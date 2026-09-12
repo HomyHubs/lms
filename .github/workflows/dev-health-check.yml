@@ -1,0 +1,50 @@
+# BẮT BUỘC theo AGENTS.md mục 12.4.
+# Chạy lại toàn bộ cổng gác (mục 7) mỗi khi có commit mới push vào `dev`,
+# để bắt lỗi phát sinh khi nhiều PR song song cộng lại (semantic conflict)
+# mà cổng gác chạy riêng trên từng nhánh PR không thấy được.
+#
+# Workflow này KHÔNG thể tự chặn merge gây ra lỗi (nó chạy sau khi push đã
+# xảy ra). Nếu job dưới đây FAIL: dừng merge mọi PR khác vào `dev` ngay,
+# tạo nhánh bugfix/dev-health-<mo-ta> sửa ưu tiên cao nhất, chỉ tiếp tục
+# merge PR khác sau khi workflow này xanh lại. Xem AGENTS.md mục 12.4.
+
+name: Dev Health Check
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      # Nếu repo dùng profile công nghệ riêng (ví dụ `make check` hoặc
+      # `pnpm -r check`), thay 3 dòng dưới bằng đúng lệnh của profile đó,
+      # y nguyên với cổng gác cục bộ ở AGENTS.md mục 7.
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Cảnh báo nếu FAIL
+        if: failure()
+        run: |
+          echo "::error::dev health-check FAILED sau khi merge vao dev."
+          echo "::error::Theo AGENTS.md muc 12.4: DUNG merge PR khac vao dev ngay."
+          echo "::error::Tao nhanh bugfix/dev-health-<mo-ta> de sua uu tien cao nhat."
+          exit 1
