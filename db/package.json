@@ -1,0 +1,13 @@
+{
+  "name": "@lms/db",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "migrate": "dbmate up",
+    "migrate:down": "dbmate down",
+    "migrate:new": "dbmate new",
+    "lint": "echo \"(db) no lint\"",
+    "typecheck": "echo \"(db) no typecheck\"",
+    "test": "echo \"(db) no unit tests; migrations verified via compose\""
+  }
+}

@@ -1,8 +1,8 @@
 # Slice/Task slice-0 — Nen tang & Auth (walking skeleton + dang nhap SDT + quen mat khau qua Email)
 
 - Co che: Doc
-- Owner hien tai: ...
-- Nhanh: ...
+- Owner hien tai: An Vo
+- Nhanh: feature/slice-0-nen-tang-auth
 - PR: ...
 - Trang thai: xem `../MVP-BACKLOG.md` (nguon trang thai duy nhat)
 - Phu thuoc: khong co

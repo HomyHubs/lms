@@ -1,0 +1,32 @@
+import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
+import rateLimit from '@fastify/rate-limit'
+import Fastify, { type FastifyInstance } from 'fastify'
+import type { AppConfig } from './platform/config.js'
+import type { AppDb } from './platform/db.js'
+import { healthRoutes } from './features/health/index.js'
+
+export interface BuildAppDeps {
+  config: AppConfig
+  db: AppDb
+}
+
+/**
+ * Dung Fastify app voi bao mat HTTP co ban (helmet, cors, rate-limit) theo webapp-template.
+ * Dang ky cac feature route. Health-check noi thong FE-BE-DB thuc.
+ */
+export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: {
+      level: config.NODE_ENV === 'test' ? 'silent' : 'info',
+    },
+  })
+
+  await app.register(helmet)
+  await app.register(cors, { origin: true })
+  await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
+
+  await healthRoutes(app, db)
+
+  return app
+}

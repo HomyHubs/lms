@@ -634,4 +634,4 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 
 **Profile công nghệ áp dụng (mục 2):** [x] Web app FE+BE (`docs/methodology/webapp-template.md`) — [ ] Không áp profile nào
 
-**Cổng gác thực tế của repo này (mục 7):** lệnh `pnpm -r lint && pnpm -r typecheck && pnpm -r test` — đã xác minh chạy được: [ ] cục bộ [ ] CI (sẽ xác minh khi slice-0 dựng xong khung repo)
+**Cổng gác thực tế của repo này (mục 7):** lệnh `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` — đã xác minh chạy được: [x] cục bộ (slice-0, 2026-09-14) [ ] CI (chờ chạy trên PR/dev)
