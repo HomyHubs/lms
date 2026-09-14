@@ -21,11 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 - Thêm migration khởi tạo `20260914000000_init.sql` (bảng `app_meta` để xác minh đường ống migration end-to-end).
+- Task 2: thêm migration `20260914010000_users_auth.sql` — bảng `users` (id, phone_number unique, password_hash, role mặc định `admin`) và bảng `sessions` (token_hash làm PK, user_id, expires_at) cho cơ chế Session opaque. Không lưu plain text; chỉ lưu bcrypt hash của mật khẩu và SHA-256 hash của token phiên. Cả hai đảo ngược được (`migrate:down`).
 
 **Đang làm dở**
 - (không).
 
 **Bước tiếp theo**
-- Task 2 (phiên sau): migration tạo bảng `users` (id, phone_number, password_hash, role) — không lưu plain text.
+- Task 3: migration cho quên mật khẩu qua OTP Email (bảng OTP có TTL ngắn) — làm ở phiên sau.
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)

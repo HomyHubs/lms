@@ -1,9 +1,11 @@
+import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import Fastify, { type FastifyInstance } from 'fastify'
 import type { AppConfig } from './platform/config.js'
 import type { AppDb } from './platform/db.js'
+import { authRoutes, makeAuthStore } from './features/auth/index.js'
 import { healthRoutes } from './features/health/index.js'
 
 export interface BuildAppDeps {
@@ -23,10 +25,12 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   })
 
   await app.register(helmet)
-  await app.register(cors, { origin: true })
+  await app.register(cors, { origin: true, credentials: true })
   await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
+  await app.register(cookie)
 
   await healthRoutes(app, db)
+  await authRoutes(app, { store: makeAuthStore(db), config })
 
   return app
 }
