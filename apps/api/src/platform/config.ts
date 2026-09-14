@@ -9,6 +9,8 @@ const EnvSchema = z.object({
     .default('postgres://lms:lms@localhost:5432/lms?sslmode=disable'),
   /** Thoi song phien (opaque session) tinh bang giay. Mac dinh 7 ngay. */
   SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 7),
+  /** Task 3: TTL cua OTP dat lai mat khau (giay). Ngan — mac dinh 10 phut. */
+  PASSWORD_RESET_OTP_TTL_SECONDS: z.coerce.number().int().positive().default(10 * 60),
 })
 
 export type AppConfig = z.infer<typeof EnvSchema>

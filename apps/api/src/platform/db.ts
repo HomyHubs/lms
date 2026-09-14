@@ -9,6 +9,8 @@ type Timestamp = ColumnType<Date, string | undefined, string | undefined>
 export interface UsersTable {
   id: Generated<string>
   phone_number: string
+  // Task 3 (slice-0): email de nhan OTP dat lai mat khau (nullable, unique khi co).
+  email: ColumnType<string | null, string | null | undefined, string | null>
   password_hash: string
   // TODO(slice-1): thay `role` text bang lien ket Branch/role day du.
   role: ColumnType<string, string | undefined, string>
@@ -24,9 +26,22 @@ export interface SessionsTable {
   expires_at: ColumnType<Date, string, string>
 }
 
+/** Bang `password_reset_otps` — Task 3 (slice-0): quen mat khau qua OTP Email. */
+export interface PasswordResetOtpsTable {
+  id: Generated<string>
+  user_id: string
+  // Luu SHA-256 hash cua ma OTP (khong luu ma tho).
+  otp_hash: string
+  attempts: ColumnType<number, number | undefined, number>
+  consumed_at: ColumnType<Date | null, string | null | undefined, string | null>
+  created_at: Timestamp
+  expires_at: ColumnType<Date, string, string>
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
+  password_reset_otps: PasswordResetOtpsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

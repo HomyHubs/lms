@@ -4,35 +4,34 @@ Phạm vi sử dụng: CHỈ áp dụng khi đúng một người hoặc một a
 
 ## Đang làm
 
-- ID Slice/Task: slice-0 (Nền tảng & Auth) — Task 2 (đăng nhập SĐT + mật khẩu)
+- ID Slice/Task: slice-0 (Nền tảng & Auth) — Task 3 (quên mật khẩu qua OTP Email)
 - Cập nhật ngày: 2026-09-14
-- Mô tả phạm vi: Đăng nhập bằng số điện thoại + mật khẩu (hash bcrypt), phiên Session opaque, rate limit endpoint login.
+- Mô tả phạm vi: Quên mật khẩu qua OTP gửi Email (TTL ngắn 10 phút, hash SHA-256, rate limit endpoint, giới hạn số lần nhập sai). Chỉ kênh Email; WhatsApp/Telegram để slice-2.
 - Nhánh làm việc: feature/slice-0-nen-tang-auth
 
 ## Đã làm trong phiên gần nhất
 
-- DB: migration `20260914010000_users_auth.sql` tạo bảng `users` (phone_number unique, password_hash, role) và `sessions` (token_hash, user_id, expires_at). Đảo ngược được.
-- Shared: contract `LoginRequest`, `LoginResponse`, `MeResponse`, `PublicUser`, `PhoneNumber` (Zod) + test.
-- Backend (`apps/api/src/features/auth`): service (bcrypt hash/verify, tạo & giải phiên opaque, chống liệt kê tài khoản), store Kysely, routes `POST /auth/login` (rate limit 5/phút), `POST /auth/logout`, `GET /auth/me`; đăng ký `@fastify/cookie`; script `seed` tạo admin đầu tiên.
-- Frontend (`apps/web`): thêm `react-router-dom`, trang `/login`, guard `RequireAuth`, `HomePage` (health-check + đăng xuất), hook `useAuth` (useSession/useLogin/useLogout), API client `login/fetchMe/logout`.
-- Test: shared 9, api 17, web 3 — tất cả xanh.
+- Task 2 đã commit (`5a08c7d`): đăng nhập SĐT + mật khẩu, phiên Session opaque.
+- Task 3 (quên mật khẩu qua OTP Email):
+  - DB: migration `20260914015000_users_add_email.sql` (thêm cột `email` nullable, unique khi có — additive) và `20260914020000_password_reset_otps.sql` (bảng OTP: `otp_hash` SHA-256, `attempts`, `consumed_at`, `expires_at`; đảo ngược được).
+  - Shared: contract `ForgotPasswordRequest`, `ResetPasswordRequest`, `Email`, `OtpCode`, `OkResponse` (Zod) + test.
+  - Backend (`apps/api/src/features/auth`): `password-reset.ts` (sinh OTP 6 số qua crypto, hash SHA-256, `requestPasswordReset` im lặng chống liệt kê tài khoản, `resetPassword` kiểm tra hết hạn/số lần sai/one-time), `email.ts` (sender dev log — TODO provider thật), store `makePasswordResetStore` (Kysely), routes `POST /auth/forgot-password` (rate limit 3/phút) + `POST /auth/reset-password` (rate limit 5/phút); seed thêm email.
+  - Frontend (`apps/web`): trang `/forgot-password` (2 bước: nhập email → nhập OTP + mật khẩu mới), link "Quên mật khẩu?" từ `/login`, hook `useForgotPassword/useResetPassword`, API client `forgotPassword/resetPassword`.
 
 ## Đang làm dở / còn thiếu
 
 - Chưa chạy `dbmate migrate` và seed trên Postgres thật trong phiên này (Docker/Postgres không chạy ở môi trường hiện tại). Migration là SQL thật, cần chạy khi có DB.
-- Task 3 (quên mật khẩu qua OTP Email) chưa bắt đầu.
+- Email OTP hiện chỉ log ra console ở dev; cần cắm provider email thật (TODO trong `email.ts`).
 
 ## Cổng gác đã chạy
 
-- `pnpm run lint` — 4/4 package pass (--max-warnings=0).
-- `pnpm run typecheck` — 5/5 pass.
-- `pnpm run test` — 29 test pass (shared 9, api 17, web 3).
+- Task 2: lint 4/4, typecheck 5/5, test 29 pass. Task 3: sẽ chạy lại đầy đủ trước khi commit.
 
 ## Bước tiếp theo
 
-1. Với Postgres thật: `pnpm --filter @lms/db migrate` rồi seed admin, kiểm tra đăng nhập end-to-end trên `/login`.
-2. Làm Task 3: quên mật khẩu qua OTP gửi Email (bảng OTP TTL ngắn, rate limit).
-3. Commit Task 2 trên nhánh `feature/slice-0-nen-tang-auth`.
+1. Chạy cổng gác đầy đủ cho Task 3 rồi commit trên nhánh `feature/slice-0-nen-tang-auth`.
+2. Với Postgres thật: `pnpm --filter @lms/db migrate` rồi seed admin, kiểm tra end-to-end `/login` và `/forgot-password`.
+3. Slice-0 hoàn tất 3 task → chuẩn bị PR vào `dev` (cập nhật MVP-BACKLOG sang Review).
 
 ## Bàn giao phiên (nếu dừng giữa chừng)
 

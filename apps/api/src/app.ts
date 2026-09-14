@@ -5,7 +5,12 @@ import rateLimit from '@fastify/rate-limit'
 import Fastify, { type FastifyInstance } from 'fastify'
 import type { AppConfig } from './platform/config.js'
 import type { AppDb } from './platform/db.js'
-import { authRoutes, makeAuthStore } from './features/auth/index.js'
+import {
+  authRoutes,
+  makeAuthStore,
+  makeConsoleEmailSender,
+  makePasswordResetStore,
+} from './features/auth/index.js'
 import { healthRoutes } from './features/health/index.js'
 
 export interface BuildAppDeps {
@@ -30,7 +35,12 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   await app.register(cookie)
 
   await healthRoutes(app, db)
-  await authRoutes(app, { store: makeAuthStore(db), config })
+  await authRoutes(app, {
+    store: makeAuthStore(db),
+    config,
+    resetStore: makePasswordResetStore(db),
+    emailSender: makeConsoleEmailSender(app.log),
+  })
 
   return app
 }

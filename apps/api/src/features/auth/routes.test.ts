@@ -5,6 +5,11 @@ import type { AppConfig } from '../../platform/config.js'
 import { authRoutes, SESSION_COOKIE } from './routes.js'
 import { hashPassword } from './service.js'
 import type { AuthStore, UserRecord } from './service.js'
+import {
+  type OtpEmailSender,
+  type OtpRecord,
+  type PasswordResetStore,
+} from './password-reset.js'
 
 function makeFakeStore(users: UserRecord[]): AuthStore {
   const sessions = new Map<string, { userId: string; expiresAt: Date }>()
@@ -27,12 +32,79 @@ function makeFakeStore(users: UserRecord[]): AuthStore {
   }
 }
 
-const config = { SESSION_TTL_SECONDS: 3600 } as AppConfig
+const config = {
+  SESSION_TTL_SECONDS: 3600,
+  PASSWORD_RESET_OTP_TTL_SECONDS: 600,
+} as AppConfig
 
-async function buildTestApp(store: AuthStore): Promise<FastifyInstance> {
+/**
+ * Store + sender gia lap cho luong quen mat khau (Task 3). Mac dinh: user
+ * 'admin@example.com'. Cho phep truy cap `otps`/`sent` de kiem tra.
+ */
+function makeFakeResetHarness(): {
+  store: PasswordResetStore
+  sender: OtpEmailSender
+  otps: OtpRecord[]
+  sent: { email: string; otp: string; expiresAt: Date }[]
+} {
+  const email = 'admin@example.com'
+  const userId = '11111111-1111-1111-1111-111111111111'
+  const otps: OtpRecord[] = []
+  const sent: { email: string; otp: string; expiresAt: Date }[] = []
+  const store: PasswordResetStore = {
+    async findUserByEmail(e) {
+      return e === email ? { id: userId } : undefined
+    },
+    async createOtp({ userId: uid, otpHash, expiresAt }) {
+      otps.push({
+        id: `otp-${otps.length + 1}`,
+        userId: uid,
+        otpHash,
+        attempts: 0,
+        consumedAt: null,
+        expiresAt,
+      })
+    },
+    async findActiveOtpByEmail(e) {
+      if (e !== email) return undefined
+      for (let i = otps.length - 1; i >= 0; i--) {
+        const rec = otps[i]
+        if (rec && rec.consumedAt === null) return rec
+      }
+      return undefined
+    },
+    async incrementOtpAttempts(id) {
+      const rec = otps.find((o) => o.id === id)
+      if (rec) rec.attempts += 1
+    },
+    async markOtpConsumed(id) {
+      const rec = otps.find((o) => o.id === id)
+      if (rec) rec.consumedAt = new Date()
+    },
+    async updateUserPassword() {
+      // Khong can kiem tra o tang route (da co unit test service).
+    },
+  }
+  const sender: OtpEmailSender = {
+    async sendOtp(input) {
+      sent.push(input)
+    },
+  }
+  return { store, sender, otps, sent }
+}
+
+async function buildTestApp(
+  store: AuthStore,
+  reset = makeFakeResetHarness(),
+): Promise<FastifyInstance> {
   const app = Fastify({ logger: false })
   await app.register(cookie)
-  await authRoutes(app, { store, config })
+  await authRoutes(app, {
+    store,
+    config,
+    resetStore: reset.store,
+    emailSender: reset.sender,
+  })
   await app.ready()
   return app
 }
@@ -133,5 +205,124 @@ describe('auth routes', () => {
       headers: { cookie: cookieHeader },
     })
     expect(meRes.statusCode).toBe(401)
+  })
+})
+
+describe('password reset routes (Task 3)', () => {
+  let user: UserRecord
+
+  beforeEach(async () => {
+    user = {
+      id: '11111111-1111-1111-1111-111111111111',
+      phone_number: '0901234567',
+      password_hash: await hashPassword('secret12'),
+      role: 'admin',
+    }
+  })
+
+  it('POST /auth/forgot-password returns ok:true and sends an OTP for a known email', async () => {
+    const reset = makeFakeResetHarness()
+    const app = await buildTestApp(makeFakeStore([user]), reset)
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        payload: { email: 'admin@example.com' },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().ok).toBe(true)
+      expect(reset.sent).toHaveLength(1)
+    } finally {
+      await app.close()
+    }
+  })
+
+  it('POST /auth/forgot-password returns ok:true for an unknown email (no enumeration)', async () => {
+    const reset = makeFakeResetHarness()
+    const app = await buildTestApp(makeFakeStore([user]), reset)
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        payload: { email: 'nobody@example.com' },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().ok).toBe(true)
+      expect(reset.sent).toHaveLength(0)
+    } finally {
+      await app.close()
+    }
+  })
+
+  it('POST /auth/forgot-password returns 400 for a malformed email', async () => {
+    const app = await buildTestApp(makeFakeStore([user]))
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        payload: { email: 'not-an-email' },
+      })
+      expect(res.statusCode).toBe(400)
+    } finally {
+      await app.close()
+    }
+  })
+
+  it('POST /auth/reset-password succeeds with the issued OTP', async () => {
+    const reset = makeFakeResetHarness()
+    const app = await buildTestApp(makeFakeStore([user]), reset)
+    try {
+      await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        payload: { email: 'admin@example.com' },
+      })
+      const otp = reset.sent.at(-1)!.otp
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/reset-password',
+        payload: { email: 'admin@example.com', otp, newPassword: 'brandnew8' },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().ok).toBe(true)
+    } finally {
+      await app.close()
+    }
+  })
+
+  it('POST /auth/reset-password returns 400 for a wrong OTP', async () => {
+    const reset = makeFakeResetHarness()
+    const app = await buildTestApp(makeFakeStore([user]), reset)
+    try {
+      await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        payload: { email: 'admin@example.com' },
+      })
+      const otp = reset.sent.at(-1)!.otp
+      const wrong = otp === '000000' ? '111111' : '000000'
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/reset-password',
+        payload: { email: 'admin@example.com', otp: wrong, newPassword: 'brandnew8' },
+      })
+      expect(res.statusCode).toBe(400)
+    } finally {
+      await app.close()
+    }
+  })
+
+  it('POST /auth/reset-password returns 400 for a malformed body', async () => {
+    const app = await buildTestApp(makeFakeStore([user]))
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/reset-password',
+        payload: { email: 'admin@example.com', otp: 'abc', newPassword: 'x' },
+      })
+      expect(res.statusCode).toBe(400)
+    } finally {
+      await app.close()
+    }
   })
 })

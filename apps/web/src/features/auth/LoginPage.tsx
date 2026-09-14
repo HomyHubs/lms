@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { LogIn } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LoginRequest } from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { useLogin } from './useAuth'
@@ -88,6 +88,13 @@ export function LoginPage(): React.ReactElement {
         <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
           {loginMutation.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </Button>
+
+        <Link
+          to="/forgot-password"
+          className="block text-center text-sm text-slate-500 underline"
+        >
+          Quên mật khẩu?
+        </Link>
       </form>
     </main>
   )

@@ -1,6 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { LoginRequest, PublicUser } from '@lms/shared'
-import { fetchMe, login as loginRequest, logout as logoutRequest } from '@/lib/api'
+import type {
+  ForgotPasswordRequest,
+  LoginRequest,
+  PublicUser,
+  ResetPasswordRequest,
+} from '@lms/shared'
+import {
+  fetchMe,
+  forgotPassword as forgotPasswordRequest,
+  login as loginRequest,
+  logout as logoutRequest,
+  resetPassword as resetPasswordRequest,
+} from '@/lib/api'
 
 const ME_KEY = ['auth', 'me'] as const
 
@@ -37,5 +48,19 @@ export function useLogout() {
     onSuccess: () => {
       qc.setQueryData(ME_KEY, null)
     },
+  })
+}
+
+/** Task 3: mutation yeu cau gui OTP dat lai mat khau qua email. */
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (input: ForgotPasswordRequest) => forgotPasswordRequest(input),
+  })
+}
+
+/** Task 3: mutation dat lai mat khau bang email + OTP + mat khau moi. */
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (input: ResetPasswordRequest) => resetPasswordRequest(input),
   })
 }

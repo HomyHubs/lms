@@ -12,6 +12,8 @@ import { hashPassword } from './service.js'
 async function main(): Promise<void> {
   const phone = process.env.SEED_ADMIN_PHONE ?? '0901234567'
   const password = process.env.SEED_ADMIN_PASSWORD ?? 'changeme8'
+  // Task 3: email de demo luong quen mat khau qua OTP.
+  const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com'
 
   const config = loadConfig()
   const db = createDb(config.DATABASE_URL)
@@ -20,12 +22,12 @@ async function main(): Promise<void> {
     const passwordHash = await hashPassword(password)
     await db
       .insertInto('users')
-      .values({ phone_number: phone, password_hash: passwordHash, role: 'admin' })
+      .values({ phone_number: phone, email, password_hash: passwordHash, role: 'admin' })
       .onConflict((oc) =>
-        oc.column('phone_number').doUpdateSet({ password_hash: passwordHash }),
+        oc.column('phone_number').doUpdateSet({ password_hash: passwordHash, email }),
       )
       .execute()
-    console.log(`Seeded admin user: ${phone}`)
+    console.log(`Seeded admin user: ${phone} (${email})`)
   } finally {
     await db.destroy()
   }

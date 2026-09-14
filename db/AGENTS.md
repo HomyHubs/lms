@@ -22,11 +22,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Đã xong**
 - Thêm migration khởi tạo `20260914000000_init.sql` (bảng `app_meta` để xác minh đường ống migration end-to-end).
 - Task 2: thêm migration `20260914010000_users_auth.sql` — bảng `users` (id, phone_number unique, password_hash, role mặc định `admin`) và bảng `sessions` (token_hash làm PK, user_id, expires_at) cho cơ chế Session opaque. Không lưu plain text; chỉ lưu bcrypt hash của mật khẩu và SHA-256 hash của token phiên. Cả hai đảo ngược được (`migrate:down`).
+- Task 3: thêm migration `20260914015000_users_add_email.sql` (additive — cột `email` nullable + partial unique index) và `20260914020000_password_reset_otps.sql` (bảng OTP: `otp_hash` SHA-256, `attempts`, `consumed_at`, `expires_at`, FK tới `users`). Không lưu OTP thô. Cả hai đảo ngược được.
 
 **Đang làm dở**
-- (không).
+- (không) — schema slice-0 (Task 1-3) hoàn tất.
 
 **Bước tiếp theo**
-- Task 3: migration cho quên mật khẩu qua OTP Email (bảng OTP có TTL ngắn) — làm ở phiên sau.
+- Chạy `pnpm --filter @lms/db migrate` trên Postgres thật khi có DB; slice-1 sẽ mở rộng Branch/role.
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)
