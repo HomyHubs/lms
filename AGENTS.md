@@ -8,21 +8,21 @@ Thay đổi quan trọng so với bản trước: file này KHÔNG còn là nơi
 
 ## 0. Bản đồ tài liệu và vai trò từng nhóm file
 
-| Tài liệu | Khi nào đọc | Vai trò |
-| --- | --- | --- |
-| `AGENTS.md` (file này, gốc repo) | Luôn luôn, đầu mỗi phiên | Quy tắc vận hành + rollup trạng thái Slice/Task cấp cao. KHÔNG dùng để cập nhật tiến độ hàng ngày. |
-| `docs/methodology/README.md` | Khi khởi tạo dự án hoặc chưa rõ cơ chế triển khai | Chọn giữa Lát cắt dọc và Lát cắt ngang; có kịch bản hỏi user nếu chưa chỉ định |
-| `docs/methodology/vertical-slice.md` | Khi cơ chế đã chọn là Lát cắt dọc | Quy tắc, Definition of Done, khung lộ trình theo slice |
-| `docs/methodology/horizontal-slice.md` | Khi cơ chế đã chọn là Lát cắt ngang | Quy tắc, Definition of Done, khung lộ trình theo tầng |
-| `docs/methodology/webapp-template.md` | Khi dự án là web app có frontend và backend | Profile công nghệ, cấu trúc repo, stack chuẩn |
-| `docs/tasks/MVP-BACKLOG.md` | Đầu mỗi phiên, trước khi chọn việc | Bảng chỉ mục Slice/Task: trạng thái, owner, nhánh, PR, phụ thuộc |
-| `docs/tasks/slices/<id>-<ten>.md` | Khi làm đúng Slice/Task đó | Chi tiết task, DoD riêng, stub, nợ kỹ thuật của slice đó |
-| `docs/tasks/CURRENT.md` | CHỈ khi một người/một agent làm tuần tự, không ai chạy song song | Con trỏ tới task đang làm; bỏ qua hoàn toàn khi làm song song nhiều dev |
-| `docs/ai-workflow/README.md` | Đầu mỗi phiên | Vòng đời task, làm việc song song, tích hợp có ngữ cảnh, auto-merge, bàn giao phiên |
-| `<thư-mục-feature>/AGENTS.md` (theo mẫu `docs/templates/feature-AGENTS.template.md`) | Khi sửa file trong thư mục feature đó | Nhật ký liên tục "Đã xong / Đang làm dở / Bước tiếp theo", cập nhật mỗi ngày |
-| `docs/decision-backlog.md` | Trước khi bắt đầu một mốc lớn | Không được vượt qua một gate đang mở |
-| `docs/adr/` | Khi quyết định cross-cutting hoặc khó đảo ngược | Bắt buộc ghi lại |
-| `.github/workflows/dev-health-check.yml` | Khi cấu hình CI cho `dev` | Chạy lại toàn bộ cổng gác mỗi khi có push vào `dev`; bắt buộc theo mục 12.4 |
+| Tài liệu                                                                             | Khi nào đọc                                                      | Vai trò                                                                                            |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `AGENTS.md` (file này, gốc repo)                                                     | Luôn luôn, đầu mỗi phiên                                         | Quy tắc vận hành + rollup trạng thái Slice/Task cấp cao. KHÔNG dùng để cập nhật tiến độ hàng ngày. |
+| `docs/methodology/README.md`                                                         | Khi khởi tạo dự án hoặc chưa rõ cơ chế triển khai                | Chọn giữa Lát cắt dọc và Lát cắt ngang; có kịch bản hỏi user nếu chưa chỉ định                     |
+| `docs/methodology/vertical-slice.md`                                                 | Khi cơ chế đã chọn là Lát cắt dọc                                | Quy tắc, Definition of Done, khung lộ trình theo slice                                             |
+| `docs/methodology/horizontal-slice.md`                                               | Khi cơ chế đã chọn là Lát cắt ngang                              | Quy tắc, Definition of Done, khung lộ trình theo tầng                                              |
+| `docs/methodology/webapp-template.md`                                                | Khi dự án là web app có frontend và backend                      | Profile công nghệ, cấu trúc repo, stack chuẩn                                                      |
+| `docs/tasks/MVP-BACKLOG.md`                                                          | Đầu mỗi phiên, trước khi chọn việc                               | Bảng chỉ mục Slice/Task: trạng thái, owner, nhánh, PR, phụ thuộc                                   |
+| `docs/tasks/slices/<id>-<ten>.md`                                                    | Khi làm đúng Slice/Task đó                                       | Chi tiết task, DoD riêng, stub, nợ kỹ thuật của slice đó                                           |
+| `docs/tasks/CURRENT.md`                                                              | CHỈ khi một người/một agent làm tuần tự, không ai chạy song song | Con trỏ tới task đang làm; bỏ qua hoàn toàn khi làm song song nhiều dev                            |
+| `docs/ai-workflow/README.md`                                                         | Đầu mỗi phiên                                                    | Vòng đời task, làm việc song song, tích hợp có ngữ cảnh, auto-merge, bàn giao phiên                |
+| `<thư-mục-feature>/AGENTS.md` (theo mẫu `docs/templates/feature-AGENTS.template.md`) | Khi sửa file trong thư mục feature đó                            | Nhật ký liên tục "Đã xong / Đang làm dở / Bước tiếp theo", cập nhật mỗi ngày                       |
+| `docs/decision-backlog.md`                                                           | Trước khi bắt đầu một mốc lớn                                    | Không được vượt qua một gate đang mở                                                               |
+| `docs/adr/`                                                                          | Khi quyết định cross-cutting hoặc khó đảo ngược                  | Bắt buộc ghi lại                                                                                   |
+| `.github/workflows/dev-health-check.yml`                                             | Khi cấu hình CI cho `dev`                                        | Chạy lại toàn bộ cổng gác mỗi khi có push vào `dev`; bắt buộc theo mục 12.4                        |
 
 Thứ tự ưu tiên khi xung đột: `AGENTS.md` gốc → file cơ chế triển khai đã chọn (`vertical-slice.md` hoặc `horizontal-slice.md`) → `webapp-template.md` → `AGENTS.md` của feature → thói quen riêng của agent (thấp nhất).
 
@@ -42,17 +42,17 @@ Ngoại lệ: về thứ tự triển khai và cách chia task, file cơ chế �
 
 ## 2. Bối cảnh dự án (điền ngay khi khởi tạo repo)
 
-| Trường | Giá trị |
-| --- | --- |
-| Tên dự án | LMS Trung tâm Anh ngữ |
-| Mục tiêu một dòng | LMS đa cơ sở cho trung tâm Anh ngữ: thi online chấm điểm tự động + thi lại, ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) có hỗ trợ sinh câu hỏi qua AI ngoài, điểm danh, xếp loại học viên, đăng nhập bằng SĐT, và quản lý ngày công/giờ dạy giáo viên |
-| Loại dự án | web app FE+BE |
-| Cơ chế triển khai đã chọn (mục 3) | Lát cắt dọc |
-| Profile công nghệ áp dụng | Web app FE+BE (`docs/methodology/webapp-template.md`) |
-| Stack thực tế | Backend: Fastify + TypeScript, PostgreSQL, pnpm + Turborepo (monorepo). Frontend: 1 web app duy nhất (React/Next.js hoặc SPA) dùng chung cho Admin/Teacher/Staff/Học viên, menu/route ẩn hiện theo role (RBAC) + theo cơ sở (branch-scoped). Hạ tầng: Docker, GitHub Actions CI. Tích hợp ngoài: WhatsApp Business API, Telegram Bot API, Email provider (OTP đa kênh) |
-| Điểm khởi đầu | Yêu cầu chi tiết: trang Notion "LMS Trung tâm Anh ngữ — Đặc tả yêu cầu đầy đủ (Vertical Slice Plan)"; slice đầu tiên: `docs/tasks/slices/slice-0-nen-tang-auth.md` |
-| Cách chạy local | `docker compose -f compose.dev.yml up` (điền lại khi khung backend/frontend dựng xong ở slice-0) |
-| Người hoặc nhóm sở hữu | Hoang An |
+| Trường                            | Giá trị                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tên dự án                         | LMS Trung tâm Anh ngữ                                                                                                                                                                                                                                                                                                                                                  |
+| Mục tiêu một dòng                 | LMS đa cơ sở cho trung tâm Anh ngữ: thi online chấm điểm tự động + thi lại, ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) có hỗ trợ sinh câu hỏi qua AI ngoài, điểm danh, xếp loại học viên, đăng nhập bằng SĐT, và quản lý ngày công/giờ dạy giáo viên                                                                                                          |
+| Loại dự án                        | web app FE+BE                                                                                                                                                                                                                                                                                                                                                          |
+| Cơ chế triển khai đã chọn (mục 3) | Lát cắt dọc                                                                                                                                                                                                                                                                                                                                                            |
+| Profile công nghệ áp dụng         | Web app FE+BE (`docs/methodology/webapp-template.md`)                                                                                                                                                                                                                                                                                                                  |
+| Stack thực tế                     | Backend: Fastify + TypeScript, PostgreSQL, pnpm + Turborepo (monorepo). Frontend: 1 web app duy nhất (React/Next.js hoặc SPA) dùng chung cho Admin/Teacher/Staff/Học viên, menu/route ẩn hiện theo role (RBAC) + theo cơ sở (branch-scoped). Hạ tầng: Docker, GitHub Actions CI. Tích hợp ngoài: WhatsApp Business API, Telegram Bot API, Email provider (OTP đa kênh) |
+| Điểm khởi đầu                     | Yêu cầu chi tiết: trang Notion "LMS Trung tâm Anh ngữ — Đặc tả yêu cầu đầy đủ (Vertical Slice Plan)"; slice đầu tiên: `docs/tasks/slices/slice-0-nen-tang-auth.md`                                                                                                                                                                                                     |
+| Cách chạy local                   | `docker compose -f compose.dev.yml up` (điền lại khi khung backend/frontend dựng xong ở slice-0)                                                                                                                                                                                                                                                                       |
+| Người hoặc nhóm sở hữu            | Hoang An                                                                                                                                                                                                                                                                                                                                                               |
 
 Nếu loại dự án là web app có frontend và backend, áp dụng thêm `docs/methodology/webapp-template.md`. Ghi tên profile đã chọn vào bảng trên.
 
@@ -217,8 +217,8 @@ git worktree add ../proj-payment   -b feature/slice-4-payment
 
 ```ts
 // src/app.ts
-import { registerAuthRoutes } from "./features/auth"
-import { registerPaymentRoutes } from "./features/payment"
+import { registerAuthRoutes } from './features/auth'
+import { registerPaymentRoutes } from './features/payment'
 registerAuthRoutes(app)
 registerPaymentRoutes(app)
 ```
@@ -249,13 +249,13 @@ Agent tự tạo và quản lý nhánh. Người dùng không cần nêu tên nh
 
 ### 11.1 Vai trò từng nhánh
 
-| Nhánh | Vai trò | Tách ra từ | Merge trở lại vào | Code trực tiếp? |
-| --- | --- | --- | --- | --- |
-| `main` | Bản ổn định để build và giao cho user (production/release) | — | — | KHÔNG |
-| `dev` | Nhánh tích hợp/phát triển mặc định | `main` | `main` (khi release) | Hạn chế, ưu tiên qua feature branch |
-| `feature/<tên>` | Một Slice/Task/layer-pass | `dev` | `dev` | CÓ |
-| `bugfix/<tên>` | Sửa lỗi trong code chưa release (đang ở `dev`) | `dev` | `dev` | CÓ |
-| `hotfix/<tên>` | Sửa lỗi production cần release gấp | `main` | `main` rồi `dev` | CÓ |
+| Nhánh           | Vai trò                                                    | Tách ra từ | Merge trở lại vào    | Code trực tiếp?                     |
+| --------------- | ---------------------------------------------------------- | ---------- | -------------------- | ----------------------------------- |
+| `main`          | Bản ổn định để build và giao cho user (production/release) | —          | —                    | KHÔNG                               |
+| `dev`           | Nhánh tích hợp/phát triển mặc định                         | `main`     | `main` (khi release) | Hạn chế, ưu tiên qua feature branch |
+| `feature/<tên>` | Một Slice/Task/layer-pass                                  | `dev`      | `dev`                | CÓ                                  |
+| `bugfix/<tên>`  | Sửa lỗi trong code chưa release (đang ở `dev`)             | `dev`      | `dev`                | CÓ                                  |
+| `hotfix/<tên>`  | Sửa lỗi production cần release gấp                         | `main`     | `main` rồi `dev`     | CÓ                                  |
 
 Mọi Slice/Task làm trên nhánh riêng và mở PR với base = `dev`. Không mở PR thẳng vào `main`.
 
@@ -300,12 +300,12 @@ git checkout dev && git pull origin dev && git merge main && git push origin dev
 
 ### 11.6 Suy luận nhánh từ yêu cầu người dùng
 
-| Người dùng nói | Agent tự làm |
-| --- | --- |
-| "Làm feature X" / "làm Slice/Task X" | Tạo `feature/...` từ `dev`, PR base = `dev` |
-| "Sửa bug trên bản đang phát triển" | Tạo `bugfix/...` từ `dev`, PR base = `dev` |
-| "Cần sửa trên main" / "user đang bị lỗi" | Tạo `hotfix/...` từ `main`, xem mục 11.5 |
-| "Release" / "đưa dev về main" | Merge `dev` → `main`, xem mục 11.4 |
+| Người dùng nói                           | Agent tự làm                                |
+| ---------------------------------------- | ------------------------------------------- |
+| "Làm feature X" / "làm Slice/Task X"     | Tạo `feature/...` từ `dev`, PR base = `dev` |
+| "Sửa bug trên bản đang phát triển"       | Tạo `bugfix/...` từ `dev`, PR base = `dev`  |
+| "Cần sửa trên main" / "user đang bị lỗi" | Tạo `hotfix/...` từ `main`, xem mục 11.5    |
+| "Release" / "đưa dev về main"            | Merge `dev` → `main`, xem mục 11.4          |
 
 ---
 
@@ -330,6 +330,7 @@ Chọn đúng 1 cơ chế cho toàn bộ luồng và ghi rõ trong `docs/ai-work
 Identity thực hiện Cơ chế A hoặc B ở mục 12.1 phải KHÁC identity đã push code / mở PR đó. GitHub tự chặn self-review ở Cơ chế A; Cơ chế B không tự chặn, phải tự đảm bảo bằng quy ước — không dùng token của agent code để tự set status check cho PR của chính nó.
 
 Cách tạo identity riêng — chọn 1:
+
 - Machine user account riêng: token fine-grained (quyền Contents + Pull requests), gắn vào repo với quyền Write. Nhanh, nhưng tốn 1 seat nếu repo ở tổ chức trả phí theo seat.
 - GitHub App riêng: không tốn seat, xác thực qua JWT + installation token. Dùng script `github_app_auth.py` (hướng dẫn setup tay nằm ngay đầu file đó) để tự động lấy token và gọi Cơ chế A hoặc B.
 
@@ -339,6 +340,7 @@ Cách tạo identity riêng — chọn 1:
 ### 12.3 Branch protection bắt buộc trên `dev`
 
 Checklist bắt buộc, kiểm tra tại Settings → Branches → rule của `dev`:
+
 - [ ] "Require a pull request before merging" — bật
 - [ ] "Require approvals" ≥ 1 (Cơ chế A) hoặc "Require status checks to pass before merging" chứa đúng context riêng (Cơ chế B)
 - [ ] "Require branches to be up to date before merging" — bật (để không merge PR dựa trên `dev` đã cũ hơn các PR song song khác vừa merge)
@@ -458,27 +460,27 @@ DoD bổ sung riêng theo cơ chế triển khai: xem `docs/methodology/vertical
 
 ## 21. Anti-pattern cấm tuyệt đối
 
-| Anti-pattern | Thay bằng |
-| --- | --- |
-| Ghi tiến độ hàng ngày vào `AGENTS.md` gốc | Ghi vào `AGENTS.md` của feature + file slice/task, mục 0 |
-| Dùng `docs/tasks/CURRENT.md` khi đang chạy song song nhiều dev | Dùng `MVP-BACKLOG.md` (cột Owner) + `AGENTS.md` của feature |
-| Đập đi tái cấu trúc repo đã có quy ước | Trường hợp A ở mục 4, bổ sung dần theo task |
-| Import thẳng vào file bên trong module khác | Chỉ import qua cửa công khai `index.ts` |
-| Đổi contract giữa chừng khi đang code | Chốt contract trước, đổi thì làm ADR |
-| Tắt rule lint hoặc bỏ test để làm xanh cổng gác | Sửa nguyên nhân, nếu phải tắt thì ghi lý do ngay tại chỗ |
-| Hai dev/agent cùng sửa một file dùng chung cùng lúc | Worktree riêng, điểm ghép mỗi dòng độc lập, mục 9 |
-| Merge một Slice/Task mà không đọc các Slice/Task khác đã merge | Quy trình tích hợp có ngữ cảnh, mục 10 |
-| Tự merge tay PR đã pass review | Auto-merge + xóa nhánh, mục 12 |
-| Coi comment (dù có JSON/kết luận rõ ràng) là "Approved" | Chỉ 2 cơ chế hợp lệ: Review chính thức hoặc Custom Status Check, mục 12.1 |
-| Cùng một identity vừa code/push vừa duyệt hoặc merge PR | Identity duyệt/merge riêng biệt, mục 12.2 |
-| Merge PR khi `dev` đã đi xa mà chưa cập nhật/rebase | Bật "Require branches to be up to date", mục 12.3 |
-| Không kiểm tra lại sức khỏe `dev` sau nhiều PR song song merge | Dev health-check bắt buộc sau mỗi merge, mục 12.4 |
-| Kết thúc phiên mà không commit và không ghi bàn giao | Quy trình bàn giao ở mục 13 |
-| Giả định "chắc là đã xong" khi không có ghi chú rõ ràng sau khi bị ngắt đột ngột | Suy luận từ git log/diff và chạy lại cổng gác trước khi tiếp tục |
-| Mở PR thẳng vào `main` cho Slice/Task thường | PR base = `dev`, mục 11 |
-| Đánh số lại hoặc xóa dòng Slice/Task khi đổi phạm vi | ID bất biến, chỉ thêm dòng mới, mục 22 |
-| Tự chọn cơ chế triển khai khi user chưa nói rõ | Hỏi user trước, mục 3 |
-| Sao chép toàn bộ nội dung task/slice sang `AGENTS.md` gốc "cho dễ xem" | Chỉ giữ rollup cấp Slice; chi tiết ở `docs/tasks/*` |
+| Anti-pattern                                                                     | Thay bằng                                                                 |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Ghi tiến độ hàng ngày vào `AGENTS.md` gốc                                        | Ghi vào `AGENTS.md` của feature + file slice/task, mục 0                  |
+| Dùng `docs/tasks/CURRENT.md` khi đang chạy song song nhiều dev                   | Dùng `MVP-BACKLOG.md` (cột Owner) + `AGENTS.md` của feature               |
+| Đập đi tái cấu trúc repo đã có quy ước                                           | Trường hợp A ở mục 4, bổ sung dần theo task                               |
+| Import thẳng vào file bên trong module khác                                      | Chỉ import qua cửa công khai `index.ts`                                   |
+| Đổi contract giữa chừng khi đang code                                            | Chốt contract trước, đổi thì làm ADR                                      |
+| Tắt rule lint hoặc bỏ test để làm xanh cổng gác                                  | Sửa nguyên nhân, nếu phải tắt thì ghi lý do ngay tại chỗ                  |
+| Hai dev/agent cùng sửa một file dùng chung cùng lúc                              | Worktree riêng, điểm ghép mỗi dòng độc lập, mục 9                         |
+| Merge một Slice/Task mà không đọc các Slice/Task khác đã merge                   | Quy trình tích hợp có ngữ cảnh, mục 10                                    |
+| Tự merge tay PR đã pass review                                                   | Auto-merge + xóa nhánh, mục 12                                            |
+| Coi comment (dù có JSON/kết luận rõ ràng) là "Approved"                          | Chỉ 2 cơ chế hợp lệ: Review chính thức hoặc Custom Status Check, mục 12.1 |
+| Cùng một identity vừa code/push vừa duyệt hoặc merge PR                          | Identity duyệt/merge riêng biệt, mục 12.2                                 |
+| Merge PR khi `dev` đã đi xa mà chưa cập nhật/rebase                              | Bật "Require branches to be up to date", mục 12.3                         |
+| Không kiểm tra lại sức khỏe `dev` sau nhiều PR song song merge                   | Dev health-check bắt buộc sau mỗi merge, mục 12.4                         |
+| Kết thúc phiên mà không commit và không ghi bàn giao                             | Quy trình bàn giao ở mục 13                                               |
+| Giả định "chắc là đã xong" khi không có ghi chú rõ ràng sau khi bị ngắt đột ngột | Suy luận từ git log/diff và chạy lại cổng gác trước khi tiếp tục          |
+| Mở PR thẳng vào `main` cho Slice/Task thường                                     | PR base = `dev`, mục 11                                                   |
+| Đánh số lại hoặc xóa dòng Slice/Task khi đổi phạm vi                             | ID bất biến, chỉ thêm dòng mới, mục 22                                    |
+| Tự chọn cơ chế triển khai khi user chưa nói rõ                                   | Hỏi user trước, mục 3                                                     |
+| Sao chép toàn bộ nội dung task/slice sang `AGENTS.md` gốc "cho dễ xem"           | Chỉ giữ rollup cấp Slice; chi tiết ở `docs/tasks/*`                       |
 
 ---
 
@@ -488,16 +490,16 @@ Nguyên tắc gốc: ID của Slice/Task là bất biến. Không đánh số l�
 
 ### 22.1 Quy tắc đánh số
 
-| Tình huống | Cách làm | Ví dụ |
-| --- | --- | --- |
-| Tính năng mới, làm sau cùng | Cấp ID tiếp theo | slice-9, slice-10 |
-| Tính năng mới phải chèn giữa | Dùng số thập phân | slice-4.5 |
-| Mục công việc quá to | Giữ số gốc, thêm hậu tố chữ | slice-5 → slice-5a, slice-5b |
-| Thêm/sửa task ở Slice `Chưa bắt đầu` | Sửa trực tiếp file chi tiết của slice đó | — |
-| Thêm/sửa task ở Slice `Đang làm` | Chỉ sửa phần chưa code; ghi lý do vào "Nhật ký thay đổi phạm vi" trong file slice | — |
-| Thêm/sửa task ở Slice `Done` | Giữ nguyên làm lịch sử; tạo slice sửa riêng, ghi `Thay đổi mục gốc: <id>` | slice-2 → slice-2.1 |
-| Bỏ tính năng chưa code | Đổi trạng thái `Đã hủy`, ghi lý do, giữ nguyên dòng | — |
-| Bỏ tính năng đã code | Tạo slice retire riêng với checklist gỡ bỏ | slice-11-retire-x |
+| Tình huống                           | Cách làm                                                                          | Ví dụ                        |
+| ------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------- |
+| Tính năng mới, làm sau cùng          | Cấp ID tiếp theo                                                                  | slice-9, slice-10            |
+| Tính năng mới phải chèn giữa         | Dùng số thập phân                                                                 | slice-4.5                    |
+| Mục công việc quá to                 | Giữ số gốc, thêm hậu tố chữ                                                       | slice-5 → slice-5a, slice-5b |
+| Thêm/sửa task ở Slice `Chưa bắt đầu` | Sửa trực tiếp file chi tiết của slice đó                                          | —                            |
+| Thêm/sửa task ở Slice `Đang làm`     | Chỉ sửa phần chưa code; ghi lý do vào "Nhật ký thay đổi phạm vi" trong file slice | —                            |
+| Thêm/sửa task ở Slice `Done`         | Giữ nguyên làm lịch sử; tạo slice sửa riêng, ghi `Thay đổi mục gốc: <id>`         | slice-2 → slice-2.1          |
+| Bỏ tính năng chưa code               | Đổi trạng thái `Đã hủy`, ghi lý do, giữ nguyên dòng                               | —                            |
+| Bỏ tính năng đã code                 | Tạo slice retire riêng với checklist gỡ bỏ                                        | slice-11-retire-x            |
 
 ### 22.2 Ba loại thay đổi
 
@@ -520,16 +522,16 @@ Nếu câu 1, 2, hoặc 3 trả lời "có" → bắt buộc ghi ADR.
 
 ### 22.4 Trạng thái được phép dùng (trong `MVP-BACKLOG.md`)
 
-| Trạng thái | Ý nghĩa |
-| --- | --- |
-| Chưa bắt đầu | Đã lên kế hoạch, chưa có code, chưa có Owner |
-| Đang làm | Đã có Owner và nhánh riêng |
-| Review | Đã mở PR, đang chờ review/auto-merge |
-| Done | Đã merge vào `dev`, đạt đủ Definition of Done |
-| Done (còn nợ) | Chạy được nhưng còn nợ kỹ thuật đã ghi |
-| Hoãn | Có giá trị nhưng lùi lịch, ghi lý do |
-| Đã hủy | Quyết định không làm, ghi lý do |
-| Đã thay thế | Bị mục khác thay, ghi rõ ID thay thế |
+| Trạng thái    | Ý nghĩa                                       |
+| ------------- | --------------------------------------------- |
+| Chưa bắt đầu  | Đã lên kế hoạch, chưa có code, chưa có Owner  |
+| Đang làm      | Đã có Owner và nhánh riêng                    |
+| Review        | Đã mở PR, đang chờ review/auto-merge          |
+| Done          | Đã merge vào `dev`, đạt đủ Definition of Done |
+| Done (còn nợ) | Chạy được nhưng còn nợ kỹ thuật đã ghi        |
+| Hoãn          | Có giá trị nhưng lùi lịch, ghi lý do          |
+| Đã hủy        | Quyết định không làm, ghi lý do               |
+| Đã thay thế   | Bị mục khác thay, ghi rõ ID thay thế          |
 
 ### 22.5 Thứ tự thao tác bắt buộc
 
@@ -624,9 +626,9 @@ Không tự đánh số lại hoặc xóa dòng đã có.
 
 Không dùng mục này để theo dõi công việc đang làm dở. Nguồn sự thật cho tiến độ hàng ngày là `docs/tasks/MVP-BACKLOG.md` và `AGENTS.md` của từng feature. Bảng dưới đây chỉ thêm một dòng mới mỗi khi một Slice/Task đã merge xong vào `dev`.
 
-| Slice/Task | Tên | Cơ chế | Kết quả rollup | PR | Ngày merge |
-| --- | --- | --- | --- | --- | --- |
-| slice-0 | Walking skeleton | Dọc | — | — | — |
+| Slice/Task | Tên              | Cơ chế | Kết quả rollup | PR  | Ngày merge |
+| ---------- | ---------------- | ------ | -------------- | --- | ---------- |
+| slice-0    | Walking skeleton | Dọc    | —              | —   | —          |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
@@ -634,4 +636,4 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 
 **Profile công nghệ áp dụng (mục 2):** [x] Web app FE+BE (`docs/methodology/webapp-template.md`) — [ ] Không áp profile nào
 
-**Cổng gác thực tế của repo này (mục 7):** lệnh `pnpm -r lint && pnpm -r typecheck && pnpm -r test` — đã xác minh chạy được: [ ] cục bộ [ ] CI (sẽ xác minh khi slice-0 dựng xong khung repo)
+**Cổng gác thực tế của repo này (mục 7):** lệnh `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` — đã xác minh chạy được: [x] cục bộ (slice-0, 2026-09-14) [ ] CI (chờ chạy trên PR/dev)
