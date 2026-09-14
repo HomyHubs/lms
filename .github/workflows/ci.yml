@@ -24,8 +24,13 @@ jobs:
           node-version: 24
           cache: 'pnpm'
 
+      # pnpm 11 coi "ignored build scripts" la loi fatal khi --frozen-lockfile,
+      # nen tat strict-dep-builds de install khong dung, roi build esbuild tuong minh.
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+
+      - name: Rebuild native deps
+        run: pnpm rebuild esbuild
 
       - name: Build
         run: pnpm -r build
