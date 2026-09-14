@@ -5,11 +5,7 @@ import type { AppConfig } from '../../platform/config.js'
 import { authRoutes, SESSION_COOKIE } from './routes.js'
 import { hashPassword } from './service.js'
 import type { AuthStore, UserRecord } from './service.js'
-import {
-  type OtpEmailSender,
-  type OtpRecord,
-  type PasswordResetStore,
-} from './password-reset.js'
+import { type OtpEmailSender, type OtpRecord, type PasswordResetStore } from './password-reset.js'
 
 function makeFakeStore(users: UserRecord[]): AuthStore {
   const sessions = new Map<string, { userId: string; expiresAt: Date }>()

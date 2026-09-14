@@ -89,10 +89,7 @@ export function LoginPage(): React.ReactElement {
           {loginMutation.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </Button>
 
-        <Link
-          to="/forgot-password"
-          className="block text-center text-sm text-slate-500 underline"
-        >
+        <Link to="/forgot-password" className="block text-center text-sm text-slate-500 underline">
           Quên mật khẩu?
         </Link>
       </form>

@@ -21,14 +21,8 @@ export interface UserRecord {
 /** Cong ra DB ma service can — cho phep test bang cach tiem gia lap. */
 export interface AuthStore {
   findUserByPhone: (phoneNumber: string) => Promise<UserRecord | undefined>
-  createSession: (input: {
-    tokenHash: string
-    userId: string
-    expiresAt: Date
-  }) => Promise<void>
-  findSession: (
-    tokenHash: string,
-  ) => Promise<{ userId: string; expiresAt: Date } | undefined>
+  createSession: (input: { tokenHash: string; userId: string; expiresAt: Date }) => Promise<void>
+  findSession: (tokenHash: string) => Promise<{ userId: string; expiresAt: Date } | undefined>
   deleteSession: (tokenHash: string) => Promise<void>
   findUserById: (id: string) => Promise<UserRecord | undefined>
 }
@@ -99,10 +93,7 @@ export async function login(
 }
 
 /** Tra ve user cua phien neu token con hieu luc; nguoc lai `null`. */
-export async function resolveSession(
-  store: AuthStore,
-  token: string,
-): Promise<PublicUser | null> {
+export async function resolveSession(store: AuthStore, token: string): Promise<PublicUser | null> {
   const session = await store.findSession(hashSessionToken(token))
   if (!session) return null
   if (session.expiresAt.getTime() <= Date.now()) {

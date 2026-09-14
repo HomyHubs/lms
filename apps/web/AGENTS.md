@@ -24,6 +24,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 ### 2026-09-14
 
 **Đã xong**
+
 - Dựng khung apps/web: React 19 + Vite + Tailwind v3 + shadcn-style Button, TanStack Query.
 - Trang chủ gọi `/api/health` (proxy sang Fastify) và hiển thị trạng thái Database THẬT.
 - Test render bằng Testing Library (stub fetch → hiển thị "Đã kết nối").
@@ -31,9 +32,11 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - Task 3: trang `/forgot-password` (2 bước — nhập email → nhập OTP + mật khẩu mới), link "Quên mật khẩu?" từ `/login`, hook `useForgotPassword/useResetPassword`, API client `forgotPassword/resetPassword`. Test flow 2 bước (stub fetch).
 
 **Đang làm dở**
+
 - (không) — phần web của slice-0 (Task 1-3) hoàn tất.
 
 **Bước tiếp theo**
+
 - Kiểm tra end-to-end `/forgot-password` với backend + Postgres thật; chuẩn bị PR slice-0 vào `dev`.
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)

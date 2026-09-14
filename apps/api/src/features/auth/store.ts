@@ -53,11 +53,7 @@ export function makeAuthStore(db: AppDb): AuthStore {
 export function makePasswordResetStore(db: AppDb): PasswordResetStore {
   return {
     async findUserByEmail(email) {
-      return db
-        .selectFrom('users')
-        .select(['id'])
-        .where('email', '=', email)
-        .executeTakeFirst()
+      return db.selectFrom('users').select(['id']).where('email', '=', email).executeTakeFirst()
     },
 
     async createOtp({ userId, otpHash, expiresAt }) {

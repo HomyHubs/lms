@@ -56,8 +56,6 @@ describe('ForgotPasswordPage flow (Task 3)', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /Đặt lại mật khẩu/ }))
 
-    await waitFor(() =>
-      expect(screen.getByText(/Đặt lại mật khẩu thành công/)).toBeInTheDocument(),
-    )
+    await waitFor(() => expect(screen.getByText(/Đặt lại mật khẩu thành công/)).toBeInTheDocument())
   })
 })

@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  ForgotPasswordRequest,
-  LoginRequest,
-  PublicUser,
-  ResetPasswordRequest,
-} from './auth.js'
+import { ForgotPasswordRequest, LoginRequest, PublicUser, ResetPasswordRequest } from './auth.js'
 
 describe('LoginRequest contract', () => {
   it('accepts a valid phone + password payload', () => {

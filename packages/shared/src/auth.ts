@@ -53,7 +53,10 @@ export type MeResponse = z.infer<typeof MeResponse>
 export const Email = z.string().trim().toLowerCase().email('Email khong hop le')
 
 /** Ma OTP: 6 chu so (khop do dai sinh o backend). */
-export const OtpCode = z.string().trim().regex(/^\d{6}$/, 'Ma OTP gom 6 chu so')
+export const OtpCode = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, 'Ma OTP gom 6 chu so')
 
 /** Buoc 1: yeu cau gui OTP toi email. */
 export const ForgotPasswordRequest = z.object({
