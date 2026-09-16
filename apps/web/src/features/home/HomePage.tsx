@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, CheckCircle2, LogOut, XCircle } from 'lucide-react'
+import { Activity, CheckCircle2, LogOut, Users, XCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { fetchHealth } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -8,6 +9,7 @@ import { useLogout, useSession } from '@/features/auth/useAuth'
 /**
  * Trang chu (sau dang nhap): hien trang thai ket noi Database that va thong tin phien.
  * Giu nguyen health-check cua Task 1, bo sung thanh dieu huong dang nhap/xuat.
+ * slice-1 Task 1: hien lien ket "Quan ly nguoi dung" chi khi role === 'admin' (RBAC menu).
  */
 export function HomePage(): React.ReactElement {
   const { user } = useSession()
@@ -30,6 +32,14 @@ export function HomePage(): React.ReactElement {
         </div>
         <div className="flex items-center gap-3">
           {user && <span className="text-sm text-slate-500">{user.phoneNumber}</span>}
+          {user?.role === 'admin' && (
+            <Link
+              to="/users"
+              className="flex items-center gap-1 text-sm text-slate-600 underline"
+            >
+              <Users className="h-4 w-4" /> Quản lý người dùng
+            </Link>
+          )}
           <Button
             variant="outline"
             size="sm"

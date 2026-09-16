@@ -1,12 +1,17 @@
 import {
+  AdminUserList,
+  AdminUserResponse,
   HealthResponse,
   LoginResponse,
   MeResponse,
   OkResponse,
+  type AdminUser,
+  type CreateUserRequest,
   type ForgotPasswordRequest,
   type LoginRequest,
   type PublicUser,
   type ResetPasswordRequest,
+  type UpdateUserRequest,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -94,4 +99,48 @@ export async function resetPassword(input: ResetPasswordRequest): Promise<void> 
   }
   const json: unknown = await res.json()
   OkResponse.parse(json)
+}
+
+/**
+ * slice-1 Task 1: quan ly nguoi dung (chi Admin). Tat ca goi qua `/api/users`
+ * voi cookie phien; backend thuc thi RBAC (403 neu khong phai Admin).
+ */
+export async function listUsers(): Promise<AdminUser[]> {
+  const res = await fetch('/api/users', { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach nguoi dung')
+  const json: unknown = await res.json()
+  return AdminUserList.parse(json).users
+}
+
+export async function createUser(input: CreateUserRequest): Promise<AdminUser> {
+  const res = await fetch('/api/users', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) {
+    const message =
+      res.status === 409 ? 'So dien thoai da duoc su dung' : 'Tao nguoi dung that bai'
+    throw new ApiError(res.status, message)
+  }
+  const json: unknown = await res.json()
+  return AdminUserResponse.parse(json).user
+}
+
+export async function updateUser(id: string, input: UpdateUserRequest): Promise<AdminUser> {
+  const res = await fetch(`/api/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Cap nhat nguoi dung that bai')
+  const json: unknown = await res.json()
+  return AdminUserResponse.parse(json).user
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  const res = await fetch(`/api/users/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Xoa nguoi dung that bai')
 }
