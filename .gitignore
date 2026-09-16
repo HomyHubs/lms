@@ -9,3 +9,11 @@ coverage/
 !.env.example
 .DS_Store
 .vite/
+
+# Python (script phu tro cuc bo, khong thuoc monorepo)
+__pycache__/
+*.pyc
+github_app_auth*.py
+
+# Cong cu AI cuc bo
+.claude/

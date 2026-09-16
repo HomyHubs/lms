@@ -3,5 +3,8 @@ packages:
   - 'packages/*'
   - 'db'
 
+allowBuilds:
+  esbuild: true
+
 onlyBuiltDependencies:
   - esbuild
