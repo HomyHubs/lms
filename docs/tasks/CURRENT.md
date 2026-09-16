@@ -6,38 +6,34 @@ Phạm vi sử dụng: CHỈ áp dụng khi đúng một người hoặc một a
 
 - ID Slice/Task: slice-1 (Quản lý người dùng, cơ sở (Branch) & phân quyền)
 - Cập nhật ngày: 2026-09-16
-- Mô tả phạm vi: CRUD User (Admin/Teacher/Student/Staff) + RBAC theo role (thay role giả định của slice-0); quản lý Center + nhiều Branch (cơ sở); Level (Starter/Mover/Flyer) + Course + Class + Enrollment (mỗi Class gắn 1 Branch); bảng `UserBranch` gán 1 hoặc nhiều Branch cho User để lọc dữ liệu/menu theo Branch được gán (branch-scoped). Chi tiết: `slices/slice-1-user-branch-phan-quyen.md`.
+- Mô tả phạm vi: CRUD User (Admin/Teacher/Student/Staff) + RBAC theo role; quản lý Center + nhiều Branch (cơ sở); Level (Starter/Mover/Flyer) + Course + Class + Enrollment (mỗi Class gắn 1 Branch); bảng `UserBranch` gán 1 hoặc nhiều Branch cho User để lọc dữ liệu theo Branch (branch-scoped). Chi tiết: `slices/slice-1-user-branch-phan-quyen.md`.
 - Nhánh làm việc: feature/slice-1-user-branch-phan-quyen (base = `dev` sau khi merge slice-0)
+- Trạng thái: 4/4 Task xong cục bộ, cổng gác xanh → mở PR vào `dev`, đang chờ review.
 
 ## Đã làm trong phiên gần nhất
 
-- slice-0 (Nền tảng & Auth) đã merge vào `dev` qua PR #1 (merge commit `c10de1c`, 2026-09-16); ghi nhận **Done** trong `MVP-BACKLOG.md` và bảng rollup ở `../../AGENTS.md`.
-- Khởi tạo slice-1: tạo nhánh `feature/slice-1-user-branch-phan-quyen` từ `dev`, chuyển backlog sang **Đang làm** (Owner: An Vo), điền Owner + nhánh vào file slice.
-- **Task 1 (slice-1) — xong cục bộ, đã commit (chưa push):**
-  - `@lms/shared`: mở rộng `UserRole` thành 4 vai trò (`admin`/`teacher`/`student`/`staff`); thêm contract CRUD user (`AdminUser`, `CreateUserRequest`, `UpdateUserRequest`, list/response) trong `users.ts`.
-  - DB: migration additive `20260916000000_users_roles.sql` — thêm CHECK constraint cho `role` + bỏ default `'admin'` (giải quyết TODO(slice-1) ở migration users_auth).
-  - API: feature mới `apps/api/src/features/users/` (service + store Kysely + routes) với RBAC guard thật — chỉ Admin được CRUD user (401/403 đúng), ghép vào `app.ts` dùng chung `authStore`.
-  - Web: trang `Quản lý người dùng` (`/users`) + hooks/api; điều hướng ẩn/hiện theo role (link chỉ hiện với Admin, route `/users` chặn non-admin).
-  - Test: unit (service) + route (RBAC + CRUD) ở API; test render danh sách ở web.
+- **Task 1 — CRUD User + RBAC theo role (4 vai trò).** Commit `ef65263`.
+- **Task 2 — Center + Branch CRUD + RBAC guard dùng chung.** Commit `b93a4a8`.
+  - `@lms/shared`: contract Center/Branch. API: feature `access/` (`makeRbac.requireRole` gắn `request.sessionUser`) + feature `centers/` (Center + Branch CRUD, chỉ Admin). DB: `20260916010000_centers_branches.sql`. Web: `/centers`.
+- **Task 3 — Level/Course/Class/Enrollment (mỗi Class gắn 1 Branch).** Commit `004a0f6`.
+  - API feature `catalog/`; Level seed sẵn, Course thuộc Level, Class gắn 1 Branch, Enrollment unique (class, student). DB: `20260916020000_levels_courses_classes_enrollments.sql` (seed 3 Level). Web: `/catalog`.
+- **Task 4 — UserBranch + branch-scoped access THẬT.** Commit `181517b`.
+  - API feature `userbranches/` (GET/PUT `/users/:id/branches`, chỉ Admin) + đóng vai trò `BranchScope`. `catalog` lọc Class/Enrollment theo Branch được gán cho người gọi (Admin/Teacher/Student); tạo/sửa/xoá Class + Enrollment chỉ trong phạm vi Branch (403/404 khi ngoài phạm vi). DB: `20260916030000_user_branches.sql`. Web: `/assignments`.
 
 ## Đang làm dở / còn thiếu
 
-- Task 2: Quản lý Center + Branch (cơ sở) — CRUD, 1 Center có nhiều Branch.
-- Task 3: Level (Starter/Mover/Flyer) + Course + Class + Enrollment, mỗi Class gắn 1 Branch.
-- Task 4: bảng `UserBranch` (gán 1 hoặc nhiều Branch cho User) + lọc dữ liệu/menu theo Branch (branch-scoped access).
-- Nợ kỹ thuật kế thừa từ slice-0, xử lý khi chạm tới: chạy `dbmate migrate` + seed trên Postgres thật; cắm provider email thật cho OTP (TODO trong `email.ts`).
-- **Chưa push**: theo kế hoạch của chủ sở hữu, chỉ push nhánh lên `dev` (mở PR) SAU KHI hoàn tất cả 4 Task của slice-1.
+- Nợ kỹ thuật kế thừa từ slice-0/1, xử lý khi chạm tới: chạy `dbmate migrate` + seed trên Postgres thật (4 migration mới của slice-1 chưa chạy trên DB thật); cắm provider email thật cho OTP (TODO trong `email.ts`).
+- Ghi chú thiết kế branch-scoped (để reviewer cân nhắc): danh sách Branch (`GET /branches`) hiện vẫn trả đầy đủ cho Admin (cấu hình tổ chức + phục vụ trang gán cơ sở); phần "dữ liệu theo Branch" được lọc thực ở tầng Class/Enrollment (đúng kịch bản nghiệm thu: Admin A chỉ thấy lớp của Branch 1).
 
 ## Cổng gác đã chạy
 
-- Task 1: đã chạy `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` cục bộ — xanh. Sẽ chạy lại đầy đủ trên CI trước khi mở PR.
+- Toàn slice-1 (Task 1–4): đã chạy `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` cục bộ — xanh (shared 14 test, api 74 test, web 9 test). Sẽ chạy lại đầy đủ trên CI trước khi merge.
 
 ## Bước tiếp theo
 
-1. Task 2: Quản lý Center + Branch (cơ sở) — CRUD, 1 Center có nhiều Branch.
-2. Task 3: Level (Starter/Mover/Flyer) + Course + Class + Enrollment, mỗi Class gắn 1 Branch.
-3. Task 4: bảng `UserBranch` + lọc dữ liệu/menu theo Branch (branch-scoped access).
-4. Sau khi cả 4 Task xong: chạy cổng gác đầy đủ, cập nhật `MVP-BACKLOG.md` + rollup, rồi push nhánh & mở PR vào `dev`.
+1. Push nhánh & mở PR vào `dev`, chạy quy trình review (skill `claude-review-loop`).
+2. Sau khi review pass + merge: chuyển `MVP-BACKLOG.md` sang Done, xoá Owner, điền PR, cập nhật bảng rollup ở `../../AGENTS.md`.
+3. Chạy `dbmate migrate` + seed trên Postgres thật để kiểm tra 4 migration slice-1 end-to-end.
 
 ## Bàn giao phiên (nếu dừng giữa chừng)
 
