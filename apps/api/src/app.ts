@@ -13,6 +13,8 @@ import {
 } from './features/auth/index.js'
 import { healthRoutes } from './features/health/index.js'
 import { makeUsersStore, usersRoutes } from './features/users/index.js'
+import { makeRbac } from './features/access/index.js'
+import { centersRoutes, makeCentersStore } from './features/centers/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -37,6 +39,8 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
 
   // Auth store dung chung cho authRoutes (dang nhap) va usersRoutes (RBAC guard).
   const authStore = makeAuthStore(db)
+  // RBAC guard that dung chung cho cac feature quan tri (slice-1 Task 2+).
+  const rbac = makeRbac(authStore)
 
   await healthRoutes(app, db)
   await authRoutes(app, {
@@ -47,6 +51,8 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   })
   // slice-1 Task 1: quan ly nguoi dung + RBAC theo role (chi Admin CRUD user).
   await usersRoutes(app, { authStore, usersStore: makeUsersStore(db) })
+  // slice-1 Task 2: quan ly Center + Branch (chi Admin).
+  await centersRoutes(app, { rbac, centersStore: makeCentersStore(db) })
 
   return app
 }

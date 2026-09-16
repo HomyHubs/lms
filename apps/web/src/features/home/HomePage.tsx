@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, CheckCircle2, LogOut, Users, XCircle } from 'lucide-react'
+import { Activity, Building2, CheckCircle2, LogOut, Users, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { fetchHealth } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -38,6 +38,14 @@ export function HomePage(): React.ReactElement {
               className="flex items-center gap-1 text-sm text-slate-600 underline"
             >
               <Users className="h-4 w-4" /> Quản lý người dùng
+            </Link>
+          )}
+          {user?.role === 'admin' && (
+            <Link
+              to="/centers"
+              className="flex items-center gap-1 text-sm text-slate-600 underline"
+            >
+              <Building2 className="h-4 w-4" /> Trung tâm &amp; cơ sở
             </Link>
           )}
           <Button

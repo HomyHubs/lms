@@ -1,11 +1,19 @@
 import {
   AdminUserList,
   AdminUserResponse,
+  BranchList,
+  BranchResponse,
+  CenterList,
+  CenterResponse,
   HealthResponse,
   LoginResponse,
   MeResponse,
   OkResponse,
   type AdminUser,
+  type Branch,
+  type Center,
+  type CreateBranchRequest,
+  type CreateCenterRequest,
   type CreateUserRequest,
   type ForgotPasswordRequest,
   type LoginRequest,
@@ -143,4 +151,52 @@ export async function updateUser(id: string, input: UpdateUserRequest): Promise<
 export async function deleteUser(id: string): Promise<void> {
   const res = await fetch(`/api/users/${id}`, { method: 'DELETE', credentials: 'include' })
   if (!res.ok) throw new ApiError(res.status, 'Xoa nguoi dung that bai')
+}
+
+/**
+ * slice-1 Task 2: quan ly Center (trung tam) + Branch (co so) — chi Admin.
+ * Tat ca goi qua `/api` voi cookie phien; backend thuc thi RBAC (403 neu khong phai Admin).
+ */
+export async function listCenters(): Promise<Center[]> {
+  const res = await fetch('/api/centers', { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach trung tam')
+  return CenterList.parse(await res.json()).centers
+}
+
+export async function createCenter(input: CreateCenterRequest): Promise<Center> {
+  const res = await fetch('/api/centers', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Tao trung tam that bai')
+  return CenterResponse.parse(await res.json()).center
+}
+
+export async function deleteCenter(id: string): Promise<void> {
+  const res = await fetch(`/api/centers/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Xoa trung tam that bai')
+}
+
+export async function listBranches(): Promise<Branch[]> {
+  const res = await fetch('/api/branches', { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach co so')
+  return BranchList.parse(await res.json()).branches
+}
+
+export async function createBranch(input: CreateBranchRequest): Promise<Branch> {
+  const res = await fetch('/api/branches', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Tao co so that bai')
+  return BranchResponse.parse(await res.json()).branch
+}
+
+export async function deleteBranch(id: string): Promise<void> {
+  const res = await fetch(`/api/branches/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Xoa co so that bai')
 }

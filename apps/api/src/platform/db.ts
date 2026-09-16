@@ -38,10 +38,30 @@ export interface PasswordResetOtpsTable {
   expires_at: ColumnType<Date, string, string>
 }
 
+/** Bang `centers` — slice-1 Task 2: trung tam (1 Center co nhieu Branch). */
+export interface CentersTable {
+  id: Generated<string>
+  name: string
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+/** Bang `branches` — slice-1 Task 2: co so truc thuoc mot Center. */
+export interface BranchesTable {
+  id: Generated<string>
+  center_id: string
+  address: ColumnType<string | null, string | null | undefined, string | null>
+  name: string
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
   password_reset_otps: PasswordResetOtpsTable
+  centers: CentersTable
+  branches: BranchesTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {
