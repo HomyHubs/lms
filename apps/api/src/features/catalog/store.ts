@@ -104,6 +104,13 @@ export function makeCatalogStore(db: AppDb): CatalogStore {
         .where('student_id', '=', studentId)
         .executeTakeFirst()
     },
+    async findEnrollmentById(id) {
+      return db
+        .selectFrom('enrollments')
+        .select(ENROLLMENT_COLUMNS)
+        .where('id', '=', id)
+        .executeTakeFirst()
+    },
     async createEnrollment({ classId, studentId }) {
       return db
         .insertInto('enrollments')

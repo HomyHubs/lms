@@ -1,5 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, BookOpen, Building2, CheckCircle2, LogOut, Users, XCircle } from 'lucide-react'
+import {
+  Activity,
+  BookOpen,
+  Building2,
+  CheckCircle2,
+  LogOut,
+  MapPin,
+  Users,
+  XCircle,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { fetchHealth } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -54,6 +63,14 @@ export function HomePage(): React.ReactElement {
               className="flex items-center gap-1 text-sm text-slate-600 underline"
             >
               <BookOpen className="h-4 w-4" /> Chương trình học
+            </Link>
+          )}
+          {user?.role === 'admin' && (
+            <Link
+              to="/assignments"
+              className="flex items-center gap-1 text-sm text-slate-600 underline"
+            >
+              <MapPin className="h-4 w-4" /> Gán cơ sở
             </Link>
           )}
           <Button

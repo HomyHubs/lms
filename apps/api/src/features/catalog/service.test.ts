@@ -110,6 +110,9 @@ function makeFakeStore(opts: { branchIds?: string[]; userIds?: string[] } = {}):
     async findEnrollment(classId, studentId) {
       return enrollments.find((e) => e.class_id === classId && e.student_id === studentId)
     },
+    async findEnrollmentById(id) {
+      return enrollments.find((e) => e.id === id)
+    },
     async createEnrollment({ classId, studentId }) {
       const row: EnrollmentRow = {
         id: `enr-${(seq += 1)}`,

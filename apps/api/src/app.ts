@@ -16,6 +16,7 @@ import { makeUsersStore, usersRoutes } from './features/users/index.js'
 import { makeRbac } from './features/access/index.js'
 import { centersRoutes, makeCentersStore } from './features/centers/index.js'
 import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
+import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranches/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -54,8 +55,18 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   await usersRoutes(app, { authStore, usersStore: makeUsersStore(db) })
   // slice-1 Task 2: quan ly Center + Branch (chi Admin).
   await centersRoutes(app, { rbac, centersStore: makeCentersStore(db) })
-  // slice-1 Task 3: chuong trinh hoc — Level/Course/Class/Enrollment (chi Admin).
-  await catalogRoutes(app, { rbac, catalogStore: makeCatalogStore(db) })
+  // slice-1 Task 4: gan Branch cho User; cung dong vai tro "pham vi Branch" (branch-scoped)
+  // cho cac feature du lieu theo Branch (vi du: Class trong catalog).
+  const userBranchesStore = makeUserBranchesStore(db)
+  // slice-1 Task 3: chuong trinh hoc — Level/Course/Class/Enrollment; Class + Enrollment
+  // duoc loc theo Branch da gan cho nguoi goi (slice-1 Task 4).
+  await catalogRoutes(app, {
+    rbac,
+    catalogStore: makeCatalogStore(db),
+    branchScope: userBranchesStore,
+  })
+  // slice-1 Task 4: Admin gan/thay tap Branch cua tung User.
+  await userBranchesRoutes(app, { rbac, userBranchesStore })
 
   return app
 }

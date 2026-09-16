@@ -5,6 +5,7 @@ import { RequireAuth } from '@/features/auth/RequireAuth'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { CentersPage } from '@/features/centers/CentersPage'
 import { HomePage } from '@/features/home/HomePage'
+import { AssignmentsPage } from '@/features/userbranches/AssignmentsPage'
 import { UsersPage } from '@/features/users/UsersPage'
 
 /** Router goc: /login va /forgot-password cong khai, / duoc bao ve boi phien dang nhap. */
@@ -42,6 +43,14 @@ export function App(): React.ReactElement {
         element={
           <RequireAuth role="admin">
             <CatalogPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/assignments"
+        element={
+          <RequireAuth role="admin">
+            <AssignmentsPage />
           </RequireAuth>
         }
       />

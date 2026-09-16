@@ -88,6 +88,7 @@ export interface CatalogStore {
 
   listEnrollmentsByClass: (classId: string) => Promise<EnrollmentRow[]>
   findEnrollment: (classId: string, studentId: string) => Promise<EnrollmentRow | undefined>
+  findEnrollmentById: (id: string) => Promise<EnrollmentRow | undefined>
   createEnrollment: (input: { classId: string; studentId: string }) => Promise<EnrollmentRow>
   deleteEnrollment: (id: string) => Promise<boolean>
 }

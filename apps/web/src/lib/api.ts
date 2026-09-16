@@ -16,6 +16,7 @@ import {
   LoginResponse,
   MeResponse,
   OkResponse,
+  UserBranchesResponse,
   type AdminUser,
   type Branch,
   type Center,
@@ -291,4 +292,24 @@ export async function createEnrollment(input: CreateEnrollmentRequest): Promise<
 export async function deleteEnrollment(id: string): Promise<void> {
   const res = await fetch(`/api/enrollments/${id}`, { method: 'DELETE', credentials: 'include' })
   if (!res.ok) throw new ApiError(res.status, 'Huy ghi danh that bai')
+}
+
+/**
+ * slice-1 Task 4: gan Branch cho User (branch-scoped access). Chi Admin.
+ */
+export async function getUserBranches(userId: string): Promise<Branch[]> {
+  const res = await fetch(`/api/users/${userId}/branches`, { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc co so cua nguoi dung')
+  return UserBranchesResponse.parse(await res.json()).branches
+}
+
+export async function setUserBranches(userId: string, branchIds: string[]): Promise<Branch[]> {
+  const res = await fetch(`/api/users/${userId}/branches`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ branchIds }),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Luu co so cho nguoi dung that bai')
+  return UserBranchesResponse.parse(await res.json()).branches
 }

@@ -90,6 +90,13 @@ export interface EnrollmentsTable {
   created_at: Timestamp
 }
 
+/** Bang `user_branches` — slice-1 Task 4: gan Branch cho User (branch-scoped access). */
+export interface UserBranchesTable {
+  user_id: string
+  branch_id: string
+  created_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -100,6 +107,7 @@ export interface Database {
   courses: CoursesTable
   classes: ClassesTable
   enrollments: EnrollmentsTable
+  user_branches: UserBranchesTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {
