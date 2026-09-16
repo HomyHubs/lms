@@ -15,6 +15,7 @@ import { healthRoutes } from './features/health/index.js'
 import { makeUsersStore, usersRoutes } from './features/users/index.js'
 import { makeRbac } from './features/access/index.js'
 import { centersRoutes, makeCentersStore } from './features/centers/index.js'
+import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -53,6 +54,8 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   await usersRoutes(app, { authStore, usersStore: makeUsersStore(db) })
   // slice-1 Task 2: quan ly Center + Branch (chi Admin).
   await centersRoutes(app, { rbac, centersStore: makeCentersStore(db) })
+  // slice-1 Task 3: chuong trinh hoc — Level/Course/Class/Enrollment (chi Admin).
+  await catalogRoutes(app, { rbac, catalogStore: makeCatalogStore(db) })
 
   return app
 }

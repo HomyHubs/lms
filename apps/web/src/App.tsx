@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { CentersPage } from '@/features/centers/CentersPage'
 import { HomePage } from '@/features/home/HomePage'
 import { UsersPage } from '@/features/users/UsersPage'
@@ -33,6 +34,14 @@ export function App(): React.ReactElement {
         element={
           <RequireAuth role="admin">
             <CentersPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/catalog"
+        element={
+          <RequireAuth role="admin">
+            <CatalogPage />
           </RequireAuth>
         }
       />

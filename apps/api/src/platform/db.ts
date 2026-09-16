@@ -56,12 +56,50 @@ export interface BranchesTable {
   updated_at: Timestamp
 }
 
+/** Bang `levels` — slice-1 Task 3: cap do co dinh (Starter/Mover/Flyer), seed san. */
+export interface LevelsTable {
+  id: Generated<string>
+  code: string
+  name: string
+}
+
+/** Bang `courses` — slice-1 Task 3: khoa hoc thuoc mot Level. */
+export interface CoursesTable {
+  id: Generated<string>
+  level_id: string
+  name: string
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+/** Bang `classes` — slice-1 Task 3: lop hoc thuoc mot Course va gan dung 1 Branch. */
+export interface ClassesTable {
+  id: Generated<string>
+  course_id: string
+  branch_id: string
+  name: string
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+/** Bang `enrollments` — slice-1 Task 3: ghi danh hoc vien vao lop (unique class+student). */
+export interface EnrollmentsTable {
+  id: Generated<string>
+  class_id: string
+  student_id: string
+  created_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
   password_reset_otps: PasswordResetOtpsTable
   centers: CentersTable
   branches: BranchesTable
+  levels: LevelsTable
+  courses: CoursesTable
+  classes: ClassesTable
+  enrollments: EnrollmentsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

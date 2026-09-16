@@ -5,17 +5,31 @@ import {
   BranchResponse,
   CenterList,
   CenterResponse,
+  ClassList,
+  ClassResponse,
+  CourseList,
+  CourseResponse,
+  EnrollmentList,
+  EnrollmentResponse,
   HealthResponse,
+  LevelList,
   LoginResponse,
   MeResponse,
   OkResponse,
   type AdminUser,
   type Branch,
   type Center,
+  type Class,
+  type Course,
   type CreateBranchRequest,
   type CreateCenterRequest,
+  type CreateClassRequest,
+  type CreateCourseRequest,
+  type CreateEnrollmentRequest,
   type CreateUserRequest,
+  type Enrollment,
   type ForgotPasswordRequest,
+  type Level,
   type LoginRequest,
   type PublicUser,
   type ResetPasswordRequest,
@@ -199,4 +213,82 @@ export async function createBranch(input: CreateBranchRequest): Promise<Branch> 
 export async function deleteBranch(id: string): Promise<void> {
   const res = await fetch(`/api/branches/${id}`, { method: 'DELETE', credentials: 'include' })
   if (!res.ok) throw new ApiError(res.status, 'Xoa co so that bai')
+}
+
+/**
+ * slice-1 Task 3: chuong trinh hoc — Level (chi doc) / Course / Class / Enrollment. Chi Admin.
+ */
+export async function listLevels(): Promise<Level[]> {
+  const res = await fetch('/api/levels', { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach cap do')
+  return LevelList.parse(await res.json()).levels
+}
+
+export async function listCourses(): Promise<Course[]> {
+  const res = await fetch('/api/courses', { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach khoa hoc')
+  return CourseList.parse(await res.json()).courses
+}
+
+export async function createCourse(input: CreateCourseRequest): Promise<Course> {
+  const res = await fetch('/api/courses', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Tao khoa hoc that bai')
+  return CourseResponse.parse(await res.json()).course
+}
+
+export async function deleteCourse(id: string): Promise<void> {
+  const res = await fetch(`/api/courses/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Xoa khoa hoc that bai')
+}
+
+export async function listClasses(): Promise<Class[]> {
+  const res = await fetch('/api/classes', { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach lop')
+  return ClassList.parse(await res.json()).classes
+}
+
+export async function createClass(input: CreateClassRequest): Promise<Class> {
+  const res = await fetch('/api/classes', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Tao lop that bai')
+  return ClassResponse.parse(await res.json()).class
+}
+
+export async function deleteClass(id: string): Promise<void> {
+  const res = await fetch(`/api/classes/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Xoa lop that bai')
+}
+
+export async function listEnrollments(classId: string): Promise<Enrollment[]> {
+  const res = await fetch(`/api/classes/${classId}/enrollments`, { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach ghi danh')
+  return EnrollmentList.parse(await res.json()).enrollments
+}
+
+export async function createEnrollment(input: CreateEnrollmentRequest): Promise<Enrollment> {
+  const res = await fetch('/api/enrollments', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) {
+    const message = res.status === 409 ? 'Hoc vien da duoc ghi danh vao lop nay' : 'Ghi danh that bai'
+    throw new ApiError(res.status, message)
+  }
+  return EnrollmentResponse.parse(await res.json()).enrollment
+}
+
+export async function deleteEnrollment(id: string): Promise<void> {
+  const res = await fetch(`/api/enrollments/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Huy ghi danh that bai')
 }
