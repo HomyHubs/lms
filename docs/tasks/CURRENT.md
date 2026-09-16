@@ -8,7 +8,7 @@ Phạm vi sử dụng: CHỈ áp dụng khi đúng một người hoặc một a
 - Cập nhật ngày: 2026-09-16
 - Mô tả phạm vi: CRUD User (Admin/Teacher/Student/Staff) + RBAC theo role; quản lý Center + nhiều Branch (cơ sở); Level (Starter/Mover/Flyer) + Course + Class + Enrollment (mỗi Class gắn 1 Branch); bảng `UserBranch` gán 1 hoặc nhiều Branch cho User để lọc dữ liệu theo Branch (branch-scoped). Chi tiết: `slices/slice-1-user-branch-phan-quyen.md`.
 - Nhánh làm việc: feature/slice-1-user-branch-phan-quyen (base = `dev` sau khi merge slice-0)
-- Trạng thái: 4/4 Task xong cục bộ, cổng gác xanh → mở PR vào `dev`, đang chờ review.
+- Trạng thái: 4/4 Task xong cục bộ, cổng gác xanh → đã mở PR #3 vào `dev` (https://github.com/HomyHubs/lms/pull/3), đang chờ review.
 
 ## Đã làm trong phiên gần nhất
 
