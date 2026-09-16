@@ -1,0 +1,45 @@
+# Cổng gác chạy trên nhánh của PR (AGENTS.md mục 7 + 12).
+# Chạy y nguyên cổng gác cục bộ: pnpm -r lint && typecheck && test (kèm build cho ^build).
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Khong dat `version:` o day — de action doc phien ban tu `packageManager`
+      # trong package.json (pnpm@11.24.0), tranh xung dot ERR_PNPM_BAD_PM_VERSION.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      # pnpm 11 coi "ignored build scripts" la loi fatal khi --frozen-lockfile,
+      # nen tat strict-dep-builds de install khong dung, roi build esbuild tuong minh.
+      - name: Install
+        run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+
+      - name: Rebuild native deps
+        run: pnpm rebuild esbuild
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: Lint
+        run: pnpm -r lint
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Test
+        run: pnpm -r test

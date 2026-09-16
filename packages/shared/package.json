@@ -1,0 +1,31 @@
+{
+  "name": "@lms/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@lms/config-eslint": "workspace:*",
+    "@lms/config-ts": "workspace:*",
+    "@types/node": "22.7.4",
+    "eslint": "9.12.0",
+    "typescript": "5.6.3",
+    "vitest": "2.1.2"
+  }
+}

@@ -14,7 +14,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 
 | ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| slice-0 | Nền tảng & Auth (walking skeleton + đăng nhập SĐT + quên mật khẩu qua Email) | Dọc | Chưa bắt đầu | — | — | — | — | `slices/slice-0-nen-tang-auth.md` |
+| slice-0 | Nền tảng & Auth (walking skeleton + đăng nhập SĐT + quên mật khẩu qua Email) | Dọc | Review | An Vo | feature/slice-0-nen-tang-auth | — | — | `slices/slice-0-nen-tang-auth.md` |
 | slice-1 | Quản lý người dùng, cơ sở (Branch) & phân quyền | Dọc | Chưa bắt đầu | — | — | — | slice-0 | `slices/slice-1-user-branch-phan-quyen.md` |
 | slice-2 | OTP đa kênh (WhatsApp/Telegram) cho đổi/khôi phục mật khẩu | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-2-otp-da-kenh.md` |
 | slice-3 | Ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) + import | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-3-ngan-hang-cau-hoi.md` |
