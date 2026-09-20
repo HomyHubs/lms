@@ -4,36 +4,41 @@ Phạm vi sử dụng: CHỈ áp dụng khi đúng một người hoặc một a
 
 ## Đang làm
 
-- ID Slice/Task: slice-1 (Quản lý người dùng, cơ sở (Branch) & phân quyền)
-- Cập nhật ngày: 2026-09-16
-- Mô tả phạm vi: CRUD User (Admin/Teacher/Student/Staff) + RBAC theo role; quản lý Center + nhiều Branch (cơ sở); Level (Starter/Mover/Flyer) + Course + Class + Enrollment (mỗi Class gắn 1 Branch); bảng `UserBranch` gán 1 hoặc nhiều Branch cho User để lọc dữ liệu theo Branch (branch-scoped). Chi tiết: `slices/slice-1-user-branch-phan-quyen.md`.
-- Nhánh làm việc: feature/slice-1-user-branch-phan-quyen (base = `dev` sau khi merge slice-0)
-- Trạng thái: 4/4 Task xong cục bộ, cổng gác xanh → đã mở PR #3 vào `dev` (https://github.com/HomyHubs/lms/pull/3), đang chờ review.
+- ID Slice/Task: slice-2 (OTP đa kênh — Email/WhatsApp/Telegram cho đổi/khôi phục mật khẩu)
+- Cập nhật ngày: 2026-09-21
+- Mô tả phạm vi: Cho người dùng chọn kênh nhận OTP (Email đã có từ slice-0, thêm WhatsApp + Telegram) trong luồng quên/đặt lại mật khẩu. Thiết kế provider-agnostic qua một `OtpDispatcher` để dễ thêm kênh sau. Chi tiết: `slices/slice-2-otp-da-kenh.md`.
+- Nhánh làm việc: feature/slice-2-otp-da-kenh (base = `dev`)
+- Trạng thái: code + test xong cục bộ, cổng gác xanh (shared 14 / api 82 / web 11). Chưa mở PR.
+- Lưu ý phụ thuộc: slice-2 phụ thuộc slice-1; slice-1 hiện ở trạng thái Review (PR #3, chưa merge vào `dev`). Bắt đầu slice-2 khi slice-1 chưa Done là theo yêu cầu tiếp tục tuần tự của người dùng — cần rebase lên `dev` sau khi slice-1 merge (xem `../../AGENTS.md` mục 9 & 10).
 
 ## Đã làm trong phiên gần nhất
 
-- **Task 1 — CRUD User + RBAC theo role (4 vai trò).** Commit `ef65263`.
-- **Task 2 — Center + Branch CRUD + RBAC guard dùng chung.** Commit `b93a4a8`.
-  - `@lms/shared`: contract Center/Branch. API: feature `access/` (`makeRbac.requireRole` gắn `request.sessionUser`) + feature `centers/` (Center + Branch CRUD, chỉ Admin). DB: `20260916010000_centers_branches.sql`. Web: `/centers`.
-- **Task 3 — Level/Course/Class/Enrollment (mỗi Class gắn 1 Branch).** Commit `004a0f6`.
-  - API feature `catalog/`; Level seed sẵn, Course thuộc Level, Class gắn 1 Branch, Enrollment unique (class, student). DB: `20260916020000_levels_courses_classes_enrollments.sql` (seed 3 Level). Web: `/catalog`.
-- **Task 4 — UserBranch + branch-scoped access THẬT.** Commit `181517b`.
-  - API feature `userbranches/` (GET/PUT `/users/:id/branches`, chỉ Admin) + đóng vai trò `BranchScope`. `catalog` lọc Class/Enrollment theo Branch được gán cho người gọi (Admin/Teacher/Student); tạo/sửa/xoá Class + Enrollment chỉ trong phạm vi Branch (403/404 khi ngoài phạm vi). DB: `20260916030000_user_branches.sql`. Web: `/assignments`.
+- **Contract (`@lms/shared`).** Thêm `OtpChannel` (email|whatsapp|telegram) và mở rộng `ForgotPasswordRequest` với `channel` (mặc định `'email'`) + `recipient` (bắt buộc khi channel ≠ email, qua `.refine`).
+- **Sender theo kênh (API).** `email.ts` (Resend + console fallback), `whatsapp.ts` (WhatsApp Cloud API), `telegram.ts` (Telegram Bot API) — đều đọc secret trực tiếp từ `process.env`.
+- **Dispatcher provider-agnostic.** `channels.ts` (`makeOtpDispatcher`) chọn sender theo `channel`, ánh xạ `recipient` → địa chỉ đúng kênh (email/phone/chatId).
+- **Luồng end-to-end.** `password-reset.ts` nhận `channel`/`recipient`, lưu `channel` xuống DB và gửi qua dispatcher; `routes.ts` đọc field mới; `app.ts` dựng dispatcher với cả 3 sender; `index.ts` export contract công khai.
+- **DB.** Migration `db/migrations/20260920000000_otp_channel_field.sql` (dbmate up/down, additive: thêm cột `channel` mặc định `'email'`); `platform/db.ts` + `store.ts` lưu `channel`.
+- **Web.** `ForgotPasswordPage.tsx`: thêm ô chọn kênh + ô nhập recipient (hiện khi chọn WhatsApp/Telegram), gửi kèm `channel`/`recipient`.
+- **Tài liệu.** Thêm ADR `docs/adr/0001-otp-da-kenh-multi-channel.md` (đổi schema + contract → bắt buộc ADR theo `../../AGENTS.md` mục 22.3).
+- **`.env.example`.** Thêm biến `RESEND_*`, `WHATSAPP_*`, `TELEGRAM_*` (giá trị để trống).
 
 ## Đang làm dở / còn thiếu
 
-- Nợ kỹ thuật kế thừa từ slice-0/1, xử lý khi chạm tới: chạy `dbmate migrate` + seed trên Postgres thật (4 migration mới của slice-1 chưa chạy trên DB thật); cắm provider email thật cho OTP (TODO trong `email.ts`).
-- Ghi chú thiết kế branch-scoped (để reviewer cân nhắc): danh sách Branch (`GET /branches`) hiện vẫn trả đầy đủ cho Admin (cấu hình tổ chức + phục vụ trang gán cơ sở); phần "dữ liệu theo Branch" được lọc thực ở tầng Class/Enrollment (đúng kịch bản nghiệm thu: Admin A chỉ thấy lớp của Branch 1).
+- Chưa mở PR vào `dev`; chưa chạy quy trình review/auto-merge.
+- Chưa chạy `dbmate migrate` + test rollback trên Postgres thật cho migration mới (kế thừa nợ slice-0/1: các migration chưa chạy trên DB thật).
+- Nghiệm thu thủ công gửi OTP thật qua WhatsApp/Telegram (spec yêu cầu gọi API provider thật) cần credentials sandbox — chưa thực hiện.
+- Slice-1 (phụ thuộc) chưa merge; cần rebase sau khi slice-1 vào `dev`.
 
 ## Cổng gác đã chạy
 
-- Toàn slice-1 (Task 1–4): đã chạy `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` cục bộ — xanh (shared 14 test, api 74 test, web 9 test). Sẽ chạy lại đầy đủ trên CI trước khi merge.
+- `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` cục bộ — xanh (shared 14, api 82, web 11). Sẽ chạy lại đầy đủ trên CI trước khi merge.
 
 ## Bước tiếp theo
 
-1. Push nhánh & mở PR vào `dev`, chạy quy trình review (skill `claude-review-loop`).
-2. Sau khi review pass + merge: chuyển `MVP-BACKLOG.md` sang Done, xoá Owner, điền PR, cập nhật bảng rollup ở `../../AGENTS.md`.
-3. Chạy `dbmate migrate` + seed trên Postgres thật để kiểm tra 4 migration slice-1 end-to-end.
+1. (Sau khi slice-1 merge) rebase `feature/slice-2-otp-da-kenh` lên `dev`, chạy lại cổng gác.
+2. Chạy `dbmate migrate` + kiểm tra rollback (`migrate:down`) trên Postgres thật.
+3. Nghiệm thu thủ công: chọn Telegram, nhận OTP thật, đặt lại mật khẩu; lặp lại với WhatsApp.
+4. Mở PR vào `dev`, chạy review; sau khi Done cập nhật `MVP-BACKLOG.md` (Done, PR) + rollup `../../AGENTS.md`.
 
 ## Bàn giao phiên (nếu dừng giữa chừng)
 

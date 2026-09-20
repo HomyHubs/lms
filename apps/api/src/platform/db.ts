@@ -32,6 +32,8 @@ export interface PasswordResetOtpsTable {
   user_id: string
   // Luu SHA-256 hash cua ma OTP (khong luu ma tho).
   otp_hash: string
+  // Slice-2: kenh da gui OTP (email | whatsapp | telegram). DB default 'email' (migration additive).
+  channel: ColumnType<string, string | undefined, string>
   attempts: ColumnType<number, number | undefined, number>
   consumed_at: ColumnType<Date | null, string | null | undefined, string | null>
   created_at: Timestamp
