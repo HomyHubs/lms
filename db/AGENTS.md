@@ -33,4 +33,22 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 - Chạy `pnpm --filter @lms/db migrate` trên Postgres thật khi có DB; slice-1 sẽ mở rộng Branch/role.
 
+### 2026-09-16
+
+**Đã xong (slice-1)**
+
+- `20260916000000_users_roles.sql` (Task 1): CHECK constraint role ∈ (admin/teacher/student/staff) + bỏ default; giải quyết TODO(slice-1) ở migration users_auth.
+- `20260916010000_centers_branches.sql` (Task 2): bảng `centers` + `branches` (1 Center → nhiều Branch, `branches.center_id` cascade). Đảo ngược được.
+- `20260916020000_levels_courses_classes_enrollments.sql` (Task 3): `levels` (seed Starter/Mover/Flyer) → `courses` → `classes` (mỗi Class gắn 1 `branch_id`) → `enrollments` (unique class+student, FK cascade). Đảo ngược được.
+- `20260916030000_user_branches.sql` (Task 4): bảng nối `user_branches` (PK user_id+branch_id, cascade) cho branch-scoped access. Đảo ngược được.
+- Tất cả additive (mục 16): không sửa migration đã merge.
+
+**Đang làm dở**
+
+- Chưa chạy `dbmate up` + seed trên Postgres thật cho 4 migration slice-1 (làm khi có DB).
+
+**Bước tiếp theo**
+
+- Sau khi PR slice-1 merge: chạy `pnpm --filter @lms/db migrate` + seed trên Postgres thật, kiểm tra rollback (`migrate:down`).
+
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)

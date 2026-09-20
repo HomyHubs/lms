@@ -4,34 +4,36 @@ Phạm vi sử dụng: CHỈ áp dụng khi đúng một người hoặc một a
 
 ## Đang làm
 
-- ID Slice/Task: slice-0 (Nền tảng & Auth) — Task 3 (quên mật khẩu qua OTP Email)
-- Cập nhật ngày: 2026-09-14
-- Mô tả phạm vi: Quên mật khẩu qua OTP gửi Email (TTL ngắn 10 phút, hash SHA-256, rate limit endpoint, giới hạn số lần nhập sai). Chỉ kênh Email; WhatsApp/Telegram để slice-2.
-- Nhánh làm việc: feature/slice-0-nen-tang-auth
+- ID Slice/Task: slice-1 (Quản lý người dùng, cơ sở (Branch) & phân quyền)
+- Cập nhật ngày: 2026-09-16
+- Mô tả phạm vi: CRUD User (Admin/Teacher/Student/Staff) + RBAC theo role; quản lý Center + nhiều Branch (cơ sở); Level (Starter/Mover/Flyer) + Course + Class + Enrollment (mỗi Class gắn 1 Branch); bảng `UserBranch` gán 1 hoặc nhiều Branch cho User để lọc dữ liệu theo Branch (branch-scoped). Chi tiết: `slices/slice-1-user-branch-phan-quyen.md`.
+- Nhánh làm việc: feature/slice-1-user-branch-phan-quyen (base = `dev` sau khi merge slice-0)
+- Trạng thái: 4/4 Task xong cục bộ, cổng gác xanh → đã mở PR #3 vào `dev` (https://github.com/HomyHubs/lms/pull/3), đang chờ review.
 
 ## Đã làm trong phiên gần nhất
 
-- Task 2 đã commit (`5a08c7d`): đăng nhập SĐT + mật khẩu, phiên Session opaque.
-- Task 3 (quên mật khẩu qua OTP Email):
-  - DB: migration `20260914015000_users_add_email.sql` (thêm cột `email` nullable, unique khi có — additive) và `20260914020000_password_reset_otps.sql` (bảng OTP: `otp_hash` SHA-256, `attempts`, `consumed_at`, `expires_at`; đảo ngược được).
-  - Shared: contract `ForgotPasswordRequest`, `ResetPasswordRequest`, `Email`, `OtpCode`, `OkResponse` (Zod) + test.
-  - Backend (`apps/api/src/features/auth`): `password-reset.ts` (sinh OTP 6 số qua crypto, hash SHA-256, `requestPasswordReset` im lặng chống liệt kê tài khoản, `resetPassword` kiểm tra hết hạn/số lần sai/one-time), `email.ts` (sender dev log — TODO provider thật), store `makePasswordResetStore` (Kysely), routes `POST /auth/forgot-password` (rate limit 3/phút) + `POST /auth/reset-password` (rate limit 5/phút); seed thêm email.
-  - Frontend (`apps/web`): trang `/forgot-password` (2 bước: nhập email → nhập OTP + mật khẩu mới), link "Quên mật khẩu?" từ `/login`, hook `useForgotPassword/useResetPassword`, API client `forgotPassword/resetPassword`.
+- **Task 1 — CRUD User + RBAC theo role (4 vai trò).** Commit `ef65263`.
+- **Task 2 — Center + Branch CRUD + RBAC guard dùng chung.** Commit `b93a4a8`.
+  - `@lms/shared`: contract Center/Branch. API: feature `access/` (`makeRbac.requireRole` gắn `request.sessionUser`) + feature `centers/` (Center + Branch CRUD, chỉ Admin). DB: `20260916010000_centers_branches.sql`. Web: `/centers`.
+- **Task 3 — Level/Course/Class/Enrollment (mỗi Class gắn 1 Branch).** Commit `004a0f6`.
+  - API feature `catalog/`; Level seed sẵn, Course thuộc Level, Class gắn 1 Branch, Enrollment unique (class, student). DB: `20260916020000_levels_courses_classes_enrollments.sql` (seed 3 Level). Web: `/catalog`.
+- **Task 4 — UserBranch + branch-scoped access THẬT.** Commit `181517b`.
+  - API feature `userbranches/` (GET/PUT `/users/:id/branches`, chỉ Admin) + đóng vai trò `BranchScope`. `catalog` lọc Class/Enrollment theo Branch được gán cho người gọi (Admin/Teacher/Student); tạo/sửa/xoá Class + Enrollment chỉ trong phạm vi Branch (403/404 khi ngoài phạm vi). DB: `20260916030000_user_branches.sql`. Web: `/assignments`.
 
 ## Đang làm dở / còn thiếu
 
-- Chưa chạy `dbmate migrate` và seed trên Postgres thật trong phiên này (Docker/Postgres không chạy ở môi trường hiện tại). Migration là SQL thật, cần chạy khi có DB.
-- Email OTP hiện chỉ log ra console ở dev; cần cắm provider email thật (TODO trong `email.ts`).
+- Nợ kỹ thuật kế thừa từ slice-0/1, xử lý khi chạm tới: chạy `dbmate migrate` + seed trên Postgres thật (4 migration mới của slice-1 chưa chạy trên DB thật); cắm provider email thật cho OTP (TODO trong `email.ts`).
+- Ghi chú thiết kế branch-scoped (để reviewer cân nhắc): danh sách Branch (`GET /branches`) hiện vẫn trả đầy đủ cho Admin (cấu hình tổ chức + phục vụ trang gán cơ sở); phần "dữ liệu theo Branch" được lọc thực ở tầng Class/Enrollment (đúng kịch bản nghiệm thu: Admin A chỉ thấy lớp của Branch 1).
 
 ## Cổng gác đã chạy
 
-- Task 2: lint 4/4, typecheck 5/5, test 29 pass. Task 3: sẽ chạy lại đầy đủ trước khi commit.
+- Toàn slice-1 (Task 1–4): đã chạy `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` cục bộ — xanh (shared 14 test, api 74 test, web 9 test). Sẽ chạy lại đầy đủ trên CI trước khi merge.
 
 ## Bước tiếp theo
 
-1. Chạy cổng gác đầy đủ cho Task 3 rồi commit trên nhánh `feature/slice-0-nen-tang-auth`.
-2. Với Postgres thật: `pnpm --filter @lms/db migrate` rồi seed admin, kiểm tra end-to-end `/login` và `/forgot-password`.
-3. Slice-0 hoàn tất 3 task → chuẩn bị PR vào `dev` (cập nhật MVP-BACKLOG sang Review).
+1. Push nhánh & mở PR vào `dev`, chạy quy trình review (skill `claude-review-loop`).
+2. Sau khi review pass + merge: chuyển `MVP-BACKLOG.md` sang Done, xoá Owner, điền PR, cập nhật bảng rollup ở `../../AGENTS.md`.
+3. Chạy `dbmate migrate` + seed trên Postgres thật để kiểm tra 4 migration slice-1 end-to-end.
 
 ## Bàn giao phiên (nếu dừng giữa chừng)
 

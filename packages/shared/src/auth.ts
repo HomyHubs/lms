@@ -21,8 +21,12 @@ export const LoginRequest = z.object({
 })
 export type LoginRequest = z.infer<typeof LoginRequest>
 
-/** Role toi thieu cho slice-0. TODO(slice-1): mo rong theo Branch/role day du. */
-export const UserRole = z.enum(['admin'])
+/**
+ * Vai tro nguoi dung cho RBAC.
+ * slice-1 Task 1: mo rong tu 'admin' (slice-0) sang du 4 vai tro nghiep vu.
+ * TODO(slice-1 Task 4): rang buoc them theo Branch (branch-scoped access).
+ */
+export const UserRole = z.enum(['admin', 'teacher', 'student', 'staff'])
 export type UserRole = z.infer<typeof UserRole>
 
 /** Thong tin user an toan de tra ve FE (khong bao gio kem password_hash). */

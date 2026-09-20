@@ -12,6 +12,11 @@ import {
   makePasswordResetStore,
 } from './features/auth/index.js'
 import { healthRoutes } from './features/health/index.js'
+import { makeUsersStore, usersRoutes } from './features/users/index.js'
+import { makeRbac } from './features/access/index.js'
+import { centersRoutes, makeCentersStore } from './features/centers/index.js'
+import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
+import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranches/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -34,13 +39,34 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
   await app.register(cookie)
 
+  // Auth store dung chung cho authRoutes (dang nhap) va usersRoutes (RBAC guard).
+  const authStore = makeAuthStore(db)
+  // RBAC guard that dung chung cho cac feature quan tri (slice-1 Task 2+).
+  const rbac = makeRbac(authStore)
+
   await healthRoutes(app, db)
   await authRoutes(app, {
-    store: makeAuthStore(db),
+    store: authStore,
     config,
     resetStore: makePasswordResetStore(db),
     emailSender: makeConsoleEmailSender(app.log),
   })
+  // slice-1 Task 1: quan ly nguoi dung + RBAC theo role (chi Admin CRUD user).
+  await usersRoutes(app, { authStore, usersStore: makeUsersStore(db) })
+  // slice-1 Task 2: quan ly Center + Branch (chi Admin).
+  await centersRoutes(app, { rbac, centersStore: makeCentersStore(db) })
+  // slice-1 Task 4: gan Branch cho User; cung dong vai tro "pham vi Branch" (branch-scoped)
+  // cho cac feature du lieu theo Branch (vi du: Class trong catalog).
+  const userBranchesStore = makeUserBranchesStore(db)
+  // slice-1 Task 3: chuong trinh hoc — Level/Course/Class/Enrollment; Class + Enrollment
+  // duoc loc theo Branch da gan cho nguoi goi (slice-1 Task 4).
+  await catalogRoutes(app, {
+    rbac,
+    catalogStore: makeCatalogStore(db),
+    branchScope: userBranchesStore,
+  })
+  // slice-1 Task 4: Admin gan/thay tap Branch cua tung User.
+  await userBranchesRoutes(app, { rbac, userBranchesStore })
 
   return app
 }

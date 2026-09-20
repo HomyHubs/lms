@@ -1,8 +1,8 @@
 # Slice/Task slice-1 — Quan ly nguoi dung, co so (Branch) & phan quyen
 
 - Co che: Doc
-- Owner hien tai: ...
-- Nhanh: ...
+- Owner hien tai: An Vo
+- Nhanh: feature/slice-1-user-branch-phan-quyen
 - PR: ...
 - Trang thai: xem `../MVP-BACKLOG.md`
 - Phu thuoc: slice-0
