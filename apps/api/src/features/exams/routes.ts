@@ -99,7 +99,6 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
         not_found: { code: 404, error: 'Khong tim thay de thi' },
         not_started: { code: 404, error: 'Chua bat dau lam bai' },
         already_submitted: { code: 409, error: 'Ban da nop bai roi' },
-        deadline_passed: { code: 409, error: 'Da qua han nop bai' },
       }
       const m = map[outcome.reason]
       reply.code(m.code)

@@ -12,7 +12,7 @@ import {
  * Logic Tao de & Thi online — slice-4. Thuan, khong phu thuoc Fastify de test de.
  * - Sinh de: rut ngau nhien tu ngan hang cau hoi theo Level + Skill (`generatePaper`, rng tiem duoc).
  *   Chong sinh 2 de giong nhau LIEN TIEP cho cung hoc vien (so voi luot gan nhat).
- * - Thi: gioi han thoi gian THUC (deadline = start + duration); nop 1 lan; vao lai sau nop khong lam lai.
+ * - Thi: co deadline (start + duration) de dem nguoc; het gio -> ep nop (tinh cau da lam); nop 1 lan; vao lai sau nop khong lam lai.
  * - Bao mat: view tra ve cho hoc vien KHONG kem dap an dung/giai thich (cham diem o slice-5).
  */
 
@@ -294,14 +294,24 @@ export async function startAttempt(
   const previousPaper = previous ? parseIds(previous.question_ids) : null
   const paper = generatePaper(pool, exam.question_count, previousPaper, rng)
 
-  const created = await store.createAttempt({
-    examId,
-    studentId,
-    questionIds: paper,
-    startedAt: now.toISOString(),
-    deadlineAt: new Date(nowMs + exam.duration_minutes * 60_000).toISOString(),
-  })
-  return { ok: true, attempt: await buildAttemptView(store, exam, created) }
+  try {
+    const created = await store.createAttempt({
+      examId,
+      studentId,
+      questionIds: paper,
+      startedAt: now.toISOString(),
+      deadlineAt: new Date(nowMs + exam.duration_minutes * 60_000).toISOString(),
+    })
+    return { ok: true, attempt: await buildAttemptView(store, exam, created) }
+  } catch (err) {
+    // Chong dua (N003): hai request dau tien dong thoi cung vuot qua findAttempt o tren
+    // roi cung insert -> insert thu hai vi pham unique(exam_id, student_id). Thay vi de
+    // loi lot ra thanh 500, doc lai luot da ton tai va resume (hoac bao da nop).
+    const raced = await store.findAttempt(examId, studentId)
+    if (!raced) throw err
+    if (raced.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
+    return { ok: true, attempt: await buildAttemptView(store, exam, raced) }
+  }
 }
 
 export type GetAttemptOutcome =
@@ -322,10 +332,10 @@ export async function getAttempt(
 
 export type SubmitAttemptOutcome =
   | { ok: true; attempt: ExamAttemptView }
-  | { ok: false; reason: 'not_found' | 'not_started' | 'already_submitted' | 'deadline_passed' }
+  | { ok: false; reason: 'not_found' | 'not_started' | 'already_submitted' }
 
 /**
- * Nop bai. Gioi han thoi gian THUC: qua deadline -> tu choi (`deadline_passed`).
+ * Nop bai. Het gio (qua deadline) KHONG khoa nop: van chap nhan, chi tinh cac cau da lam.
  * Nop 1 lan: da nop roi -> `already_submitted`. Chi giu dap an cho cau thuoc de.
  */
 export async function submitAttempt(
@@ -340,9 +350,7 @@ export async function submitAttempt(
   const attempt = await store.findAttempt(examId, studentId)
   if (!attempt) return { ok: false, reason: 'not_started' }
   if (attempt.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
-  if (now.getTime() > toDate(attempt.deadline_at).getTime()) {
-    return { ok: false, reason: 'deadline_passed' }
-  }
+  // Het gio giua chung khong khoa nop — ep nop, lam duoc cau nao tinh cau do.
   const paperIds = new Set(parseIds(attempt.question_ids))
   const filtered: Record<string, string> = {}
   for (const [k, v] of Object.entries(answers)) {

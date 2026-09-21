@@ -25,7 +25,7 @@ Hoc vien vao thi mot de duoc sinh tu ngan hang cau hoi (random theo Level+Skill+
 - **Mo hinh du lieu:** `exams` (de/blueprint do Admin/Teacher tao: title, level, skill, so cau, thoi luong, cua so lich, nguoi tao) + `exam_attempts` (luot lam cua hoc vien: de da sinh `question_ids` JSON, started_at, deadline_at, submitted_at, answers JSON). `unique(exam_id, student_id)` = moi hoc vien 1 luot / de (nop 1 lan, vao lai resume dung de cu).
 - **RBAC:** tao/quan ly de = Admin + Teacher; lam/nop bai = Student. Backend thuc thi that (khong chi an/hien o FE).
 - **Bao mat de thi:** de tra ve cho hoc vien la "student view" — KHONG kem `correct_answer`/`explanation` (chong lo dap an). Cham diem la slice-5.
-- **Gioi han thoi gian (thuc):** deadline_at = start + duration_minutes; nop sau deadline bi tu choi (`deadline_passed`).
+- **Gioi han thoi gian:** deadline_at = start + duration_minutes (de dem nguoc / ep nop phia client); het gio KHONG khoa nop — hoc vien van nop duoc, chi tinh cac cau da lam.
 - **Chong sinh de trung lien tiep (thuc):** khi sinh de moi cho hoc vien, so voi luot gan nhat cua chinh hoc vien; neu tap cau hoi trung y het -> rut lai (ham `generatePaper` thuan, co test bang rng tiem vao).
 
 ## Stub cho phep

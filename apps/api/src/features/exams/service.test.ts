@@ -266,9 +266,53 @@ describe('startAttempt — sinh de, lich thi, resume', () => {
     const out = await startAttempt(store, 'exam-open', 'student-1', NOW)
     expect(out).toEqual({ ok: false, reason: 'not_enough_questions' })
   })
+
+  it('resume khi insert dua nhau (vi pham unique) thay vi loi 500', async () => {
+    // Mo phong dua: findAttempt lan dau chua thay luot nao, nhung createAttempt vi pham
+    // unique(exam_id, student_id) vi request song song da chen truoc; luc do luot cua
+    // request kia da nam trong "DB" -> phai doc lai va resume, khong de loi lot ra.
+    const base = seeded()
+    let raced: AttemptRow | undefined
+    const store: ExamsStore = {
+      ...base,
+      findAttempt: async () => raced,
+      createAttempt: async (input) => {
+        raced = {
+          id: 'attempt-raced',
+          exam_id: input.examId,
+          student_id: input.studentId,
+          question_ids: JSON.stringify(input.questionIds),
+          answers: null,
+          started_at: input.startedAt,
+          deadline_at: input.deadlineAt,
+          submitted_at: null,
+        }
+        throw new Error('duplicate key value violates unique constraint')
+      },
+    }
+    const out = await startAttempt(store, 'exam-open', 'student-1', NOW)
+    expect(out.ok).toBe(true)
+    if (!out.ok) return
+    expect(out.attempt.status).toBe('in_progress')
+    expect(out.attempt.questions).toHaveLength(2)
+  })
+
+  it('bao loi thuc khi createAttempt that bai va khong co luot nao ton tai', async () => {
+    // Loi that (khong phai dua): createAttempt loi va findAttempt van khong thay gi ->
+    // khong duoc nuot loi, phai nem ra ngoai.
+    const base = seeded()
+    const store: ExamsStore = {
+      ...base,
+      findAttempt: async () => undefined,
+      createAttempt: async () => {
+        throw new Error('db down')
+      },
+    }
+    await expect(startAttempt(store, 'exam-open', 'student-1', NOW)).rejects.toThrow('db down')
+  })
 })
 
-describe('submitAttempt — nop 1 lan, gioi han thoi gian thuc', () => {
+describe('submitAttempt — nop 1 lan, het gio thi ep nop', () => {
   function seeded(): ExamsStore {
     return makeFakeStore({
       exams: [openExam()],
@@ -324,17 +368,25 @@ describe('submitAttempt — nop 1 lan, gioi han thoi gian thuc', () => {
     expect(restart).toEqual({ ok: false, reason: 'already_submitted' })
   })
 
-  it('deadline_passed khi nop qua han (gioi han thoi gian la thuc)', async () => {
+  it('qua deadline van cho nop (ep nop) — chi tinh cac cau da lam', async () => {
     const store = seeded()
-    await startAttempt(store, 'exam-open', 'student-1', NOW) // deadline 10:30
+    const started = await startAttempt(store, 'exam-open', 'student-1', NOW) // deadline 10:30
+    expect(started.ok).toBe(true)
+    if (!started.ok) return
+    const firstQid = started.attempt.questions[0]?.id ?? ''
+    // Het gio giua chung -> ep nop; cau da lam van duoc tinh, khong bi khoa.
     const out = await submitAttempt(
       store,
       'exam-open',
       'student-1',
-      {},
+      { [firstQid]: 'a' },
       new Date('2026-09-21T10:31:00Z'),
     )
-    expect(out).toEqual({ ok: false, reason: 'deadline_passed' })
+    expect(out.ok).toBe(true)
+    if (!out.ok) return
+    expect(out.attempt.status).toBe('submitted')
+    expect(out.attempt.submittedAt).toBe('2026-09-21T10:31:00.000Z')
+    expect(out.attempt.answers).toEqual({ [firstQid]: 'a' })
   })
 
   it('getAttempt tra ve trang thai luot hien tai', async () => {
