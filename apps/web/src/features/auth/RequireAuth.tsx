@@ -12,7 +12,7 @@ export function RequireAuth({
   role,
 }: {
   children: React.ReactElement
-  role?: UserRole
+  role?: UserRole | UserRole[]
 }): React.ReactElement {
   const { user, isLoading } = useSession()
   const location = useLocation()
@@ -23,7 +23,8 @@ export function RequireAuth({
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
-  if (role && user.role !== role) {
+  const roles = role === undefined ? [] : Array.isArray(role) ? role : [role]
+  if (roles.length > 0 && !roles.includes(user.role)) {
     return <Navigate to="/" replace />
   }
   return children

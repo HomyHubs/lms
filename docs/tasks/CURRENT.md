@@ -4,41 +4,34 @@ Phạm vi sử dụng: CHỈ áp dụng khi đúng một người hoặc một a
 
 ## Đang làm
 
-- ID Slice/Task: slice-2 (OTP đa kênh — Email/WhatsApp/Telegram cho đổi/khôi phục mật khẩu)
-- Cập nhật ngày: 2026-09-21
-- Mô tả phạm vi: Cho người dùng chọn kênh nhận OTP (Email đã có từ slice-0, thêm WhatsApp + Telegram) trong luồng quên/đặt lại mật khẩu. Thiết kế provider-agnostic qua một `OtpDispatcher` để dễ thêm kênh sau. Chi tiết: `slices/slice-2-otp-da-kenh.md`.
-- Nhánh làm việc: feature/slice-2-otp-da-kenh (base = `dev`)
-- Trạng thái: code + test xong cục bộ, cổng gác xanh (shared 14 / api 82 / web 11). Chưa mở PR.
-- Lưu ý phụ thuộc: slice-2 phụ thuộc slice-1; slice-1 hiện ở trạng thái Review (PR #3, chưa merge vào `dev`). Bắt đầu slice-2 khi slice-1 chưa Done là theo yêu cầu tiếp tục tuần tự của người dùng — cần rebase lên `dev` sau khi slice-1 merge (xem `../../AGENTS.md` mục 9 & 10).
+- ID Slice/Task: slice-3 (Ngân hàng câu hỏi theo cấp độ Starter/Mover/Flyer + import)
+- Cập nhật ngày: 2026-09-20
+- Mô tả phạm vi: Ngân hàng câu hỏi phân loại theo Level (Starter/Mover/Flyer) / Skill / Type / Difficulty; CRUD câu hỏi (Admin/Teacher, RBAC thật) + import hàng loạt theo Question Import Schema. Import validate strict (`.strict()`): sai/thừa field hoặc sai enum → báo lỗi rõ ràng và KHÔNG lưu gì (all-or-nothing). Chi tiết: `slices/slice-3-ngan-hang-cau-hoi.md`. Phụ thuộc: slice-1 (đã merge — commit `7e6dfc4`, PR #3).
+- Nhánh làm việc: feature/slice-3-ngan-hang-cau-hoi (base = `dev`)
+- Trạng thái: Đã hiện thực đủ các tầng (shared/api/web/db), cổng gác xanh cục bộ. CHƯA commit — đang chờ rà soát changeset trước khi commit/mở PR.
 
 ## Đã làm trong phiên gần nhất
 
-- **Contract (`@lms/shared`).** Thêm `OtpChannel` (email|whatsapp|telegram) và mở rộng `ForgotPasswordRequest` với `channel` (mặc định `'email'`) + `recipient` (bắt buộc khi channel ≠ email, qua `.refine`).
-- **Sender theo kênh (API).** `email.ts` (Resend + console fallback), `whatsapp.ts` (WhatsApp Cloud API), `telegram.ts` (Telegram Bot API) — đều đọc secret trực tiếp từ `process.env`.
-- **Dispatcher provider-agnostic.** `channels.ts` (`makeOtpDispatcher`) chọn sender theo `channel`, ánh xạ `recipient` → địa chỉ đúng kênh (email/phone/chatId).
-- **Luồng end-to-end.** `password-reset.ts` nhận `channel`/`recipient`, lưu `channel` xuống DB và gửi qua dispatcher; `routes.ts` đọc field mới; `app.ts` dựng dispatcher với cả 3 sender; `index.ts` export contract công khai.
-- **DB.** Migration `db/migrations/20260920000000_otp_channel_field.sql` (dbmate up/down, additive: thêm cột `channel` mặc định `'email'`); `platform/db.ts` + `store.ts` lưu `channel`.
-- **Web.** `ForgotPasswordPage.tsx`: thêm ô chọn kênh + ô nhập recipient (hiện khi chọn WhatsApp/Telegram), gửi kèm `channel`/`recipient`.
-- **Tài liệu.** Thêm ADR `docs/adr/0001-otp-da-kenh-multi-channel.md` (đổi schema + contract → bắt buộc ADR theo `../../AGENTS.md` mục 22.3).
-- **`.env.example`.** Thêm biến `RESEND_*`, `WHATSAPP_*`, `TELEGRAM_*` (giá trị để trống).
+- **`@lms/shared` — `questions.ts`:** contract Ngân hàng câu hỏi dùng chung FE-BE (`Question`, `CreateQuestionRequest`, `UpdateQuestionRequest`, Question Import Schema `QuestionImportRow` dùng `.strict()`, `ImportQuestionsRequest`/`ImportQuestionsResult`, `QuestionImportError`, danh sách cột `IMPORT_COLUMNS`). `LevelCode` (Starter/Mover/Flyer) tái dùng nguồn duy nhất ở `catalog.ts` (đã bỏ khai báo trùng từng gây lỗi build `TS2308` ở barrel `index.ts`). Export qua `index.ts`.
+- **API — feature `questions/`:** `store.ts` (`makeQuestionsStore(db)`), `service.ts` (`listQuestions`/`createQuestion`/`updateQuestion`/`deleteQuestion`/`importQuestions` — import validate strict từng dòng, chỉ cần một dòng sai là trả lỗi rõ và KHÔNG lưu dòng nào), `routes.ts` (GET/POST `/questions`, PATCH/DELETE `/questions/:id`, POST `/questions/import`) với RBAC `requireRole('admin','teacher')`. Wiring trong `app.ts` (line 73). DB: `db/migrations/20260921000000_questions.sql` (bảng câu hỏi khoá theo Level).
+- **Web — feature `questions/`:** trang `/questions` (`QuestionsPage`) — form thêm câu hỏi + import từ CSV + bảng danh sách; hook `useQuestions` (list/create/delete/import, TanStack Query); API client `listQuestions`/`createQuestion`/`updateQuestion`/`deleteQuestion`/`importQuestions` + `parseQuestionsCsv` (parse CSV, tách options theo `|`, đọc thông báo lỗi rõ từ backend). Route + guard trong `App.tsx` / `RequireAuth.tsx`.
 
 ## Đang làm dở / còn thiếu
 
-- Chưa mở PR vào `dev`; chưa chạy quy trình review/auto-merge.
-- Chưa chạy `dbmate migrate` + test rollback trên Postgres thật cho migration mới (kế thừa nợ slice-0/1: các migration chưa chạy trên DB thật).
-- Nghiệm thu thủ công gửi OTP thật qua WhatsApp/Telegram (spec yêu cầu gọi API provider thật) cần credentials sandbox — chưa thực hiện.
-- Slice-1 (phụ thuộc) chưa merge; cần rebase sau khi slice-1 vào `dev`.
+- Chưa commit/push/mở PR (chờ người dùng xác nhận). §12.2: người/agent viết code KHÔNG được tự duyệt PR của mình — cần một identity độc lập review & approve.
+- Nợ kỹ thuật kế thừa: chạy `dbmate migrate` + seed trên Postgres thật (migration `20260921000000_questions.sql` chưa chạy trên DB thật); cắm provider email thật cho OTP (TODO trong `email.ts`).
 
 ## Cổng gác đã chạy
 
-- `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` cục bộ — xanh (shared 14, api 82, web 11). Sẽ chạy lại đầy đủ trên CI trước khi merge.
+- `pnpm build` (tsc toàn repo): 3/3 task xanh.
+- `pnpm test` (turbo): shared 14 test, api 85 test, web 10 test — tất cả xanh.
+- Nghiệm thu slice-3 được phủ test ở cả hai tầng: import đúng schema → thành công (service + route trả 201, `imported=1`, options tách theo `|`); import sai field/enum → báo lỗi rõ (400 + `errors`) và KHÔNG lưu dòng nào (`listQuestions` rỗng).
 
 ## Bước tiếp theo
 
-1. (Sau khi slice-1 merge) rebase `feature/slice-2-otp-da-kenh` lên `dev`, chạy lại cổng gác.
-2. Chạy `dbmate migrate` + kiểm tra rollback (`migrate:down`) trên Postgres thật.
-3. Nghiệm thu thủ công: chọn Telegram, nhận OTP thật, đặt lại mật khẩu; lặp lại với WhatsApp.
-4. Mở PR vào `dev`, chạy review; sau khi Done cập nhật `MVP-BACKLOG.md` (Done, PR) + rollup `../../AGENTS.md`.
+1. Rà soát changeset, commit theo tầng, push nhánh & mở PR vào `dev`; chạy quy trình review (skill `claude-review-loop`) với identity độc lập (§12.2).
+2. Sau khi review pass + merge: cập nhật `MVP-BACKLOG.md` (Done, điền PR) và bảng rollup ở `../../AGENTS.md`.
+3. Chạy `dbmate migrate` + seed trên Postgres thật để kiểm tra migration slice-3 end-to-end.
 
 ## Bàn giao phiên (nếu dừng giữa chừng)
 

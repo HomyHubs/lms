@@ -99,6 +99,24 @@ export interface UserBranchesTable {
   created_at: Timestamp
 }
 
+/** Bang `questions` — slice-3: ngan hang cau hoi theo Level/Skill/Type/Difficulty. */
+export interface QuestionsTable {
+  id: Generated<string>
+  level_id: string
+  skill: string
+  question_type: string
+  difficulty: string
+  question_text: string
+  // Chuoi JSON string[] (cau nhieu lua chon); null neu khong co.
+  options: ColumnType<string | null, string | null | undefined, string | null>
+  correct_answer: string
+  points: ColumnType<number, number | undefined, number>
+  explanation: ColumnType<string | null, string | null | undefined, string | null>
+  source_reference: ColumnType<string | null, string | null | undefined, string | null>
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -110,6 +128,7 @@ export interface Database {
   classes: ClassesTable
   enrollments: EnrollmentsTable
   user_branches: UserBranchesTable
+  questions: QuestionsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

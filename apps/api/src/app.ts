@@ -20,6 +20,7 @@ import { makeRbac } from './features/access/index.js'
 import { centersRoutes, makeCentersStore } from './features/centers/index.js'
 import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
 import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranches/index.js'
+import { makeQuestionsStore, questionsRoutes } from './features/questions/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -79,6 +80,9 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   })
   // slice-1 Task 4: Admin gan/thay tap Branch cua tung User.
   await userBranchesRoutes(app, { rbac, userBranchesStore })
+
+  // slice-3: Ngan hang cau hoi theo cap do (Starter/Mover/Flyer) + import. Admin + Teacher.
+  await questionsRoutes(app, { rbac, questionsStore: makeQuestionsStore(db) })
 
   return app
 }
