@@ -8,8 +8,11 @@ import type { AppDb } from './platform/db.js'
 import {
   authRoutes,
   makeAuthStore,
-  makeConsoleEmailSender,
+  makeEmailSender,
+  makeOtpDispatcher,
   makePasswordResetStore,
+  makeTelegramSender,
+  makeWhatsAppSender,
 } from './features/auth/index.js'
 import { healthRoutes } from './features/health/index.js'
 import { makeUsersStore, usersRoutes } from './features/users/index.js'
@@ -45,12 +48,21 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   // RBAC guard that dung chung cho cac feature quan tri (slice-1 Task 2+).
   const rbac = makeRbac(authStore)
 
+  // Slice-2: bo dieu phoi OTP da kenh (provider-agnostic). Moi sender doc secret tu env;
+  // thieu cau hinh se fallback (email -> console) hoac nem loi ro rang (whatsapp/telegram).
+  const otpDispatcher = makeOtpDispatcher(
+    makeEmailSender(app.log),
+    makeWhatsAppSender(app.log),
+    makeTelegramSender(app.log),
+    app.log,
+  )
+
   await healthRoutes(app, db)
   await authRoutes(app, {
     store: authStore,
     config,
     resetStore: makePasswordResetStore(db),
-    emailSender: makeConsoleEmailSender(app.log),
+    otpDispatcher,
   })
   // slice-1 Task 1: quan ly nguoi dung + RBAC theo role (chi Admin CRUD user).
   await usersRoutes(app, { authStore, usersStore: makeUsersStore(db) })

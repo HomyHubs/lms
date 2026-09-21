@@ -49,8 +49,8 @@ export const MeResponse = z.object({
 export type MeResponse = z.infer<typeof MeResponse>
 
 /**
- * Task 3 (slice-0): quen mat khau qua OTP gui Email.
- * TODO(slice-2): them kenh WhatsApp/Telegram; hien tai chi ho tro Email.
+ * Task 3 (slice-0): quen mat khau qua OTP.
+ * Slice-2: mo rong sang WhatsApp + Telegram.
  */
 
 /** Email nhan OTP dat lai mat khau. */
@@ -62,10 +62,31 @@ export const OtpCode = z
   .trim()
   .regex(/^\d{6}$/, 'Ma OTP gom 6 chu so')
 
-/** Buoc 1: yeu cau gui OTP toi email. */
-export const ForgotPasswordRequest = z.object({
-  email: Email,
-})
+/**
+ * Slice-2: kenh gui OTP — email (tu slice-0), whatsapp, telegram.
+ */
+export const OtpChannel = z.enum(['email', 'whatsapp', 'telegram'])
+export type OtpChannel = z.infer<typeof OtpChannel>
+
+/**
+ * Buoc 1: yeu cau gui OTP.
+ * - `email`     → tai khoan tra cuu theo email nay.
+ * - `channel`   → kenh nhan OTP (mac dinh 'email').
+ * - `recipient` → dia chi nhan theo kenh:
+ *     email: co the bo qua (tu dong dung truong `email`);
+ *     whatsapp: so dien thoai E.164 (bat buoc);
+ *     telegram: chat_id Telegram (bat buoc).
+ */
+export const ForgotPasswordRequest = z
+  .object({
+    email: Email,
+    channel: OtpChannel.default('email'),
+    recipient: z.string().min(1).optional(),
+  })
+  .refine(
+    (data) => data.channel === 'email' || data.recipient !== undefined,
+    { message: 'recipient bat buoc khi channel la whatsapp hoac telegram', path: ['recipient'] },
+  )
 export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequest>
 
 /** Buoc 2: dat lai mat khau bang email + OTP + mat khau moi. */

@@ -1,11 +1,12 @@
 import { createHash, randomInt } from 'node:crypto'
 import { hashPassword } from './service.js'
+import type { OtpChannel, OtpDispatcher } from './channels.js'
 
 /**
- * Task 3 (slice-0): quen mat khau qua OTP gui Email.
+ * Task 3 (slice-0): quen mat khau qua OTP.
  * Co che: OTP 6 chu so, DB chi luu SHA-256 hash cua OTP (khong luu ma tho).
  * OTP het han sau `ttlSeconds` (ngan) va chi dung mot lan; gioi han so lan nhap sai.
- * TODO(slice-2): them kenh WhatsApp/Telegram; hien tai chi Email.
+ * Slice-2: gui OTP qua kenh nguoi dung chon (email | whatsapp | telegram) qua OtpDispatcher.
  */
 
 /** So lan nhap OTP sai toi da truoc khi ma bi vo hieu (chong do vet). */
@@ -29,7 +30,13 @@ export interface OtpEmailSender {
 /** Cong DB ma luong reset can — tach de test bang gia lap. */
 export interface PasswordResetStore {
   findUserByEmail: (email: string) => Promise<{ id: string } | undefined>
-  createOtp: (input: { userId: string; otpHash: string; expiresAt: Date }) => Promise<void>
+  createOtp: (input: {
+    userId: string
+    otpHash: string
+    expiresAt: Date
+    /** Slice-2: kenh da gui OTP, luu de doi chieu/thong ke. */
+    channel: OtpChannel
+  }) => Promise<void>
   /** OTP con hieu luc gan nhat (chua dung, chua het han) cua user theo email. */
   findActiveOtpByEmail: (email: string) => Promise<OtpRecord | undefined>
   incrementOtpAttempts: (id: string) => Promise<void>
@@ -48,21 +55,31 @@ export function hashOtp(otp: string): string {
 }
 
 /**
- * Buoc 1: yeu cau OTP. Neu email ton tai, sinh + luu OTP (hash) va gui email.
+ * Buoc 1: yeu cau OTP. Neu email ton tai, sinh + luu OTP (hash) va gui qua kenh da chon.
+ * - `channel`: email (mac dinh) | whatsapp | telegram.
+ * - `recipient`: dia chi nhan theo kenh; voi email co the bo trong (mac dinh dung `email`).
  * Luon tra ve `void` (khong bao email co ton tai hay khong) de chong liet ke tai khoan.
  */
 export async function requestPasswordReset(
   store: PasswordResetStore,
-  sender: OtpEmailSender,
-  input: { email: string; ttlSeconds: number },
+  dispatcher: OtpDispatcher,
+  input: { email: string; channel: OtpChannel; recipient?: string; ttlSeconds: number },
 ): Promise<void> {
   const user = await store.findUserByEmail(input.email)
   if (!user) return // im lang: khong lo email co ton tai hay khong
 
+  // Voi kenh email, dia chi nhan mac dinh la chinh email tai khoan.
+  const recipient =
+    input.channel === 'email' ? (input.recipient ?? input.email) : input.recipient
+  if (!recipient) {
+    // Schema (ForgotPasswordRequest.refine) da chan truong hop nay; phong thu them o service.
+    throw new Error('recipient bat buoc khi channel khong phai email')
+  }
+
   const otp = generateOtp()
   const expiresAt = new Date(Date.now() + input.ttlSeconds * 1000)
-  await store.createOtp({ userId: user.id, otpHash: hashOtp(otp), expiresAt })
-  await sender.sendOtp({ email: input.email, otp, expiresAt })
+  await store.createOtp({ userId: user.id, otpHash: hashOtp(otp), expiresAt, channel: input.channel })
+  await dispatcher.dispatch({ channel: input.channel, recipient, otp, expiresAt })
 }
 
 /** Ket qua dat lai mat khau: phan biet ly do that bai de UI bao dung. */

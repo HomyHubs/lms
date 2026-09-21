@@ -5,7 +5,8 @@ import type { AppConfig } from '../../platform/config.js'
 import { authRoutes, SESSION_COOKIE } from './routes.js'
 import { hashPassword } from './service.js'
 import type { AuthStore, UserRecord } from './service.js'
-import { type OtpEmailSender, type OtpRecord, type PasswordResetStore } from './password-reset.js'
+import { type OtpRecord, type PasswordResetStore } from './password-reset.js'
+import type { OtpDispatchArgs, OtpDispatcher } from './channels.js'
 
 function makeFakeStore(users: UserRecord[]): AuthStore {
   const sessions = new Map<string, { userId: string; expiresAt: Date }>()
@@ -34,19 +35,19 @@ const config = {
 } as AppConfig
 
 /**
- * Store + sender gia lap cho luong quen mat khau (Task 3). Mac dinh: user
+ * Store + dispatcher gia lap cho luong quen mat khau (Task 3 + Slice-2). Mac dinh: user
  * 'admin@example.com'. Cho phep truy cap `otps`/`sent` de kiem tra.
  */
 function makeFakeResetHarness(): {
   store: PasswordResetStore
-  sender: OtpEmailSender
+  dispatcher: OtpDispatcher
   otps: OtpRecord[]
-  sent: { email: string; otp: string; expiresAt: Date }[]
+  sent: OtpDispatchArgs[]
 } {
   const email = 'admin@example.com'
   const userId = '11111111-1111-1111-1111-111111111111'
   const otps: OtpRecord[] = []
-  const sent: { email: string; otp: string; expiresAt: Date }[] = []
+  const sent: OtpDispatchArgs[] = []
   const store: PasswordResetStore = {
     async findUserByEmail(e) {
       return e === email ? { id: userId } : undefined
@@ -81,12 +82,12 @@ function makeFakeResetHarness(): {
       // Khong can kiem tra o tang route (da co unit test service).
     },
   }
-  const sender: OtpEmailSender = {
-    async sendOtp(input) {
-      sent.push(input)
+  const dispatcher: OtpDispatcher = {
+    async dispatch(args) {
+      sent.push(args)
     },
   }
-  return { store, sender, otps, sent }
+  return { store, dispatcher, otps, sent }
 }
 
 async function buildTestApp(
@@ -99,7 +100,7 @@ async function buildTestApp(
     store,
     config,
     resetStore: reset.store,
-    emailSender: reset.sender,
+    otpDispatcher: reset.dispatcher,
   })
   await app.ready()
   return app
@@ -204,7 +205,7 @@ describe('auth routes', () => {
   })
 })
 
-describe('password reset routes (Task 3)', () => {
+describe('password reset routes (Task 3 + Slice-2)', () => {
   let user: UserRecord
 
   beforeEach(async () => {
@@ -216,7 +217,7 @@ describe('password reset routes (Task 3)', () => {
     }
   })
 
-  it('POST /auth/forgot-password returns ok:true and sends an OTP for a known email', async () => {
+  it('POST /auth/forgot-password returns ok:true and dispatches an OTP for a known email', async () => {
     const reset = makeFakeResetHarness()
     const app = await buildTestApp(makeFakeStore([user]), reset)
     try {
@@ -228,6 +229,41 @@ describe('password reset routes (Task 3)', () => {
       expect(res.statusCode).toBe(200)
       expect(res.json().ok).toBe(true)
       expect(reset.sent).toHaveLength(1)
+      // Khong gui channel -> mac dinh 'email', recipient mac dinh la email tai khoan.
+      expect(reset.sent[0]).toMatchObject({ channel: 'email', recipient: 'admin@example.com' })
+    } finally {
+      await app.close()
+    }
+  })
+
+  it('POST /auth/forgot-password dispatches via the chosen channel (WhatsApp)', async () => {
+    const reset = makeFakeResetHarness()
+    const app = await buildTestApp(makeFakeStore([user]), reset)
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        payload: { email: 'admin@example.com', channel: 'whatsapp', recipient: '84901234567' },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(reset.sent).toHaveLength(1)
+      expect(reset.sent[0]).toMatchObject({ channel: 'whatsapp', recipient: '84901234567' })
+    } finally {
+      await app.close()
+    }
+  })
+
+  it('POST /auth/forgot-password returns 400 when recipient is missing for a non-email channel', async () => {
+    const reset = makeFakeResetHarness()
+    const app = await buildTestApp(makeFakeStore([user]), reset)
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        payload: { email: 'admin@example.com', channel: 'telegram' },
+      })
+      expect(res.statusCode).toBe(400)
+      expect(reset.sent).toHaveLength(0)
     } finally {
       await app.close()
     }

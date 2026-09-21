@@ -56,13 +56,14 @@ export function makePasswordResetStore(db: AppDb): PasswordResetStore {
       return db.selectFrom('users').select(['id']).where('email', '=', email).executeTakeFirst()
     },
 
-    async createOtp({ userId, otpHash, expiresAt }) {
+    async createOtp({ userId, otpHash, expiresAt, channel }) {
       await db
         .insertInto('password_reset_otps')
         .values({
           user_id: userId,
           otp_hash: otpHash,
           expires_at: expiresAt.toISOString(),
+          channel,
         })
         .execute()
     },

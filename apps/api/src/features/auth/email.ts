@@ -1,20 +1,64 @@
 import type { FastifyBaseLogger } from 'fastify'
 import type { OtpEmailSender } from './password-reset.js'
 
-/**
- * Task 3 (slice-0): kenh gui OTP qua Email.
- * Ban dev/skeleton: ghi OTP ra log co cau truc (khong dung provider that de tranh
- * phu thuoc ngoai o slice-0). Endpoint van chay that end-to-end (DB that).
- * TODO(slice-0/slice-2): thay bang provider email that (vd Resend/SES) qua bien moi truong;
- * khi do KHONG duoc log ma OTP tho.
- */
+// ─── Resend adapter ──────────────────────────────────────────────────────────
+
+function makeResendEmailSender(apiKey: string, logger: FastifyBaseLogger): OtpEmailSender {
+  return {
+    async sendOtp({ email, otp, expiresAt }) {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM ?? 'noreply@example.com',
+          to: email,
+          subject: 'Mã OTP đặt lại mật khẩu',
+          text: [
+            `Mã OTP của bạn là: ${otp}`,
+            `Hiệu lực đến: ${expiresAt.toISOString()}`,
+            'Không chia sẻ mã này với bất kỳ ai.',
+          ].join('\n'),
+        }),
+      })
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '(unreadable body)')
+        logger.error({ email, status: res.status, body }, 'Resend API error')
+        throw new Error(`Resend email delivery failed (HTTP ${res.status})`)
+      }
+
+      logger.info({ email }, 'OTP email sent via Resend')
+    },
+  }
+}
+
+// ─── Console fallback (dev / CI) ─────────────────────────────────────────────
+
 export function makeConsoleEmailSender(logger: FastifyBaseLogger): OtpEmailSender {
   return {
     async sendOtp({ email, otp, expiresAt }) {
       logger.info(
         { email, otp, expiresAt: expiresAt.toISOString() },
-        '[dev] Gui OTP dat lai mat khau qua Email (chi log o moi truong dev)',
+        '[dev] OTP email (console fallback – đặt RESEND_API_KEY để gửi thật)',
       )
     },
   }
+}
+
+// ─── Factory (chọn adapter theo env) ─────────────────────────────────────────
+
+/**
+ * Slice-2: trả về Resend adapter khi có RESEND_API_KEY,
+ * ngược lại dùng console fallback (dev/CI).
+ */
+export function makeEmailSender(logger: FastifyBaseLogger): OtpEmailSender {
+  const apiKey = process.env.RESEND_API_KEY
+  if (apiKey) {
+    return makeResendEmailSender(apiKey, logger)
+  }
+  logger.warn('RESEND_API_KEY chưa đặt – dùng console email sender (chế độ dev)')
+  return makeConsoleEmailSender(logger)
 }
