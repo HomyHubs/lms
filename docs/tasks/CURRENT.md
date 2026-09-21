@@ -4,36 +4,34 @@ Phạm vi sử dụng: CHỈ áp dụng khi đúng một người hoặc một a
 
 ## Đang làm
 
-- ID Slice/Task: slice-1 (Quản lý người dùng, cơ sở (Branch) & phân quyền)
-- Cập nhật ngày: 2026-09-16
-- Mô tả phạm vi: CRUD User (Admin/Teacher/Student/Staff) + RBAC theo role; quản lý Center + nhiều Branch (cơ sở); Level (Starter/Mover/Flyer) + Course + Class + Enrollment (mỗi Class gắn 1 Branch); bảng `UserBranch` gán 1 hoặc nhiều Branch cho User để lọc dữ liệu theo Branch (branch-scoped). Chi tiết: `slices/slice-1-user-branch-phan-quyen.md`.
-- Nhánh làm việc: feature/slice-1-user-branch-phan-quyen (base = `dev` sau khi merge slice-0)
-- Trạng thái: 4/4 Task xong cục bộ, cổng gác xanh → đã mở PR #3 vào `dev` (https://github.com/HomyHubs/lms/pull/3), đang chờ review.
+- ID Slice/Task: slice-3 (Ngân hàng câu hỏi theo cấp độ Starter/Mover/Flyer + import)
+- Cập nhật ngày: 2026-09-20
+- Mô tả phạm vi: Ngân hàng câu hỏi phân loại theo Level (Starter/Mover/Flyer) / Skill / Type / Difficulty; CRUD câu hỏi (Admin/Teacher, RBAC thật) + import hàng loạt theo Question Import Schema. Import validate strict (`.strict()`): sai/thừa field hoặc sai enum → báo lỗi rõ ràng và KHÔNG lưu gì (all-or-nothing). Chi tiết: `slices/slice-3-ngan-hang-cau-hoi.md`. Phụ thuộc: slice-1 (đã merge — commit `7e6dfc4`, PR #3).
+- Nhánh làm việc: feature/slice-3-ngan-hang-cau-hoi (base = `dev`)
+- Trạng thái: Đã hiện thực đủ các tầng (shared/api/web/db), cổng gác xanh cục bộ. CHƯA commit — đang chờ rà soát changeset trước khi commit/mở PR.
 
 ## Đã làm trong phiên gần nhất
 
-- **Task 1 — CRUD User + RBAC theo role (4 vai trò).** Commit `ef65263`.
-- **Task 2 — Center + Branch CRUD + RBAC guard dùng chung.** Commit `b93a4a8`.
-  - `@lms/shared`: contract Center/Branch. API: feature `access/` (`makeRbac.requireRole` gắn `request.sessionUser`) + feature `centers/` (Center + Branch CRUD, chỉ Admin). DB: `20260916010000_centers_branches.sql`. Web: `/centers`.
-- **Task 3 — Level/Course/Class/Enrollment (mỗi Class gắn 1 Branch).** Commit `004a0f6`.
-  - API feature `catalog/`; Level seed sẵn, Course thuộc Level, Class gắn 1 Branch, Enrollment unique (class, student). DB: `20260916020000_levels_courses_classes_enrollments.sql` (seed 3 Level). Web: `/catalog`.
-- **Task 4 — UserBranch + branch-scoped access THẬT.** Commit `181517b`.
-  - API feature `userbranches/` (GET/PUT `/users/:id/branches`, chỉ Admin) + đóng vai trò `BranchScope`. `catalog` lọc Class/Enrollment theo Branch được gán cho người gọi (Admin/Teacher/Student); tạo/sửa/xoá Class + Enrollment chỉ trong phạm vi Branch (403/404 khi ngoài phạm vi). DB: `20260916030000_user_branches.sql`. Web: `/assignments`.
+- **`@lms/shared` — `questions.ts`:** contract Ngân hàng câu hỏi dùng chung FE-BE (`Question`, `CreateQuestionRequest`, `UpdateQuestionRequest`, Question Import Schema `QuestionImportRow` dùng `.strict()`, `ImportQuestionsRequest`/`ImportQuestionsResult`, `QuestionImportError`, danh sách cột `IMPORT_COLUMNS`). `LevelCode` (Starter/Mover/Flyer) tái dùng nguồn duy nhất ở `catalog.ts` (đã bỏ khai báo trùng từng gây lỗi build `TS2308` ở barrel `index.ts`). Export qua `index.ts`.
+- **API — feature `questions/`:** `store.ts` (`makeQuestionsStore(db)`), `service.ts` (`listQuestions`/`createQuestion`/`updateQuestion`/`deleteQuestion`/`importQuestions` — import validate strict từng dòng, chỉ cần một dòng sai là trả lỗi rõ và KHÔNG lưu dòng nào), `routes.ts` (GET/POST `/questions`, PATCH/DELETE `/questions/:id`, POST `/questions/import`) với RBAC `requireRole('admin','teacher')`. Wiring trong `app.ts` (line 73). DB: `db/migrations/20260921000000_questions.sql` (bảng câu hỏi khoá theo Level).
+- **Web — feature `questions/`:** trang `/questions` (`QuestionsPage`) — form thêm câu hỏi + import từ CSV + bảng danh sách; hook `useQuestions` (list/create/delete/import, TanStack Query); API client `listQuestions`/`createQuestion`/`updateQuestion`/`deleteQuestion`/`importQuestions` + `parseQuestionsCsv` (parse CSV, tách options theo `|`, đọc thông báo lỗi rõ từ backend). Route + guard trong `App.tsx` / `RequireAuth.tsx`.
 
 ## Đang làm dở / còn thiếu
 
-- Nợ kỹ thuật kế thừa từ slice-0/1, xử lý khi chạm tới: chạy `dbmate migrate` + seed trên Postgres thật (4 migration mới của slice-1 chưa chạy trên DB thật); cắm provider email thật cho OTP (TODO trong `email.ts`).
-- Ghi chú thiết kế branch-scoped (để reviewer cân nhắc): danh sách Branch (`GET /branches`) hiện vẫn trả đầy đủ cho Admin (cấu hình tổ chức + phục vụ trang gán cơ sở); phần "dữ liệu theo Branch" được lọc thực ở tầng Class/Enrollment (đúng kịch bản nghiệm thu: Admin A chỉ thấy lớp của Branch 1).
+- Chưa commit/push/mở PR (chờ người dùng xác nhận). §12.2: người/agent viết code KHÔNG được tự duyệt PR của mình — cần một identity độc lập review & approve.
+- Nợ kỹ thuật kế thừa: chạy `dbmate migrate` + seed trên Postgres thật (migration `20260921000000_questions.sql` chưa chạy trên DB thật); cắm provider email thật cho OTP (TODO trong `email.ts`).
 
 ## Cổng gác đã chạy
 
-- Toàn slice-1 (Task 1–4): đã chạy `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` cục bộ — xanh (shared 14 test, api 74 test, web 9 test). Sẽ chạy lại đầy đủ trên CI trước khi merge.
+- `pnpm build` (tsc toàn repo): 3/3 task xanh.
+- `pnpm test` (turbo): shared 14 test, api 85 test, web 10 test — tất cả xanh.
+- Nghiệm thu slice-3 được phủ test ở cả hai tầng: import đúng schema → thành công (service + route trả 201, `imported=1`, options tách theo `|`); import sai field/enum → báo lỗi rõ (400 + `errors`) và KHÔNG lưu dòng nào (`listQuestions` rỗng).
 
 ## Bước tiếp theo
 
-1. Push nhánh & mở PR vào `dev`, chạy quy trình review (skill `claude-review-loop`).
-2. Sau khi review pass + merge: chuyển `MVP-BACKLOG.md` sang Done, xoá Owner, điền PR, cập nhật bảng rollup ở `../../AGENTS.md`.
-3. Chạy `dbmate migrate` + seed trên Postgres thật để kiểm tra 4 migration slice-1 end-to-end.
+1. Rà soát changeset, commit theo tầng, push nhánh & mở PR vào `dev`; chạy quy trình review (skill `claude-review-loop`) với identity độc lập (§12.2).
+2. Sau khi review pass + merge: cập nhật `MVP-BACKLOG.md` (Done, điền PR) và bảng rollup ở `../../AGENTS.md`.
+3. Chạy `dbmate migrate` + seed trên Postgres thật để kiểm tra migration slice-3 end-to-end.
 
 ## Bàn giao phiên (nếu dừng giữa chừng)
 
