@@ -23,4 +23,12 @@ export {
   type OtpRecord,
   type ResetPasswordOutcome,
 } from './password-reset.js'
-export { makeConsoleEmailSender } from './email.js'
+export { makeConsoleEmailSender, makeEmailSender } from './email.js'
+export { makeWhatsAppSender, type OtpWhatsAppSender } from './whatsapp.js'
+export { makeTelegramSender, type OtpTelegramSender } from './telegram.js'
+export {
+  makeOtpDispatcher,
+  type OtpChannel,
+  type OtpDispatcher,
+  type OtpDispatchArgs,
+} from './channels.js'

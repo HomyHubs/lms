@@ -10,8 +10,9 @@ import {
 import type { AppConfig } from '../../platform/config.js'
 import type { AuthStore } from './service.js'
 import { login, logout, resolveSession } from './service.js'
-import type { OtpEmailSender, PasswordResetStore } from './password-reset.js'
+import type { PasswordResetStore } from './password-reset.js'
 import { requestPasswordReset, resetPassword } from './password-reset.js'
+import type { OtpDispatcher } from './channels.js'
 
 /** Ten cookie chua token phien opaque. */
 export const SESSION_COOKIE = 'lms_session'
@@ -19,9 +20,9 @@ export const SESSION_COOKIE = 'lms_session'
 interface AuthRoutesDeps {
   store: AuthStore
   config: AppConfig
-  // Task 3: cong DB + kenh email cho luong quen mat khau (OTP).
+  // Task 3 + Slice-2: cong DB + bo dieu phoi OTP da kenh (email/whatsapp/telegram).
   resetStore: PasswordResetStore
-  emailSender: OtpEmailSender
+  otpDispatcher: OtpDispatcher
 }
 
 function setSessionCookie(reply: FastifyReply, token: string, expiresAt: Date): void {
@@ -36,7 +37,7 @@ function setSessionCookie(reply: FastifyReply, token: string, expiresAt: Date): 
 }
 
 export async function authRoutes(app: FastifyInstance, deps: AuthRoutesDeps): Promise<void> {
-  const { store, config, resetStore, emailSender } = deps
+  const { store, config, resetStore, otpDispatcher } = deps
 
   // POST /auth/login — rate limit chat hon (chong do vet mat khau).
   app.post(
@@ -98,8 +99,9 @@ export async function authRoutes(app: FastifyInstance, deps: AuthRoutesDeps): Pr
     return body
   })
 
-  // POST /auth/forgot-password — gui OTP qua Email. Rate limit chat (chong spam gui mail).
-  // Luon tra 200 ok:true du email co ton tai hay khong (chong liet ke tai khoan).
+  // POST /auth/forgot-password — gui OTP qua kenh da chon (email/whatsapp/telegram).
+  // Rate limit chat (chong spam gui OTP). Luon tra 200 ok:true du email co ton tai
+  // hay khong (chong liet ke tai khoan).
   app.post(
     '/auth/forgot-password',
     {
@@ -111,11 +113,13 @@ export async function authRoutes(app: FastifyInstance, deps: AuthRoutesDeps): Pr
       const parsed = ForgotPasswordRequest.safeParse(request.body)
       if (!parsed.success) {
         reply.code(400)
-        return { error: 'Email khong hop le' }
+        return { error: 'Du lieu yeu cau OTP khong hop le' }
       }
 
-      await requestPasswordReset(resetStore, emailSender, {
+      await requestPasswordReset(resetStore, otpDispatcher, {
         email: parsed.data.email,
+        channel: parsed.data.channel,
+        recipient: parsed.data.recipient,
         ttlSeconds: config.PASSWORD_RESET_OTP_TTL_SECONDS,
       })
 

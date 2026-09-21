@@ -5,25 +5,26 @@ import {
   hashOtp,
   requestPasswordReset,
   resetPassword,
-  type OtpEmailSender,
   type OtpRecord,
   type PasswordResetStore,
 } from './password-reset.js'
+import type { OtpDispatchArgs, OtpDispatcher } from './channels.js'
 import { verifyPassword } from './service.js'
 
-/** Store + sender gia lap trong bo nho de test logic ma khong can Postgres. */
+/** Store + dispatcher gia lap trong bo nho de test logic ma khong can Postgres. */
 function makeHarness(opts: { email?: string } = {}) {
   const email = opts.email ?? 'admin@example.com'
   const userId = '11111111-1111-1111-1111-111111111111'
   const otps: OtpRecord[] = []
   const passwords = new Map<string, string>()
-  const sent: { email: string; otp: string; expiresAt: Date }[] = []
+  const createdChannels: string[] = []
+  const sent: OtpDispatchArgs[] = []
 
   const store: PasswordResetStore = {
     async findUserByEmail(e) {
       return e === email ? { id: userId } : undefined
     },
-    async createOtp({ userId: uid, otpHash, expiresAt }) {
+    async createOtp({ userId: uid, otpHash, expiresAt, channel }) {
       otps.push({
         id: `otp-${otps.length + 1}`,
         userId: uid,
@@ -32,6 +33,7 @@ function makeHarness(opts: { email?: string } = {}) {
         consumedAt: null,
         expiresAt,
       })
+      createdChannels.push(channel)
     },
     async findActiveOtpByEmail(e) {
       if (e !== email) return undefined
@@ -55,13 +57,13 @@ function makeHarness(opts: { email?: string } = {}) {
     },
   }
 
-  const sender: OtpEmailSender = {
-    async sendOtp(input) {
-      sent.push(input)
+  const dispatcher: OtpDispatcher = {
+    async dispatch(args) {
+      sent.push(args)
     },
   }
 
-  return { store, sender, otps, passwords, sent, userId, email }
+  return { store, dispatcher, otps, passwords, sent, createdChannels, userId, email }
 }
 
 describe('generateOtp / hashOtp', () => {
@@ -77,27 +79,71 @@ describe('generateOtp / hashOtp', () => {
 describe('requestPasswordReset', () => {
   it('sends an OTP when the email exists', async () => {
     const h = makeHarness()
-    await requestPasswordReset(h.store, h.sender, { email: h.email, ttlSeconds: 600 })
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      ttlSeconds: 600,
+    })
     expect(h.sent).toHaveLength(1)
     expect(h.otps).toHaveLength(1)
     // DB luu hash, khong luu ma tho.
     expect(h.otps[0]?.otpHash).toBe(hashOtp(h.sent[0]!.otp))
   })
 
-  it('is silent (no OTP, no email) for an unknown email — no account enumeration', async () => {
+  it('is silent (no OTP, no dispatch) for an unknown email — no account enumeration', async () => {
     const h = makeHarness()
-    await requestPasswordReset(h.store, h.sender, {
+    await requestPasswordReset(h.store, h.dispatcher, {
       email: 'nobody@example.com',
+      channel: 'email',
       ttlSeconds: 600,
     })
     expect(h.sent).toHaveLength(0)
     expect(h.otps).toHaveLength(0)
   })
+
+  it('defaults the email-channel recipient to the account email', async () => {
+    const h = makeHarness()
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      ttlSeconds: 600,
+    })
+    expect(h.sent[0]).toMatchObject({ channel: 'email', recipient: h.email })
+    expect(h.createdChannels[0]).toBe('email')
+  })
+
+  it('dispatches via WhatsApp with the provided recipient and records the channel', async () => {
+    const h = makeHarness()
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'whatsapp',
+      recipient: '84901234567',
+      ttlSeconds: 600,
+    })
+    expect(h.sent[0]).toMatchObject({ channel: 'whatsapp', recipient: '84901234567' })
+    expect(h.createdChannels[0]).toBe('whatsapp')
+  })
+
+  it('dispatches via Telegram with the provided chat id', async () => {
+    const h = makeHarness()
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'telegram',
+      recipient: '123456789',
+      ttlSeconds: 600,
+    })
+    expect(h.sent[0]).toMatchObject({ channel: 'telegram', recipient: '123456789' })
+    expect(h.createdChannels[0]).toBe('telegram')
+  })
 })
 
 describe('resetPassword', () => {
   async function issueOtp(h: ReturnType<typeof makeHarness>): Promise<string> {
-    await requestPasswordReset(h.store, h.sender, { email: h.email, ttlSeconds: 600 })
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      ttlSeconds: 600,
+    })
     return h.sent.at(-1)!.otp
   }
 
@@ -144,7 +190,11 @@ describe('resetPassword', () => {
 
   it('rejects an expired OTP', async () => {
     const h = makeHarness()
-    await requestPasswordReset(h.store, h.sender, { email: h.email, ttlSeconds: -1 })
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      ttlSeconds: -1,
+    })
     const otp = h.sent.at(-1)!.otp
     const outcome = await resetPassword(h.store, {
       email: h.email,
