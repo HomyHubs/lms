@@ -49,10 +49,11 @@ Gioi han thoi gian lam bai va viec khong cho sinh 2 de giong nhau lien tiep cho 
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-09-21 | Lam ro | Chot mo hinh exams + exam_attempts, RBAC, student-safe question view | Spec khong neu chi tiet mo hinh; chon phuong an bam sat nghiem thu | (khong — additive, khong pha contract cu) |
+| 2026-09-23 | Sua hanh vi | N001: het gio giua chung KHONG khoa nop — ep nop, chi tinh cau da lam (bo `deadline_passed`). N003: chong dua khi startAttempt -> resume thay vi 500 | Quyet dinh san pham cua chu so huu; nghiem thu slice da ghi "auto-submit HOAC chan nop" nen chon auto-submit | (khong — trong pham vi nghiem thu; bo 1 error code, nop van thanh cong) |
 
 ## Cach nghiem thu
 
-Hoc vien vao dung lich thi, lam bai, nop bai truoc/dung han; thu vao lai sau khi da nop se khong lam lai duoc de cu.
+Hoc vien vao dung lich thi, lam bai, nop bai; het gio giua chung KHONG bi khoa — van nop duoc (ep nop), chi tinh cac cau da lam; thu vao lai sau khi da nop se khong lam lai duoc de cu.
 
 ## Ban giao phien gan nhat
 

@@ -23,6 +23,25 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-09-23
+
+**Đã xong**
+
+- slice-4 (Tạo đề & Thi online) — xử lý finding review **N001** "hết giờ giữa chừng bị khóa nộp": bỏ chặn `deadline_passed` trong `submitAttempt`; hết giờ vẫn cho nộp (ép nộp), chỉ tính đáp án các câu thuộc đề đã làm. Bỏ `deadline_passed` khỏi `SubmitAttemptOutcome` và khỏi map lỗi ở `routes.ts`.
+- Viết lại unit test deadline thành "qua deadline vẫn cho nộp (ép nộp) — chỉ tính câu đã làm" (`service.test.ts`).
+- **N003** (đua khi `startAttempt` chạy song song → resume thay vì lỗi 500) đã xử lý cùng commit, kèm 2 unit test.
+- Commit `b18e667`. Cổng gác toàn repo XANH: `pnpm -r build && lint && typecheck && test` — apps/api 118 test pass (exams: service 16 + routes 9), shared 14, web 12.
+
+**Đang làm dở**
+
+- (không cho N001) — code + test đã xong, đã commit, cổng gác xanh.
+
+**Bước tiếp theo**
+
+- Finding còn lại của slice-4: N002 (GET /exams chưa lọc theo lịch/lớp — để khi có assignment), N004 (info).
+- V002: chạy `dbmate migrate` cho migration exams trên Postgres thật (đang là TODO(slice-4)).
+- Tiếp tục review/PR slice-4 vào `dev`.
+
 ### 2026-09-14
 
 **Đã xong**
