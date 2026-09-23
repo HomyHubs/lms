@@ -31,14 +31,15 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - Viết lại unit test deadline thành "qua deadline vẫn cho nộp (ép nộp) — chỉ tính câu đã làm" (`service.test.ts`).
 - **N003** (đua khi `startAttempt` chạy song song → resume thay vì lỗi 500) đã xử lý cùng commit, kèm 2 unit test.
 - Commit `b18e667`. Cổng gác toàn repo XANH: `pnpm -r build && lint && typecheck && test` — apps/api 118 test pass (exams: service 16 + routes 9), shared 14, web 12.
+- **N002** (GET /exams lọc theo vai trò): thêm `isExamOpenAt` + `listOpenExams` (`service.ts`); `GET /exams` phân nhánh theo role — học viên chỉ thấy đề đang mở trong cửa sổ lịch (`opens_at..closes_at`), quản trị (Admin/Teacher/Staff) vẫn xem toàn bộ qua `listExams`. Kèm 2 unit test + 2 route test. Cổng gác `@lms/api` XANH: lint + typecheck + 122 test pass (exams: service 18 + routes 11). Không đổi contract (`ExamList` giữ nguyên).
 
 **Đang làm dở**
 
-- (không cho N001) — code + test đã xong, đã commit, cổng gác xanh.
+- (không) — N001/N003 đã commit (`b18e667`); N002 code + test xong, cổng gác xanh, commit ngay sau khi cập nhật nhật ký.
 
 **Bước tiếp theo**
 
-- Finding còn lại của slice-4: N002 (GET /exams chưa lọc theo lịch/lớp — để khi có assignment), N004 (info).
+- Finding còn lại của slice-4: N004 (info). N002 đã xử lý (xem mục Đã xong); gán đề theo lớp/học viên (assignment) hoãn → sau MVP.
 - V002: chạy `dbmate migrate` cho migration exams trên Postgres thật (đang là TODO(slice-4)).
 - Tiếp tục review/PR slice-4 vào `dev`.
 

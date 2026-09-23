@@ -8,7 +8,14 @@ import {
 } from '@lms/shared'
 import { getSessionUser, type Rbac } from '../access/index.js'
 import type { ExamsStore } from './service.js'
-import { createExam, getAttempt, listExams, startAttempt, submitAttempt } from './service.js'
+import {
+  createExam,
+  getAttempt,
+  listExams,
+  listOpenExams,
+  startAttempt,
+  submitAttempt,
+} from './service.js'
 
 interface ExamsRoutesDeps {
   rbac: Rbac
@@ -17,7 +24,7 @@ interface ExamsRoutesDeps {
 
 /**
  * Route Tao de & Thi online (slice-4).
- * - Tao/liet ke de: Admin + Teacher tao (RBAC that); moi nguoi dang nhap deu xem duoc danh sach.
+ * - Tao/liet ke de: Admin + Teacher tao (RBAC that). Danh sach: quan tri xem tat ca; hoc vien chi thay de dang mo (N002).
  * - Lam/nop bai: chi Student. De tra ve KHONG kem dap an dung (bao mat de thi).
  */
 export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): Promise<void> {
@@ -26,8 +33,13 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
   const requireLogin = rbac.requireRole()
   const requireStudent = rbac.requireRole('student')
 
-  app.get('/exams', { preHandler: requireLogin }, async () => {
-    const exams = await listExams(examsStore)
+  app.get('/exams', { preHandler: requireLogin }, async (request) => {
+    // N002: hoc vien chi thay de dang mo (trong cua so lich); quan tri xem toan bo de quan ly.
+    const viewer = getSessionUser(request)
+    const exams =
+      viewer.role === 'student'
+        ? await listOpenExams(examsStore, new Date())
+        : await listExams(examsStore)
     const body: ExamList = { exams }
     return body
   })

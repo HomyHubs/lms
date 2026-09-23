@@ -235,6 +235,21 @@ export async function listExams(store: ExamsStore): Promise<Exam[]> {
   return rows.map(toExam)
 }
 
+/** De dang mo tai `now`: opens_at <= now <= closes_at (dung cho danh sach cua hoc vien). */
+export function isExamOpenAt(exam: Pick<ExamRow, 'opens_at' | 'closes_at'>, now: Date): boolean {
+  const t = now.getTime()
+  return t >= toDate(exam.opens_at).getTime() && t <= toDate(exam.closes_at).getTime()
+}
+
+/**
+ * Danh sach de cho HOC VIEN (N002): chi tra de dang trong cua so lich (opens_at..closes_at).
+ * Quan tri (Admin/Teacher/Staff) van xem toan bo qua `listExams`. Gan de theo lop -> slice sau.
+ */
+export async function listOpenExams(store: ExamsStore, now: Date): Promise<Exam[]> {
+  const rows = await store.listExams()
+  return rows.filter((row) => isExamOpenAt(row, now)).map(toExam)
+}
+
 export type CreateExamOutcome = { ok: true; exam: Exam } | { ok: false; reason: 'level_not_found' }
 
 export async function createExam(

@@ -352,3 +352,37 @@ describe('exams routes — thi online (student)', () => {
     expect(again.statusCode).toBe(409)
   })
 })
+
+describe('exams routes — danh sach loc theo vai tro (N002)', () => {
+  let app: FastifyInstance | undefined
+  afterEach(async () => {
+    if (app) await app.close()
+    app = undefined
+  })
+
+  function mixedStore(): ExamsStore {
+    const now = Date.now()
+    const future = openExam({
+      id: 'exam-future',
+      opens_at: new Date(now + 3_600_000).toISOString(),
+      closes_at: new Date(now + 7_200_000).toISOString(),
+    })
+    return makeFakeExamsStore({ exams: [openExam(), future] })
+  }
+
+  it('student chi thay de dang mo (bo de chua mo)', async () => {
+    app = await buildTestApp(STUDENT, mixedStore())
+    const res = await app.inject({ method: 'GET', url: '/exams', headers: { cookie: COOKIE } })
+    expect(res.statusCode).toBe(200)
+    const ids = res.json().exams.map((e: { id: string }) => e.id)
+    expect(ids).toEqual(['exam-open'])
+  })
+
+  it('teacher thay toan bo de (ke ca chua mo)', async () => {
+    app = await buildTestApp(TEACHER, mixedStore())
+    const res = await app.inject({ method: 'GET', url: '/exams', headers: { cookie: COOKIE } })
+    expect(res.statusCode).toBe(200)
+    const ids = res.json().exams.map((e: { id: string }) => e.id).sort()
+    expect(ids).toEqual(['exam-future', 'exam-open'])
+  })
+})

@@ -8,7 +8,15 @@ import type {
   LevelRef,
   QuestionLite,
 } from './service.js'
-import { createExam, generatePaper, getAttempt, startAttempt, submitAttempt } from './service.js'
+import {
+  createExam,
+  generatePaper,
+  getAttempt,
+  listExams,
+  listOpenExams,
+  startAttempt,
+  submitAttempt,
+} from './service.js'
 
 const LEVELS: LevelRef[] = [
   { id: 'lvl-starter', code: 'starter' },
@@ -199,6 +207,32 @@ describe('createExam', () => {
       'teacher-1',
     )
     expect(out).toEqual({ ok: false, reason: 'level_not_found' })
+  })
+})
+
+describe('listExams / listOpenExams — loc theo vai tro (N002)', () => {
+  const openWindow = openExam({ id: 'exam-open' }) // 09:00..12:00, NOW=10:00 -> dang mo
+  const future = openExam({
+    id: 'exam-future',
+    opens_at: '2026-09-21T11:00:00.000Z',
+    closes_at: '2026-09-21T13:00:00.000Z',
+  })
+  const closed = openExam({
+    id: 'exam-closed',
+    opens_at: '2026-09-21T07:00:00.000Z',
+    closes_at: '2026-09-21T09:30:00.000Z',
+  })
+
+  it('listOpenExams chi tra de trong cua so lich (bo chua mo / da dong)', async () => {
+    const store = makeFakeStore({ exams: [openWindow, future, closed] })
+    const open = await listOpenExams(store, NOW)
+    expect(open.map((e) => e.id)).toEqual(['exam-open'])
+  })
+
+  it('listExams (quan tri) tra toan bo de', async () => {
+    const store = makeFakeStore({ exams: [openWindow, future, closed] })
+    const all = await listExams(store)
+    expect(all.map((e) => e.id).sort()).toEqual(['exam-closed', 'exam-future', 'exam-open'])
   })
 })
 

@@ -42,7 +42,7 @@ Gioi han thoi gian lam bai va viec khong cho sinh 2 de giong nhau lien tiep cho 
 | --- | --- | --- | --- |
 | TODO(slice-4) | api/exams | Chua chay `dbmate migrate` tren Postgres that cho migration exams (ke thua no slice-0..3) | Khi co DB |
 | TODO(slice-5) | api/exams | Chua cham diem; `answers` luu de slice-5 cham | slice-5 |
-| TODO(later) | api/exams | Gan de theo lop/hoc vien (assignment); hien tai moi hoc vien deu thay de trong lich | sau MVP |
+| TODO(later) | api/exams | Gan de theo lop/hoc vien (assignment); da co N002 loc theo cua so lich (hoc vien chi thay de dang mo), con lai la gan theo lop cu the | sau MVP |
 
 ## Nhat ky thay doi pham vi cua rieng Slice/Task nay
 
@@ -50,6 +50,7 @@ Gioi han thoi gian lam bai va viec khong cho sinh 2 de giong nhau lien tiep cho 
 | --- | --- | --- | --- | --- |
 | 2026-09-21 | Lam ro | Chot mo hinh exams + exam_attempts, RBAC, student-safe question view | Spec khong neu chi tiet mo hinh; chon phuong an bam sat nghiem thu | (khong — additive, khong pha contract cu) |
 | 2026-09-23 | Sua hanh vi | N001: het gio giua chung KHONG khoa nop — ep nop, chi tinh cau da lam (bo `deadline_passed`). N003: chong dua khi startAttempt -> resume thay vi 500 | Quyet dinh san pham cua chu so huu; nghiem thu slice da ghi "auto-submit HOAC chan nop" nen chon auto-submit | (khong — trong pham vi nghiem thu; bo 1 error code, nop van thanh cong) |
+| 2026-09-23 | Sua hanh vi | N002: GET /exams loc theo vai tro — hoc vien chi thay de dang mo trong cua so lich (opens_at..closes_at) qua `listOpenExams`; quan tri (Admin/Teacher/Staff) van xem toan bo qua `listExams` | Finding review; nghiem thu MVP "hoc vien dang nhap thay de trong cua so lich" | (khong — additive, khong doi contract `ExamList`) |
 
 ## Cach nghiem thu
 
@@ -58,3 +59,9 @@ Hoc vien vao dung lich thi, lam bai, nop bai; het gio giua chung KHONG bi khoa �
 ## Ban giao phien gan nhat
 
 Dien theo mau `../../ai-workflow/templates/session-handoff.md` khi dung giua chung.
+
+### 2026-09-23 — N002 (GET /exams loc theo vai tro)
+
+- **Da lam**: them `isExamOpenAt` + `listOpenExams` (`service.ts`); `GET /exams` phan nhanh theo role (hoc vien -> chi de dang mo trong cua so lich; quan tri -> toan bo). Them 2 unit test + 2 route test.
+- **Cong gac**: `@lms/api` lint + typecheck + test XANH (17 file, 122 test pass).
+- **Buoc tiep theo**: commit N002; con lai N004 (info) + V002 (dbmate migrate tren Postgres that); tiep tuc review/PR slice-4 vao `dev`. Gan de theo lop (assignment) hoan -> sau MVP.
