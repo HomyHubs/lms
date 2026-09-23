@@ -17,8 +17,8 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-0 | Nền tảng & Auth (walking skeleton + đăng nhập SĐT + quên mật khẩu qua Email) | Dọc | Done | — | feature/slice-0-nen-tang-auth | 1 | — | `slices/slice-0-nen-tang-auth.md` |
 | slice-1 | Quản lý người dùng, cơ sở (Branch) & phân quyền | Dọc | Review | An Vo | feature/slice-1-user-branch-phan-quyen | 3 | slice-0 | `slices/slice-1-user-branch-phan-quyen.md` |
 | slice-2 | OTP đa kênh (WhatsApp/Telegram) cho đổi/khôi phục mật khẩu | Dọc | Đang làm | An Vo | feature/slice-2-otp-da-kenh | — | slice-1 | `slices/slice-2-otp-da-kenh.md` |
-| slice-3 | Ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) + import | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-3-ngan-hang-cau-hoi.md` |
-| slice-4 | Tạo đề & Thi online | Dọc | Chưa bắt đầu | — | — | — | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
+| slice-3 | Ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) + import | Dọc | Done | — | feature/slice-3-ngan-hang-cau-hoi | 5 | slice-1 | `slices/slice-3-ngan-hang-cau-hoi.md` |
+| slice-4 | Tạo đề & Thi online | Dọc | Review | An Vo | feature/slice-4-tao-de-thi-online | #6 | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
 | slice-4.5 | Sinh prompt AI & import ngược câu hỏi | Dọc | Chưa bắt đầu | — | — | — | slice-3 | `slices/slice-4.5-sinh-prompt-ai-import.md` |
 | slice-5 | Chấm điểm tự động & Thi lại | Dọc | Chưa bắt đầu | — | — | — | slice-4 | `slices/slice-5-cham-diem-thi-lai.md` |
 | slice-6 | Điểm danh | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-6-diem-danh.md` |

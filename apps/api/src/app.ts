@@ -21,6 +21,7 @@ import { centersRoutes, makeCentersStore } from './features/centers/index.js'
 import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
 import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranches/index.js'
 import { makeQuestionsStore, questionsRoutes } from './features/questions/index.js'
+import { examsRoutes, makeExamsStore } from './features/exams/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -83,6 +84,9 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
 
   // slice-3: Ngan hang cau hoi theo cap do (Starter/Mover/Flyer) + import. Admin + Teacher.
   await questionsRoutes(app, { rbac, questionsStore: makeQuestionsStore(db) })
+
+  // slice-4: Tao de & Thi online. Admin/Teacher tao de; Student lam/nop bai (de an dap an).
+  await examsRoutes(app, { rbac, examsStore: makeExamsStore(db) })
 
   return app
 }

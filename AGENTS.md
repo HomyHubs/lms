@@ -629,6 +629,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | Slice/Task | Tên              | Cơ chế | Kết quả rollup | PR  | Ngày merge |
 | ---------- | ---------------- | ------ | -------------- | --- | ---------- |
 | slice-0    | Walking skeleton | Dọc    | Done           | 1   | 2026-09-16 |
+| slice-3    | Ngân hàng câu hỏi | Dọc    | Done           | 5   | 2026-09-21 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
