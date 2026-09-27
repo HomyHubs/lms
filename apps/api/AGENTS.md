@@ -5,10 +5,10 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 ## Bối cảnh feature
 
 - Nhiệm vụ: Backend Fastify + TypeScript cho LMS. Slice-0 dựng khung + endpoint health-check nối thông FE-BE-DB thật (Postgres qua Kysely).
-- Slice/Task đang triển khai: slice-0, xem `docs/tasks/slices/slice-0-nen-tang-auth.md`
+- Slice/Task đang triển khai: slice-4, xem `docs/tasks/slices/slice-4-tao-de-thi-online.md`
 - Phụ thuộc module nào, qua cửa công khai nào: `@lms/shared` (contract `HealthResponse`).
 - Owner hiện tại: An Vo
-- Nhánh: feature/slice-0-nen-tang-auth
+- Nhánh: feature/slice-4-tao-de-thi-online
 
 ## Contract (cửa công khai — chốt trước, không đổi giữa chừng)
 
@@ -62,3 +62,14 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - Chạy migrate + seed trên Postgres thật, kiểm tra end-to-end; chuẩn bị PR slice-0 vào `dev`.
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)
+
+### 2026-09-27 — xử lý review PR #6
+
+**Đã xong**
+
+- Thêm `store.integration.test.ts` chạy với PostgreSQL thật: Kysely store round-trip, hai start đồng thời chỉ tạo một attempt, student-safe view và submit sau deadline.
+- CI cấp PostgreSQL service, chạy migration trước test và xác minh migration mới nhất down/up.
+
+**Bước tiếp theo**
+
+- Xác nhận CI xanh và review lại đúng HEAD.

@@ -4,6 +4,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { CentersPage } from '@/features/centers/CentersPage'
+import { ExamsPage } from '@/features/exams/ExamsPage'
 import { HomePage } from '@/features/home/HomePage'
 import { QuestionsPage } from '@/features/questions/QuestionsPage'
 import { AssignmentsPage } from '@/features/userbranches/AssignmentsPage'
@@ -60,6 +61,14 @@ export function App(): React.ReactElement {
         element={
           <RequireAuth role={['admin', 'teacher']}>
             <QuestionsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/exams"
+        element={
+          <RequireAuth role="student">
+            <ExamsPage />
           </RequireAuth>
         }
       />

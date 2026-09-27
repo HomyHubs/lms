@@ -5,10 +5,10 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 ## Bối cảnh feature
 
 - Nhiệm vụ: Quản lý schema Postgres qua dbmate (SQL migrations, đảo ngược được).
-- Slice/Task đang triển khai: slice-0, xem `docs/tasks/slices/slice-0-nen-tang-auth.md`
+- Slice/Task đang triển khai: slice-4, xem `docs/tasks/slices/slice-4-tao-de-thi-online.md`
 - Phụ thuộc: Postgres từ `compose.dev.yml`; đọc `DATABASE_URL` từ `.env` gốc repo.
 - Owner hiện tại: An Vo
-- Nhánh: feature/slice-0-nen-tang-auth
+- Nhánh: feature/slice-4-tao-de-thi-online
 
 ## Contract (cửa công khai — chốt trước, không đổi giữa chừng)
 
@@ -52,3 +52,14 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - Sau khi PR slice-1 merge: chạy `pnpm --filter @lms/db migrate` + seed trên Postgres thật, kiểm tra rollback (`migrate:down`).
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)
+
+### 2026-09-27 — slice-4
+
+**Đã xong**
+
+- CI chạy toàn bộ migration trên PostgreSQL service thật trước test.
+- Sau test, CI chạy `dbmate down` cho migration exams rồi `dbmate up` lại để xác minh rollback/re-apply.
+
+**Bước tiếp theo**
+
+- Theo dõi CI PR #6; chỉ đóng nợ V002 khi workflow mới xanh.
