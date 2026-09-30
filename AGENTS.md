@@ -626,9 +626,12 @@ Không tự đánh số lại hoặc xóa dòng đã có.
 
 Không dùng mục này để theo dõi công việc đang làm dở. Nguồn sự thật cho tiến độ hàng ngày là `docs/tasks/MVP-BACKLOG.md` và `AGENTS.md` của từng feature. Bảng dưới đây chỉ thêm một dòng mới mỗi khi một Slice/Task đã merge xong vào `dev`.
 
-| Slice/Task | Tên              | Cơ chế | Kết quả rollup | PR  | Ngày merge |
-| ---------- | ---------------- | ------ | -------------- | --- | ---------- |
-| slice-0    | Walking skeleton | Dọc    | Done           | 1   | 2026-09-16 |
+| Slice/Task | Tên | Cơ chế | Kết quả rollup | PR | Ngày merge |
+| --- | --- | --- | --- | --- | --- |
+| slice-0 | Walking skeleton | Dọc | Done | 1 | 2026-09-16 |
+| slice-1 | User, Branch & phân quyền | Dọc | Done | 3 | 2026-09-20 |
+| slice-2 | OTP đa kênh | Dọc | Done (còn nợ) | 4 | 2026-09-21 |
+| slice-3 | Ngân hàng câu hỏi | Dọc | Done | 5 | 2026-09-21 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
@@ -637,3 +640,4 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 **Profile công nghệ áp dụng (mục 2):** [x] Web app FE+BE (`docs/methodology/webapp-template.md`) — [ ] Không áp profile nào
 
 **Cổng gác thực tế của repo này (mục 7):** lệnh `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` — đã xác minh chạy được: [x] cục bộ (slice-0, 2026-09-14) [ ] CI (chờ chạy trên PR/dev)
+

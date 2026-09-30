@@ -5,11 +5,11 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 ## Bối cảnh feature
 
 - Nhiệm vụ: Frontend React 19 + Vite + TypeScript. Slice-0 hiển thị trạng thái kết nối Database lấy từ backend health-check thật.
-- Slice/Task đang triển khai: slice-0, xem `docs/tasks/slices/slice-0-nen-tang-auth.md`
+- Slice/Task đang triển khai: slice-4, xem `docs/tasks/slices/slice-4-tao-de-thi-online.md`
 - Phụ thuộc module nào, qua cửa công khai nào: `@lms/shared` (`HealthResponse`); gọi API qua proxy `/api` (vite.config.ts).
 - Profile UI: **B — Tailwind CSS + shadcn/ui + lucide-react** (chốt tại slice-0, xem webapp-template mục 8). KHÔNG trộn MUI.
 - Owner hiện tại: An Vo
-- Nhánh: feature/slice-0-nen-tang-auth
+- Nhánh: feature/slice-4-tao-de-thi-online
 
 ## Contract (cửa công khai — chốt trước, không đổi giữa chừng)
 
@@ -40,3 +40,16 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - Kiểm tra end-to-end `/forgot-password` với backend + Postgres thật; chuẩn bị PR slice-0 vào `dev`.
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)
+
+### 2026-09-27 — slice-4
+
+**Đã xong**
+
+- Thêm route học viên `/exams`, link từ trang chủ, danh sách đề đang mở.
+- Thêm luồng start/resume, hiển thị câu hỏi student-safe, lưu đáp án trong state, đếm ngược và nộp bài.
+- Hết giờ tự động nộp; lượt đã nộp không hiện nút nộp lại.
+- Thêm test UI cho nộp thủ công, tự nộp khi hết giờ và trạng thái đã nộp.
+
+**Bước tiếp theo**
+
+- CI guard đã xanh trên `ca45ef8`; review lại PR #6 đúng HEAD bằng identity độc lập.

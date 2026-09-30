@@ -1,10 +1,10 @@
 # Slice/Task slice-2 — OTP da kenh (WhatsApp/Telegram) cho doi/khoi phuc mat khau
 
 - Co che: Doc
-- Owner hien tai: ...
-- Nhanh: ...
-- PR: ...
-- Trang thai: xem `../MVP-BACKLOG.md`
+- Owner hien tai: —
+- Nhanh: feature/slice-2-otp-da-kenh
+- PR: 4
+- Trang thai: Done (con no) — da merge vao `dev`
 - Phu thuoc: slice-1
 - Sua muc goc: de trong
 
@@ -33,7 +33,7 @@ Rate limit cho endpoint OTP/login (chong brute-force) phai la thuc.
 | Marker | Vi tri | Noi dung | Du kien tra |
 | --- | --- | --- | --- |
 | TODO(slice-2) | apps/api/src/features/auth/whatsapp.ts, telegram.ts | Chua nghiem thu gui OTP that qua provider (can credentials sandbox) | Khi co credentials WhatsApp/Telegram |
-| TODO(slice-2) | db/migrations/20260920000000_otp_channel_field.sql | Chua chay dbmate migrate + test rollback tren Postgres that | Truoc khi merge vao dev |
+| TODO(slice-2) | db/migrations/20260920000000_otp_channel_field.sql | Chua chay dbmate migrate + test rollback tren Postgres that | Sau merge, truoc khi coi no ky thuat da tra |
 
 ## Nhat ky thay doi pham vi cua rieng Slice/Task nay
 
@@ -47,8 +47,7 @@ Yeu cau doi mat khau, chon kenh Telegram, nhan OTP thuc qua Telegram Bot, nhap d
 
 ## Ban giao phien gan nhat
 
-- Ngay: 2026-09-21
-- Trang thai: code + test xong cuc bo, cong gac xanh (shared 14 / api 82 / web 11). Chua mo PR.
-- Da xong: contract (OtpChannel + ForgotPasswordRequest.channel/recipient); dispatcher provider-agnostic (channels.ts); sender email/whatsapp/telegram; luu channel xuong DB (migration additive 20260920000000, co migrate:down); routes.ts + app.ts wiring; index.ts export; UI chon kenh o ForgotPasswordPage; test cho dispatcher + service + route + trang; ADR 0001; .env.example.
-- Con lai: mo PR vao dev; chay dbmate migrate + test rollback tren Postgres that; nghiem thu thu cong gui OTP that qua WhatsApp/Telegram (can credentials).
-- Phu thuoc: slice-1 dang Review (PR #3) chua merge — bat dau slice-2 tuan tu theo yeu cau nguoi dung; can rebase len dev sau khi slice-1 merge.
+- Ngay: 2026-09-27
+- Trang thai: da merge vao `dev` qua PR #4, commit `992e478`; khong con Owner.
+- Da xong: contract (OtpChannel + ForgotPasswordRequest.channel/recipient); dispatcher provider-agnostic; sender email/whatsapp/telegram; migration additive; API/UI/test va ADR 0001.
+- No con lai: nghiem thu gui OTP that bang credentials sandbox WhatsApp/Telegram; chay migration + rollback tren PostgreSQL that.

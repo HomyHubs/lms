@@ -117,6 +117,37 @@ export interface QuestionsTable {
   updated_at: Timestamp
 }
 
+/** Bang `exams` — slice-4: de thi (blueprint) do Admin/Teacher tao. */
+export interface ExamsTable {
+  id: Generated<string>
+  title: string
+  level_id: string
+  skill: string
+  // So cau rut ngau nhien tu ngan hang + thoi luong lam bai (phut).
+  question_count: number
+  duration_minutes: number
+  // Cua so lich thi (mo/dong). Insert bang chuoi ISO; doc ra Date.
+  opens_at: ColumnType<Date, string, string>
+  closes_at: ColumnType<Date, string, string>
+  created_by: string
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+/** Bang `exam_attempts` — slice-4: mot luot lam bai cua hoc vien (unique exam+student). */
+export interface ExamAttemptsTable {
+  id: Generated<string>
+  exam_id: string
+  student_id: string
+  // De da sinh: chuoi JSON string[] cac question id (giu thu tu).
+  question_ids: string
+  // Dap an hoc vien: chuoi JSON object; null cho toi khi nop.
+  answers: ColumnType<string | null, string | null | undefined, string | null>
+  started_at: ColumnType<Date, string | undefined, string>
+  deadline_at: ColumnType<Date, string, string>
+  submitted_at: ColumnType<Date | null, string | null | undefined, string | null>
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -129,6 +160,8 @@ export interface Database {
   enrollments: EnrollmentsTable
   user_branches: UserBranchesTable
   questions: QuestionsTable
+  exams: ExamsTable
+  exam_attempts: ExamAttemptsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

@@ -1,10 +1,10 @@
 # Slice/Task slice-1 — Quan ly nguoi dung, co so (Branch) & phan quyen
 
 - Co che: Doc
-- Owner hien tai: An Vo
+- Owner hien tai: —
 - Nhanh: feature/slice-1-user-branch-phan-quyen
-- PR: ...
-- Trang thai: xem `../MVP-BACKLOG.md`
+- PR: 3
+- Trang thai: Done — da merge vao `dev`
 - Phu thuoc: slice-0
 - Sua muc goc: de trong
 
@@ -45,4 +45,5 @@ Tao 2 Branch, gan Admin A chi vao Branch 1, Admin B vao ca 2 Branch; xac nhan Ad
 
 ## Ban giao phien gan nhat
 
-Dien theo mau `../../ai-workflow/templates/session-handoff.md` khi dung giua chung.
+- Da merge vao `dev` qua PR #3, commit `7e6dfc4`.
+- Khong con Owner; trang thai chinh thuc: Done.
