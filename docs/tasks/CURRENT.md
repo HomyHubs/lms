@@ -8,7 +8,7 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - Cập nhật ngày: 2026-09-27
 - Nhánh: `feature/slice-4-tao-de-thi-online`
 - PR: #6
-- Trạng thái: Đang sửa theo review; chờ CI và review lại.
+- Trạng thái: Đã sửa xong hai blocker; CI guard xanh trên HEAD `ca45ef8`; chờ review lại.
 
 ## Đã làm
 
@@ -19,6 +19,5 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 
 ## Bước tiếp theo
 
-1. Chờ CI trên HEAD mới xanh.
-2. Review lại PR #6 đúng SHA mới bằng identity độc lập.
-3. Chỉ merge khi không còn blocker và có formal approval hợp lệ.
+1. Review lại PR #6 đúng SHA `ca45ef81e97a50f284d6e3551fe7200f888765b0` bằng identity độc lập.
+2. Chỉ merge khi review mới không còn blocker và có formal approval hợp lệ.

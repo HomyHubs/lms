@@ -40,7 +40,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 
 - Finding còn lại của slice-4: N004 (info). N002 đã xử lý (xem mục Đã xong); gán đề theo lớp/học viên (assignment) hoãn → sau MVP.
-- V002: chạy `dbmate migrate` cho migration exams trên Postgres thật (đang là TODO(slice-4)).
+- V002 đã đóng: CI dùng PostgreSQL thật, chạy migration + integration exams + rollback/re-apply; guard xanh trên `ca45ef8`.
 - Tiếp tục review/PR slice-4 vào `dev`.
 
 ### 2026-09-14
@@ -72,4 +72,4 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Bước tiếp theo**
 
-- Xác nhận CI xanh và review lại đúng HEAD.
+- CI guard đã xanh trên `ca45ef8`; review lại đúng HEAD bằng identity độc lập.

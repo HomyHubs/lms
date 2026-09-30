@@ -52,4 +52,4 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Bước tiếp theo**
 
-- Chờ CI và review lại PR #6 trên HEAD mới.
+- CI guard đã xanh trên `ca45ef8`; review lại PR #6 đúng HEAD bằng identity độc lập.

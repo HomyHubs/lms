@@ -62,4 +62,4 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Bước tiếp theo**
 
-- Theo dõi CI PR #6; chỉ đóng nợ V002 khi workflow mới xanh.
+- V002 đã đóng: workflow PR #6 xanh trên `ca45ef8`, gồm migrate up, integration test và down/up migration exams.

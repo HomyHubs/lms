@@ -40,7 +40,7 @@ Gioi han thoi gian lam bai va viec khong cho sinh 2 de giong nhau lien tiep cho 
 
 | Marker | Vi tri | Noi dung | Du kien tra |
 | --- | --- | --- | --- |
-| TODO(slice-4) | api/exams | Chua chay `dbmate migrate` tren Postgres that cho migration exams (ke thua no slice-0..3) | Khi co DB |
+| DONE(slice-4) | api/exams + CI | Da chay migration, integration store/concurrent start/submit va rollback/re-apply tren PostgreSQL that; CI guard xanh o `ca45ef8` | 2026-09-27 |
 | TODO(slice-5) | api/exams | Chua cham diem; `answers` luu de slice-5 cham | slice-5 |
 | TODO(later) | api/exams | Gan de theo lop/hoc vien (assignment); da co N002 loc theo cua so lich (hoc vien chi thay de dang mo), con lai la gan theo lop cu the | sau MVP |
 
@@ -64,4 +64,4 @@ Dien theo mau `../../ai-workflow/templates/session-handoff.md` khi dung giua chu
 
 - **Da lam**: them `isExamOpenAt` + `listOpenExams` (`service.ts`); `GET /exams` phan nhanh theo role (hoc vien -> chi de dang mo trong cua so lich; quan tri -> toan bo). Them 2 unit test + 2 route test.
 - **Cong gac**: `@lms/api` lint + typecheck + test XANH (17 file, 122 test pass).
-- **Buoc tiep theo**: commit N002; con lai N004 (info) + V002 (dbmate migrate tren Postgres that); tiep tuc review/PR slice-4 vao `dev`. Gan de theo lop (assignment) hoan -> sau MVP.
+- **Buoc tiep theo**: review lai PR #6 tren HEAD `ca45ef8`; chi merge khi co formal approval doc lap. Gan de theo lop (assignment) hoan -> sau MVP.
