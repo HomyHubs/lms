@@ -46,12 +46,11 @@ export function makeTelegramSender(logger: FastifyBaseLogger): OtpTelegramSender
       })
 
       if (!res.ok) {
-        const body = await res.text().catch(() => '(unreadable body)')
-        logger.error({ chatId: targetChatId, status: res.status, body }, 'Telegram Bot API error')
+        logger.error({ status: res.status }, 'Telegram Bot API error')
         throw new Error(`Telegram delivery failed (HTTP ${res.status})`)
       }
 
-      logger.info({ chatId: targetChatId }, 'OTP sent via Telegram')
+      logger.info('OTP sent via Telegram')
     },
   }
 }

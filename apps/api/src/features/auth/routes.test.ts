@@ -1,3 +1,4 @@
+import rateLimit from '@fastify/rate-limit'
 import cookie from '@fastify/cookie'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -50,7 +51,7 @@ function makeFakeResetHarness(): {
   const sent: OtpDispatchArgs[] = []
   const store: PasswordResetStore = {
     async findUserByEmail(e) {
-      return e === email ? { id: userId } : undefined
+      return e === email ? { id: userId, verifiedEmail: email } : undefined
     },
     async createOtp({ userId: uid, otpHash, expiresAt }) {
       otps.push({
@@ -78,6 +79,12 @@ function makeFakeResetHarness(): {
       const rec = otps.find((o) => o.id === id)
       if (rec) rec.consumedAt = new Date()
     },
+    async completeReset(id) {
+      const rec = otps.find((o) => o.id === id)
+      if (!rec || rec.consumedAt) return false
+      rec.consumedAt = new Date()
+      return true
+    },
     async updateUserPassword() {
       // Khong can kiem tra o tang route (da co unit test service).
     },
@@ -96,6 +103,7 @@ async function buildTestApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: false })
   await app.register(cookie)
+  await app.register(rateLimit)
   await authRoutes(app, {
     store,
     config,
@@ -111,6 +119,46 @@ function sessionCookieFrom(setCookie: string | string[] | undefined): string {
   const match = /lms_session=([^;]+)/.exec(raw)
   return match ? `${SESSION_COOKIE}=${match[1]}` : ''
 }
+
+describe('reset endpoint security', () => {
+  it.each([
+    { email: 'admin@example.com', recipient: 'attacker@example.com' },
+    { email: 'admin@example.com', channel: 'telegram', recipient: '12345' },
+    { email: 'admin@example.com', channel: 'whatsapp', recipient: '84901234567' },
+  ])('rejects client destinations and unavailable channels: %j', async (payload) => {
+    const h = makeFakeResetHarness()
+    const app = await buildTestApp(makeFakeStore([]), h)
+    try {
+      expect(
+        (await app.inject({ method: 'POST', url: '/auth/forgot-password', payload })).statusCode,
+      ).toBe(400)
+      expect(h.sent).toHaveLength(0)
+      expect(h.otps).toHaveLength(0)
+    } finally {
+      await app.close()
+    }
+  })
+
+  it.each([
+    ['/auth/forgot-password', 3],
+    ['/auth/reset-password', 5],
+    ['/auth/login', 5],
+  ] as const)('enforces actual rate limit on %s', async (url, max) => {
+    const app = await buildTestApp(makeFakeStore([]))
+    try {
+      const results = []
+      for (let i = 0; i < max + 2; i++)
+        results.push(await app.inject({ method: 'POST', url, payload: {} }))
+      expect(results.filter((res) => res.statusCode === 429)).toHaveLength(2)
+      const concurrent = await Promise.all(
+        Array.from({ length: 4 }, () => app.inject({ method: 'POST', url, payload: {} })),
+      )
+      expect(concurrent.every((res) => res.statusCode === 429)).toBe(true)
+    } finally {
+      await app.close()
+    }
+  })
+})
 
 describe('auth routes', () => {
   let app: FastifyInstance
@@ -245,9 +293,9 @@ describe('password reset routes (Task 3 + Slice-2)', () => {
         url: '/auth/forgot-password',
         payload: { email: 'admin@example.com', channel: 'whatsapp', recipient: '84901234567' },
       })
-      expect(res.statusCode).toBe(200)
-      expect(reset.sent).toHaveLength(1)
-      expect(reset.sent[0]).toMatchObject({ channel: 'whatsapp', recipient: '84901234567' })
+      expect(res.statusCode).toBe(400)
+      expect(reset.sent).toHaveLength(0)
+      expect(reset.otps).toHaveLength(0)
     } finally {
       await app.close()
     }

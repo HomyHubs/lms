@@ -119,7 +119,6 @@ export async function authRoutes(app: FastifyInstance, deps: AuthRoutesDeps): Pr
       await requestPasswordReset(resetStore, otpDispatcher, {
         email: parsed.data.email,
         channel: parsed.data.channel,
-        recipient: parsed.data.recipient,
         ttlSeconds: config.PASSWORD_RESET_OTP_TTL_SECONDS,
       })
 

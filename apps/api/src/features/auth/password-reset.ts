@@ -29,7 +29,7 @@ export interface OtpEmailSender {
 
 /** Cong DB ma luong reset can — tach de test bang gia lap. */
 export interface PasswordResetStore {
-  findUserByEmail: (email: string) => Promise<{ id: string } | undefined>
+  findUserByEmail: (email: string) => Promise<{ id: string; verifiedEmail?: string } | undefined>
   createOtp: (input: {
     userId: string
     otpHash: string
@@ -42,6 +42,8 @@ export interface PasswordResetStore {
   incrementOtpAttempts: (id: string) => Promise<void>
   markOtpConsumed: (id: string) => Promise<void>
   updateUserPassword: (userId: string, passwordHash: string) => Promise<void>
+  /** Atomic conditional consume + password update; false for a lost race. */
+  completeReset: (id: string, userId: string, passwordHash: string) => Promise<boolean>
 }
 
 /** Sinh ma OTP 6 chu so (dung randomInt cua crypto, khong dung Math.random). */
@@ -66,20 +68,20 @@ export async function requestPasswordReset(
   input: { email: string; channel: OtpChannel; recipient?: string; ttlSeconds: number },
 ): Promise<void> {
   const user = await store.findUserByEmail(input.email)
-  if (!user) return // im lang: khong lo email co ton tai hay khong
-
-  // Voi kenh email, dia chi nhan mac dinh la chinh email tai khoan.
-  const recipient =
-    input.channel === 'email' ? (input.recipient ?? input.email) : input.recipient
-  if (!recipient) {
-    // Schema (ForgotPasswordRequest.refine) da chan truong hop nay; phong thu them o service.
-    throw new Error('recipient bat buoc khi channel khong phai email')
-  }
+  // Never infer verification from a client address or a stored legacy email.
+  if (!user?.verifiedEmail || input.channel !== 'email') return
+  const recipient = user.verifiedEmail
 
   const otp = generateOtp()
   const expiresAt = new Date(Date.now() + input.ttlSeconds * 1000)
-  await store.createOtp({ userId: user.id, otpHash: hashOtp(otp), expiresAt, channel: input.channel })
   await dispatcher.dispatch({ channel: input.channel, recipient, otp, expiresAt })
+  // Never activate an OTP when delivery failed.
+  await store.createOtp({
+    userId: user.id,
+    otpHash: hashOtp(otp),
+    expiresAt,
+    channel: input.channel,
+  })
 }
 
 /** Ket qua dat lai mat khau: phan biet ly do that bai de UI bao dung. */
@@ -95,8 +97,11 @@ export async function resetPassword(
   store: PasswordResetStore,
   input: { email: string; otp: string; newPassword: string },
 ): Promise<ResetPasswordOutcome> {
+  const user = await store.findUserByEmail(input.email)
+  if (!user?.verifiedEmail) return { ok: false, reason: 'invalid' }
   const record = await store.findActiveOtpByEmail(input.email)
-  if (!record) return { ok: false, reason: 'invalid' }
+  if (!record || record.userId !== user.id || record.consumedAt)
+    return { ok: false, reason: 'invalid' }
 
   if (record.expiresAt.getTime() <= Date.now()) {
     return { ok: false, reason: 'expired' }
@@ -112,7 +117,6 @@ export async function resetPassword(
 
   // OTP dung: doi mat khau (bcrypt) va danh dau OTP da dung (mot lan duy nhat).
   const passwordHash = await hashPassword(input.newPassword)
-  await store.updateUserPassword(record.userId, passwordHash)
-  await store.markOtpConsumed(record.id)
-  return { ok: true }
+  const completed = await store.completeReset(record.id, record.userId, passwordHash)
+  return completed ? { ok: true } : { ok: false, reason: 'invalid' }
 }
