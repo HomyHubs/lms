@@ -35,3 +35,9 @@ Chưa bắt đầu, Đang làm, Review, Done, Done (còn nợ), Hoãn, Đã hủ
 1. Tạo file từ `slices/_TEMPLATE.md`, đặt tên `slices/<id>-<slug>.md`.
 2. Thêm đúng một dòng vào bảng trên, trạng thái "Chưa bắt đầu".
 3. Nếu đây là thay đổi phạm vi của một Slice/Task đã có, đọc `../../AGENTS.md` mục "Quy trình thay đổi phạm vi" trước.
+
+## Bổ sung slice-3 theo mục 22
+
+| ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| slice-3.1 | Question UI/import completion (thay đổi slice-3) | Dọc | Đang làm | Coding agent | bugfix/slice-3.1-question-completion | — | slice-1/3 merged PR3/5 (bảng lịch sử stale) | `slices/slice-3.1-question-completion.md` |
