@@ -4,7 +4,7 @@
 - Branch: bugfix/slice-3.1-question-completion
 - Worktree: .agent-worktrees/slice3-completion
 - Owner: coding agent, theo yêu cầu 2026-11-02.
-- Trạng thái: Đang làm; chưa merge/DoD.
+- Trạng thái: Review — PR https://github.com/HomyHubs/lms/pull/7 (base dev); chưa merge/DoD, không self-approve/merge.
 - Phụ thuộc: slice-1/3 merged theo git history (backlog lịch sử stale).
 
 ## Phạm vi trước code

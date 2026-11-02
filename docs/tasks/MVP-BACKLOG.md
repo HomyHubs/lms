@@ -40,4 +40,4 @@ Chưa bắt đầu, Đang làm, Review, Done, Done (còn nợ), Hoãn, Đã hủ
 
 | ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| slice-3.1 | Question UI/import completion (thay đổi slice-3) | Dọc | Đang làm | Coding agent | bugfix/slice-3.1-question-completion | — | slice-1/3 merged PR3/5 (bảng lịch sử stale) | `slices/slice-3.1-question-completion.md` |
+| slice-3.1 | Question UI/import completion (thay đổi slice-3) | Dọc | Review | Coding agent | bugfix/slice-3.1-question-completion | 7 | slice-1/3 merged PR3/5 (bảng lịch sử stale) | `slices/slice-3.1-question-completion.md` |
