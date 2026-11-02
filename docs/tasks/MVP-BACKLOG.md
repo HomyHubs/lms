@@ -15,35 +15,16 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | slice-0 | Nền tảng & Auth (walking skeleton + đăng nhập SĐT + quên mật khẩu qua Email) | Dọc | Done | — | feature/slice-0-nen-tang-auth | 1 | — | `slices/slice-0-nen-tang-auth.md` |
-| slice-1 | Quản lý người dùng, cơ sở (Branch) & phân quyền | Dọc | Done | — | feature/slice-1-user-branch-phan-quyen | 3 | slice-0 | `slices/slice-1-user-branch-phan-quyen.md` |
-| slice-2 | OTP đa kênh (WhatsApp/Telegram) cho đổi/khôi phục mật khẩu | Dọc | Done (còn nợ) | — | feature/slice-2-otp-da-kenh | 4 | slice-1 | `slices/slice-2-otp-da-kenh.md` |
-| slice-3 | Ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) + import | Dọc | Done | — | feature/slice-3-ngan-hang-cau-hoi | 5 | slice-1 | `slices/slice-3-ngan-hang-cau-hoi.md` |
-| slice-4 | Tạo đề & Thi online | Dọc | Done | — | feature/slice-4-tao-de-thi-online | 6 | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
-| slice-4.5 | Sinh prompt AI & import ngược câu hỏi | Dọc | Done | — | feature/slice-4.5-sinh-prompt-ai-import | 12 | slice-3 | `slices/slice-4.5-sinh-prompt-ai-import.md` |
-| slice-5 | Chấm điểm tự động & Thi lại | Dọc | Done (ngoại lệ §9.4 đã đóng: PR #6 merge trước, slice-5 rebase lên dev) | — | feature/slice-5-cham-diem-thi-lai | 9 | slice-4 | `slices/slice-5-cham-diem-thi-lai.md` |
-| slice-6 | Điểm danh | Dọc | Done | — | feature/slice-6-diem-danh | 10 | slice-1 | `slices/slice-6-diem-danh.md` |
-| slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Done | — | feature/slice-7-xep-loai-dashboard | 13 | slice-5, slice-6 | `slices/slice-7-xep-loai-dashboard.md` |
-| slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Done | — | feature/slice-8-ngay-cong-gio-day | 14 | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
-| slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Đã thay thế (slice-9a, slice-9b) | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
-| slice-10 | Giao diện chung: AppShell, dashboard theo vai trò, restyle | Dọc | Done | — | feature/ui-shell | 15 | slice-8 | `slices/slice-10-giao-dien-chung.md` |
-| slice-11a | Bộ đề thi cố định (tạo trên hệ thống) & thi theo bộ đề | Dọc | Done | — | feature/slice-11a-bo-de-co-dinh | 19 | slice-4, slice-5 | `slices/slice-11a-bo-de-co-dinh.md` |
-| slice-11b | Import bộ đề từ Word (.docx) / Excel (.xlsx, .csv) | Dọc | Done | — | feature/slice-11b-import-de-word-excel | 21 | slice-11a | `slices/slice-11b-import-de-word-excel.md` |
-| slice-12 | Hình ảnh trong câu hỏi / bộ đề | Dọc | Done | — | feature/slice-12-hinh-anh-cau-hoi | 22 | slice-11a (Task 4: + slice-11b) | `slices/slice-12-hinh-anh-cau-hoi.md` |
-| slice-13 | Lịch sử thi học viên & báo cáo kết quả/thi lại | Dọc | Done | — | feature/slice-13-lich-su-thi-bao-cao | 20 | slice-5, slice-7 | `slices/slice-13-lich-su-thi-bao-cao.md` |
-
-## Công việc bổ sung theo mục 22
-
-| ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| slice-2.1 | Reset security (thay đổi slice-2) | Dọc | Done | — | bugfix/slice-2.1-reset-security | 8 | slice-1/2 merged PR3/4 (bảng lịch sử stale) | `slices/slice-2.1-reset-security.md` |
-| slice-9a | Chấm tay Speaking/Writing (thay đổi slice-9) | Dọc | Done | — | feature/slice-9a-cham-tay | 16 | slice-5, slice-10 | `slices/slice-9a-cham-tay.md` |
-| slice-9b | Thông báo trong app + nhắc nhở tự động (thay đổi slice-9) | Dọc | Done | — | feature/slice-9b-thong-bao | 18 | slice-2, slice-5, slice-7, slice-10 | `slices/slice-9b-thong-bao.md` |
-| slice-4.2 | Hoàn thiện luồng làm bài thi online (thay đổi slice-4) | Dọc | Done | — | bugfix/slice-4.2-exam-online-completion | 23 | slice-4, slice-4.1, slice-5 | `slices/slice-4.2-exam-online-completion.md` |
-| slice-4.3 | Điều hướng câu, đánh dấu xem lại, lưu nháp trên máy (thay đổi slice-4) | Dọc | Done | — | feature/slice-4.3-exam-navigation | 24 | slice-4.2 | `slices/slice-4.3-exam-navigation-offline.md` |
-| slice-12.1 | Hình ảnh ở form câu hỏi ngân hàng (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.1-question-bank-images | 25 | slice-12 | `slices/slice-12.1-question-bank-images.md` |
-| slice-12.3 | Hình câu hỏi ở màn chấm tay (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.3-grading-images | 26 | slice-12, slice-9a | `slices/slice-12.3-grading-images.md` |
-| slice-12.2 | Ảnh nhúng Word tự gắn khi import (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.2-docx-images | 27 | slice-12, slice-11b | `slices/slice-12.2-docx-images.md` |
-| slice-11c | Mẫu Excel trắc nghiệm dễ điền + hình từ link Google (thay đổi slice-11b) | Dọc | Done | — | feature/slice-11c-mc-excel | 28 | slice-11b, slice-12.2 | `slices/slice-11c-mc-excel.md` |
+| slice-1 | Quản lý người dùng, cơ sở (Branch) & phân quyền | Dọc | Review | An Vo | feature/slice-1-user-branch-phan-quyen | 3 | slice-0 | `slices/slice-1-user-branch-phan-quyen.md` |
+| slice-2 | OTP đa kênh (WhatsApp/Telegram) cho đổi/khôi phục mật khẩu | Dọc | Đang làm | An Vo | feature/slice-2-otp-da-kenh | — | slice-1 | `slices/slice-2-otp-da-kenh.md` |
+| slice-3 | Ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) + import | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-3-ngan-hang-cau-hoi.md` |
+| slice-4 | Tạo đề & Thi online | Dọc | Chưa bắt đầu | — | — | — | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
+| slice-4.5 | Sinh prompt AI & import ngược câu hỏi | Dọc | Chưa bắt đầu | — | — | — | slice-3 | `slices/slice-4.5-sinh-prompt-ai-import.md` |
+| slice-5 | Chấm điểm tự động & Thi lại | Dọc | Chưa bắt đầu | — | — | — | slice-4 | `slices/slice-5-cham-diem-thi-lai.md` |
+| slice-6 | Điểm danh | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-6-diem-danh.md` |
+| slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Chưa bắt đầu | — | — | — | slice-5, slice-6 | `slices/slice-7-xep-loai-dashboard.md` |
+| slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Chưa bắt đầu | — | — | — | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
+| slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Hoãn | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
 
 ## Trạng thái hợp lệ
 
@@ -54,9 +35,3 @@ Chưa bắt đầu, Đang làm, Review, Done, Done (còn nợ), Hoãn, Đã hủ
 1. Tạo file từ `slices/_TEMPLATE.md`, đặt tên `slices/<id>-<slug>.md`.
 2. Thêm đúng một dòng vào bảng trên, trạng thái "Chưa bắt đầu".
 3. Nếu đây là thay đổi phạm vi của một Slice/Task đã có, đọc `../../AGENTS.md` mục "Quy trình thay đổi phạm vi" trước.
-
-## Bổ sung slice-3 theo mục 22
-
-| ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| slice-3.1 | Question UI/import completion (thay đổi slice-3) | Dọc | Done | — | bugfix/slice-3.1-question-completion | 7 | slice-1/3 merged PR3/5 (bảng lịch sử stale) | `slices/slice-3.1-question-completion.md` |
