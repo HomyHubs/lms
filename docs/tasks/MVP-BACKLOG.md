@@ -30,7 +30,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 
 | ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| slice-2.1 | Reset security (thay đổi slice-2) | Dọc | Đang làm | Coding agent | bugfix/slice-2.1-reset-security | — | slice-1/2 merged PR3/4 (bảng lịch sử stale) | `slices/slice-2.1-reset-security.md` |
+| slice-2.1 | Reset security (thay đổi slice-2) | Dọc | Review | Coding agent | bugfix/slice-2.1-reset-security | 8 | slice-1/2 merged PR3/4 (bảng lịch sử stale) | `slices/slice-2.1-reset-security.md` |
 
 ## Trạng thái hợp lệ
 

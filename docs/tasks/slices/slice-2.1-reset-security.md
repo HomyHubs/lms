@@ -4,7 +4,7 @@
 - Owner: coding agent theo yêu cầu chủ sở hữu 2026-11-02.
 - Branch: bugfix/slice-2.1-reset-security
 - Worktree: .agent-worktrees/slice2-security
-- Trạng thái: Đang làm; chưa merge, chưa đạt DoD.
+- Trạng thái: Review — PR https://github.com/HomyHubs/lms/pull/8 (base dev); chưa merge, chưa đạt DoD; không self-approve/merge.
 - Phụ thuộc: slice-1/slice-2 đã merge theo git history; backlog cũ stale.
 
 ## Contract và phạm vi trước code
