@@ -16,7 +16,7 @@ Hoc vien/giao vien chon kenh nhan OTP (WhatsApp, Telegram, hoac Email da co tu s
 
 | # | Task | Tang | Ghi chu |
 | --- | --- | --- | --- |
-| 1 | Tich hop WhatsApp Business API gui OTP | - | Can tai khoan doanh nghiep da duyet (xem cau hoi mo trong trang LMS) |
+| 1 | ~~Tich hop WhatsApp Business API gui OTP~~ (HOAN) | - | Khong co tai khoan WhatsApp -> bo kenh nay; dung Email la chinh (+ Telegram da co code) |
 | 2 | Tich hop Telegram Bot API gui OTP | - | - |
 | 3 | Giao dien chon kenh nhan OTP (WhatsApp/Telegram/Email) + luong doi/khoi phuc mat khau dung chung ca 3 kenh | - | Thiet ke provider-agnostic de de them kenh sau |
 
@@ -40,6 +40,7 @@ Rate limit cho endpoint OTP/login (chong brute-force) phai la thuc.
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-09-21 | Them | Cot `channel` (password_reset_otps) + field `channel`/`recipient` trong ForgotPasswordRequest | Ho tro OTP da kenh (WhatsApp/Telegram), thiet ke provider-agnostic | 0001 |
+| 2026-11-02 | Bo pham vi | Bo kenh WhatsApp; kenh chinh = Email (Telegram giu code, bat neu co bot token) | Chu so huu khong co tai khoan WhatsApp Business | - |
 
 ## Cach nghiem thu
 

@@ -16,7 +16,7 @@ Admin xem duoc dashboard tong quan diem, bang xep hang hoc vien, va xep loai hoc
 
 | # | Task | Tang | Ghi chu |
 | --- | --- | --- | --- |
-| 1 | Cong thuc xep loai (diem thi + ty le chuyen can), cau hinh duoc theo tung cap do | - | Can chot trong so cu the (xem cau hoi mo trong trang LMS) |
+| 1 | Cong thuc xep loai (diem thi + ty le chuyen can), cau hinh duoc theo tung cap do | - | Trong so da chot: diem thi 90% + chuyen can 10%; phai cau hinh doi duoc ve sau |
 | 2 | Dashboard bieu do diem, ty le dat/khong dat theo lop/cap do/thoi gian | - | - |
 | 3 | Bang xep hang hoc vien + theo doi tien do thi lai | - | - |
 | 4 | Export bao cao Excel/PDF | - | - |
@@ -38,6 +38,7 @@ Du lieu dashboard va xep loai phai la du lieu thuc, chi tinh trong pham vi Branc
 
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
+| 2026-11-02 | Lam ro | Chot trong so xep loai: thi 90% + chuyen can 10%, cau hinh doi duoc ve sau | Quyet dinh chu so huu | - |
 
 ## Cach nghiem thu
 

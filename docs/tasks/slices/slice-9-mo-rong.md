@@ -36,6 +36,7 @@ Khong ap dung (slice tuy chon).
 
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
+| 2026-11-02 | Hoan | Khong lam slice-9 cho MVP (trang thai -> Hoan). Noi dung con mo ho, lam ro lai neu sau nay can | Quyet dinh chu so huu | - |
 
 ## Cach nghiem thu
 
