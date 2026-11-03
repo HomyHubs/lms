@@ -13,7 +13,11 @@ import {
 } from '../dist/features/questions/service.js'
 
 const docker = (...args) =>
-  execFileSync('docker', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
+  execFileSync('docker', args, {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: 120_000,
+  }).trim()
 const id = docker(
   'run',
   '--rm',
@@ -34,6 +38,9 @@ try {
     port: Number(docker('port', id, '5432/tcp').split(':').at(-1)),
     user: 'postgres',
     database: 'postgres',
+    connectionTimeoutMillis: 2_000,
+    statement_timeout: 30_000,
+    query_timeout: 35_000,
   })
   for (let i = 0; ; i++) {
     try {
@@ -44,6 +51,9 @@ try {
       await new Promise((resolve) => setTimeout(resolve, 500))
     }
   }
+  const version = await pool.query('show server_version_num')
+  assert.equal(Math.floor(Number(version.rows[0].server_version_num) / 10_000), 18)
+  console.log('PASS isolated PostgreSQL major version 18')
   const dir = new URL('../../../db/migrations/', import.meta.url)
   const migrations = readdirSync(dir)
     .filter((file) => file.endsWith('.sql'))
@@ -91,6 +101,11 @@ try {
   assert.equal(edited.question.questionText, 'Edited')
   assert.equal(edited.question.explanation, null)
   assert.equal(edited.question.sourceReference, null)
+  const persisted = (await listQuestions(store)).find((question) => question.id === q.id)
+  assert.ok(persisted)
+  assert.equal(persisted.questionText, 'Edited')
+  assert.equal(persisted.explanation, null)
+  assert.equal(persisted.sourceReference, null)
   console.log('PASS real DB metadata roundtrip and nullable edit')
   await pool.query(
     "create function reject_fixture() returns trigger language plpgsql as $$ begin if NEW.question_text = 'reject' then raise exception 'test rollback'; end if; return NEW; end $$; create trigger reject_fixture before insert on questions for each row execute function reject_fixture()",
@@ -106,7 +121,11 @@ try {
   assert.equal((await listQuestions(store)).length, 0)
   console.log('PASS CRUD delete')
 } finally {
-  if (db) await db.destroy()
-  else if (pool) await pool.end()
-  docker('stop', id)
+  try {
+    if (db) await db.destroy()
+    else if (pool) await pool.end()
+  } finally {
+    docker('stop', id)
+  }
 }
+console.log('QUESTIONS_PG_INTEGRATION_PASS')
