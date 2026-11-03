@@ -1,7 +1,10 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
+import { SESSION_COOKIE, hashSessionToken } from '../auth/index.js'
+
 import {
   CreateExamRequest,
   SubmitExamRequest,
+  SaveExamAnswersRequest,
   type AttemptResponse,
   type ExamList,
   type ExamResponse,
@@ -15,7 +18,14 @@ import {
   listOpenExams,
   startAttempt,
   submitAttempt,
+  saveAttemptAnswers,
 } from './service.js'
+
+function attemptSession(request: FastifyRequest): string {
+  const token = request.cookies[SESSION_COOKIE]
+  if (!token) throw new Error('Authenticated session required')
+  return hashSessionToken(token)
+}
 
 interface ExamsRoutesDeps {
   rbac: Rbac
@@ -62,7 +72,7 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
 
   app.post('/exams/:id/attempts', { preHandler: requireStudent }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const outcome = await startAttempt(examsStore, id, getSessionUser(request).id, new Date())
+    const outcome = await startAttempt(examsStore, id, getSessionUser(request).id, new Date(), Math.random, attemptSession(request))
     if (!outcome.ok) {
       const map: Record<typeof outcome.reason, { code: number; error: string }> = {
         not_found: { code: 404, error: 'Khong tim thay de thi' },
@@ -70,10 +80,12 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
         closed: { code: 409, error: 'De thi da dong' },
         already_submitted: { code: 409, error: 'Ban da nop bai, khong the lam lai' },
         not_enough_questions: { code: 409, error: 'Ngan hang khong du cau hoi de sinh de' },
+        paper_unavailable: { code: 409, error: 'Khong co de khac khong trung lap' },
+        session_conflict: { code: 409, error: 'Luot thi dang thuoc phien dang nhap khac' },
       }
       const m = map[outcome.reason]
       reply.code(m.code)
-      return { error: m.error }
+      return { error: m.error, code: outcome.reason }
     }
     const body: AttemptResponse = { attempt: outcome.attempt }
     return body
@@ -81,8 +93,9 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
 
   app.get('/exams/:id/attempt', { preHandler: requireStudent }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const outcome = await getAttempt(examsStore, id, getSessionUser(request).id)
+    const outcome = await getAttempt(examsStore, id, getSessionUser(request).id, new Date(), attemptSession(request))
     if (!outcome.ok) {
+      if (outcome.reason === 'session_conflict') return reply.code(409).send({ error: outcome.reason, code: outcome.reason })
       reply.code(404)
       return {
         error: outcome.reason === 'not_found' ? 'Khong tim thay de thi' : 'Chua bat dau lam bai',
@@ -90,6 +103,17 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
     }
     const body: AttemptResponse = { attempt: outcome.attempt }
     return body
+  })
+
+  app.post('/exams/:id/answers', { preHandler: requireStudent }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const parsed = SaveExamAnswersRequest.safeParse(request.body)
+    if (!parsed.success) return reply.code(400).send({ error: 'Invalid checkpoint' })
+    const outcome = await saveAttemptAnswers(examsStore, id, getSessionUser(request).id,
+      parsed.data.answers, parsed.data.revision, new Date(), attemptSession(request))
+    if (!outcome.ok) return reply.code(outcome.reason === 'not_found' || outcome.reason === 'not_started' ? 404 : 409)
+      .send({ error: outcome.reason, code: outcome.reason })
+    return { attempt: outcome.attempt } satisfies AttemptResponse
   })
 
   app.post('/exams/:id/submit', { preHandler: requireStudent }, async (request, reply) => {
@@ -105,16 +129,19 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
       getSessionUser(request).id,
       parsed.data.answers,
       new Date(),
+      attemptSession(request),
     )
     if (!outcome.ok) {
       const map: Record<typeof outcome.reason, { code: number; error: string }> = {
         not_found: { code: 404, error: 'Khong tim thay de thi' },
         not_started: { code: 404, error: 'Chua bat dau lam bai' },
         already_submitted: { code: 409, error: 'Ban da nop bai roi' },
+        session_conflict: { code: 409, error: 'Luot thi dang thuoc phien dang nhap khac' },
+        revision_conflict: { code: 409, error: 'Dap an da thay doi; tai lai bai thi' },
       }
       const m = map[outcome.reason]
       reply.code(m.code)
-      return { error: m.error }
+      return { error: m.error, code: outcome.reason }
     }
     const body: AttemptResponse = { attempt: outcome.attempt }
     return body

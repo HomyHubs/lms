@@ -65,3 +65,11 @@ Dien theo mau `../../ai-workflow/templates/session-handoff.md` khi dung giua chu
 - **Da lam**: them `isExamOpenAt` + `listOpenExams` (`service.ts`); `GET /exams` phan nhanh theo role (hoc vien -> chi de dang mo trong cua so lich; quan tri -> toan bo). Them 2 unit test + 2 route test.
 - **Cong gac**: `@lms/api` lint + typecheck + test XANH (17 file, 122 test pass).
 - **Buoc tiep theo**: review lai PR #6 tren HEAD `ca45ef8`; chi merge khi co formal approval doc lap. Gan de theo lop (assignment) hoan -> sau MVP.
+
+### 2026-11-03 — Independent local integrity follow-up (not merged)
+
+- PR #6 owner van la An Vo; remote HEAD `0766ee749230328e6bf7b9165984d0561f4e9dd5` da kiem tra lai. Guard xanh cua owner khong phai CI cho patch nay.
+- Worktree rieng `.agent-worktrees/slice4-followup`, nhanh `bugfix/slice-4.1-exam-integrity`; khong push vao nhanh owner.
+- Them snapshot bat bien, session lease, checkpoint revision, deadline/submit atomic idempotent, paper-unavailable/variant dedup va blueprint UI. Xem [slice-4.1 handoff](slice-4.1-exam-integrity.md) va [ADR 0002](../../adr/0002-exam-attempt-integrity.md).
+- N001 duoc lam ro: late submit chi giu dap an checkpoint da luu truoc deadline, khong nhan dap an moi gui sau han. Deadline van la start + duration.
+- Day la patch local cho owner review; khong danh dau slice-4 Done, khong thay owner, khong merge, khong sua root rollup hay backlog chung. Recovery khi mat session va legacy snapshot can owner/product chap thuan truoc rollout.

@@ -161,6 +161,9 @@ function makeFakeExamsStore(
         exam_id: input.examId,
         student_id: input.studentId,
         question_ids: JSON.stringify(input.questionIds),
+        question_snapshot: JSON.stringify(input.questionSnapshot),
+        session_key: input.sessionKey,
+        answer_revision: 0,
         answers: null,
         started_at: input.startedAt,
         deadline_at: input.deadlineAt,
@@ -169,11 +172,28 @@ function makeFakeExamsStore(
       attempts.push(row)
       return row
     },
+    async claimSession(id, key) {
+      const row = attempts.find((a) => a.id === id)!
+      if (row.session_key && row.session_key !== key) return false
+      row.session_key = key
+      return true
+    },
+    async saveAnswers(id, answers, revision, now) {
+      const row = attempts.find((a) => a.id === id)!
+      if (row.submitted_at !== null) return row
+      if (Date.parse(now) >= new Date(row.deadline_at).getTime()) { row.submitted_at = row.deadline_at; return row }
+      if ((row.answer_revision ?? 0) !== revision) return undefined
+      row.answers = answers
+      row.answer_revision = revision + 1
+      return row
+    },
     async saveSubmission(attemptId, answersJson, submittedAtIso) {
       const row = attempts.find((a) => a.id === attemptId)
       if (!row) throw new Error('attempt not found')
-      row.answers = answersJson
-      row.submitted_at = submittedAtIso
+      if (row.submitted_at !== null) return row
+      const late = Date.parse(submittedAtIso) >= new Date(row.deadline_at).getTime()
+      if (!late) row.answers = answersJson
+      row.submitted_at = late ? row.deadline_at : submittedAtIso
       return row
     },
   }
@@ -313,7 +333,33 @@ describe('exams routes — thi online (student)', () => {
     expect(res.statusCode).toBe(409)
   })
 
-  it('luot thi: bat dau (200, de an dap an) -> xem lai -> nop (200) -> nop lai bi chan (409)', async () => {
+  it('checkpoints use revision CAS and strict payloads; another authenticated session is rejected', async () => {
+    app = await buildTestApp(STUDENT, seededStore())
+    await app.inject({ method: 'POST', url: '/exams/exam-open/attempts', headers: { cookie: COOKIE } })
+    const saved = await app.inject({ method: 'POST', url: '/exams/exam-open/answers',
+      headers: { cookie: COOKIE }, payload: { answers: {}, revision: 0 } })
+    expect(saved.statusCode).toBe(200)
+    expect(saved.json().attempt.revision).toBe(1)
+    const stale = await app.inject({ method: 'POST', url: '/exams/exam-open/answers',
+      headers: { cookie: COOKIE }, payload: { answers: {}, revision: 0 } })
+    expect(stale.statusCode).toBe(409)
+    for (const endpoint of ['answers', 'submit']) {
+      const invalid = await app.inject({ method: 'POST', url: `/exams/exam-open/${endpoint}`,
+        headers: { cookie: COOKIE }, payload: { answers: {}, revision: 1, clientTimestamp: '2000-01-01' } })
+      expect(invalid.statusCode).toBe(400)
+    }
+    for (const [method, endpoint, payload] of [
+      ['POST', 'attempts', undefined], ['GET', 'attempt', undefined],
+      ['POST', 'answers', { answers: {}, revision: 1 }], ['POST', 'submit', { answers: {} }],
+    ] as const) {
+      const denied = await app.inject({ method, url: `/exams/exam-open/${endpoint}`,
+        headers: { cookie: `${SESSION_COOKIE}=different-login` }, payload })
+      expect(denied.statusCode).toBe(409)
+      expect(denied.json().code).toBe('session_conflict')
+    }
+  })
+
+  it('luot thi: bat dau -> xem lai -> nop -> retry returns canonical result', async () => {
     app = await buildTestApp(STUDENT, seededStore())
 
     const start = await app.inject({
@@ -349,7 +395,8 @@ describe('exams routes — thi online (student)', () => {
       headers: { cookie: COOKIE },
       payload: { answers: {} },
     })
-    expect(again.statusCode).toBe(409)
+    expect(again.statusCode).toBe(200)
+    expect(again.json()).toEqual(submit.json())
   })
 })
 

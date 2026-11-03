@@ -141,6 +141,9 @@ export interface ExamAttemptsTable {
   student_id: string
   // De da sinh: chuoi JSON string[] cac question id (giu thu tu).
   question_ids: string
+  question_snapshot: ColumnType<string | null, string | null | undefined, string | null>
+  session_key: ColumnType<string | null, string | null | undefined, string | null>
+  answer_revision: Generated<number>
   // Dap an hoc vien: chuoi JSON object; null cho toi khi nop.
   answers: ColumnType<string | null, string | null | undefined, string | null>
   started_at: ColumnType<Date, string | undefined, string>

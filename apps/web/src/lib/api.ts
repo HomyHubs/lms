@@ -44,6 +44,9 @@ import {
   type Question,
   type ResetPasswordRequest,
   type SubmitExamRequest,
+  type SaveExamAnswersRequest,
+  type CreateExamRequest,
+  ExamResponse,
   type UpdateQuestionRequest,
   type UpdateUserRequest,
 } from '@lms/shared'
@@ -454,6 +457,24 @@ export function parseQuestionsCsv(text: string): Record<string, string>[] {
     })
 }
 
+
+export async function saveExamAnswers(examId: string, input: SaveExamAnswersRequest): Promise<ExamAttemptView> {
+  const res = await fetch(`/api/exams/${examId}/answers`, {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong luu duoc dap an; vui long thu lai')
+  return AttemptResponse.parse(await res.json()).attempt
+}
+
+export async function createExamBlueprint(input: CreateExamRequest): Promise<Exam> {
+  const res = await fetch('/api/exams', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong tao duoc de thi')
+  return ExamResponse.parse(await res.json()).exam
+}
 
 /** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */
 export async function listExams(): Promise<Exam[]> {

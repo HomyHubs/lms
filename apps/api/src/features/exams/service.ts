@@ -45,6 +45,8 @@ export interface QuestionLite {
   skill: string
   points: number
   options: string | null
+  correct_answer?: string
+  explanation?: string | null
 }
 
 /** Luot lam bai doc tu DB. */
@@ -53,6 +55,9 @@ export interface AttemptRow {
   exam_id: string
   student_id: string
   question_ids: string
+  question_snapshot?: string | null
+  session_key?: string | null
+  answer_revision?: number
   answers: string | null
   started_at: Date | string
   deadline_at: Date | string
@@ -74,6 +79,8 @@ export interface CreateAttemptFields {
   examId: string
   studentId: string
   questionIds: string[]
+  questionSnapshot: QuestionLite[]
+  sessionKey: string
   startedAt: string
   deadlineAt: string
 }
@@ -89,6 +96,8 @@ export interface ExamsStore {
   findAttempt: (examId: string, studentId: string) => Promise<AttemptRow | undefined>
   findLatestAttemptForStudent: (studentId: string) => Promise<AttemptRow | undefined>
   createAttempt: (input: CreateAttemptFields) => Promise<AttemptRow>
+  claimSession: (attemptId: string, sessionKey: string) => Promise<boolean>
+  saveAnswers: (attemptId: string, answersJson: string, revision: number, nowIso: string) => Promise<AttemptRow | undefined>
   saveSubmission: (
     attemptId: string,
     answersJson: string,
@@ -186,23 +195,34 @@ export function generatePaper(
   count: number,
   previousPaper: string[] | null,
   rng: () => number = Math.random,
-): string[] {
-  function draw(): string[] {
-    return poolIds
-      .map((id) => ({ id, k: rng() }))
-      .sort((a, b) => a.k - b.k)
-      .slice(0, count)
-      .map((x) => x.id)
-  }
-  let paper = draw()
-  if (previousPaper !== null && poolIds.length > count) {
-    let tries = 0
-    while (sameSet(paper, previousPaper) && tries < 20) {
-      paper = draw()
-      tries += 1
-    }
+  variants: ReadonlyMap<string, string> = new Map(),
+): string[] | null {
+  const key = (id: string) => variants.get(id) ?? id
+  const unique = [...new Map(poolIds.map((id) => [key(id), id])).values()]
+  if (!Number.isInteger(count) || count < 1 || unique.length < count) return null
+  const shuffled = unique.map((id) => ({ id, k: rng() })).sort((a, b) => a.k - b.k)
+  const paper = shuffled.slice(0, count).map((x) => x.id)
+  if (previousPaper && sameSet(paper.map(key), previousPaper.map(key))) {
+    const replacement = shuffled.slice(count).find((x) => !paper.map(key).includes(key(x.id)))
+    if (!replacement) return null
+    paper[count - 1] = replacement.id
   }
   return paper
+}
+
+/** Exact content variants only; the bank has no semantic variant-family contract. */
+export function variantKey(q: QuestionLite): string {
+  return JSON.stringify([q.question_text, q.question_type, q.skill, parseOptions(q.options), q.points])
+}
+
+function snapshot(attempt: AttemptRow): QuestionLite[] {
+  if (!attempt.question_snapshot) throw new Error('Exam snapshot unavailable; owner recovery required')
+  const rows = JSON.parse(attempt.question_snapshot) as QuestionLite[]
+  const ids = parseIds(attempt.question_ids)
+  if (!Array.isArray(rows) || rows.length !== ids.length || rows.some((q, i) => q.id !== ids[i])) {
+    throw new Error('Incomplete exam snapshot; owner recovery required')
+  }
+  return rows
 }
 
 async function buildAttemptView(
@@ -210,12 +230,8 @@ async function buildAttemptView(
   exam: ExamRow,
   attempt: AttemptRow,
 ): Promise<ExamAttemptView> {
-  const paperIds = parseIds(attempt.question_ids)
-  const byId = new Map((await store.findQuestionsByIds(paperIds)).map((q) => [q.id, q]))
-  const questions: ExamQuestionView[] = paperIds
-    .map((id) => byId.get(id))
-    .filter((q): q is QuestionLite => q !== undefined)
-    .map(toQuestionView)
+  const questions: ExamQuestionView[] = snapshot(attempt).map(toQuestionView)
+  void store
   const submittedAt = attempt.submitted_at !== null ? toIso(attempt.submitted_at) : null
   return {
     examId: exam.id,
@@ -225,6 +241,7 @@ async function buildAttemptView(
     startedAt: toIso(attempt.started_at),
     deadlineAt: toIso(attempt.deadline_at),
     submittedAt,
+    revision: attempt.answer_revision ?? 0,
     questions,
     answers: parseAnswers(attempt.answers),
   }
@@ -276,7 +293,7 @@ export type StartAttemptOutcome =
   | { ok: true; attempt: ExamAttemptView }
   | {
       ok: false
-      reason: 'not_found' | 'not_open' | 'closed' | 'already_submitted' | 'not_enough_questions'
+      reason: 'not_found' | 'not_open' | 'closed' | 'already_submitted' | 'not_enough_questions' | 'paper_unavailable' | 'session_conflict'
     }
 
 /**
@@ -289,31 +306,41 @@ export async function startAttempt(
   studentId: string,
   now: Date,
   rng: () => number = Math.random,
+  sessionKey = 'internal',
 ): Promise<StartAttemptOutcome> {
   const exam = await store.findExamById(examId)
   if (!exam) return { ok: false, reason: 'not_found' }
   const nowMs = now.getTime()
-  if (nowMs < toDate(exam.opens_at).getTime()) return { ok: false, reason: 'not_open' }
-  if (nowMs > toDate(exam.closes_at).getTime()) return { ok: false, reason: 'closed' }
-
   const existing = await store.findAttempt(examId, studentId)
   if (existing) {
+    if (!(await store.claimSession(existing.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
     if (existing.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
-    return { ok: true, attempt: await buildAttemptView(store, exam, existing) }
+    const active = nowMs >= toDate(existing.deadline_at).getTime()
+      ? await store.saveSubmission(existing.id, existing.answers ?? '{}', now.toISOString()) : existing
+    return { ok: true, attempt: await buildAttemptView(store, exam, active) }
   }
+  if (nowMs < toDate(exam.opens_at).getTime()) return { ok: false, reason: 'not_open' }
+  if (nowMs > toDate(exam.closes_at).getTime()) return { ok: false, reason: 'closed' }
 
   const pool = await store.listQuestionIdsFor(exam.level_id, exam.skill)
   if (pool.length < exam.question_count) return { ok: false, reason: 'not_enough_questions' }
 
   const previous = await store.findLatestAttemptForStudent(studentId)
-  const previousPaper = previous ? parseIds(previous.question_ids) : null
-  const paper = generatePaper(pool, exam.question_count, previousPaper, rng)
+  const previousPaper = previous ? parseIds(previous.question_ids).map((id) => `previous:${id}`) : null
+  const bank = await store.findQuestionsByIds(pool)
+  const variants = new Map(bank.map((q) => [q.id, variantKey(q)]))
+  if (previous) for (const q of snapshot(previous)) variants.set(`previous:${q.id}`, variantKey(q))
+  const paper = generatePaper(bank.map((q) => q.id), exam.question_count, previousPaper, rng, variants)
+  if (!paper) return { ok: false, reason: 'paper_unavailable' }
+  const byId = new Map(bank.map((q) => [q.id, q]))
 
   try {
     const created = await store.createAttempt({
       examId,
       studentId,
       questionIds: paper,
+      questionSnapshot: paper.map((id) => byId.get(id)!),
+      sessionKey,
       startedAt: now.toISOString(),
       deadlineAt: new Date(nowMs + exam.duration_minutes * 60_000).toISOString(),
     })
@@ -324,6 +351,7 @@ export async function startAttempt(
     // loi lot ra thanh 500, doc lai luot da ton tai va resume (hoac bao da nop).
     const raced = await store.findAttempt(examId, studentId)
     if (!raced) throw err
+    if (!(await store.claimSession(raced.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
     if (raced.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
     return { ok: true, attempt: await buildAttemptView(store, exam, raced) }
   }
@@ -331,23 +359,28 @@ export async function startAttempt(
 
 export type GetAttemptOutcome =
   | { ok: true; attempt: ExamAttemptView }
-  | { ok: false; reason: 'not_found' | 'not_started' }
+  | { ok: false; reason: 'not_found' | 'not_started' | 'session_conflict' }
 
 export async function getAttempt(
   store: ExamsStore,
   examId: string,
   studentId: string,
+  now: Date = new Date(),
+  sessionKey = 'internal',
 ): Promise<GetAttemptOutcome> {
   const exam = await store.findExamById(examId)
   if (!exam) return { ok: false, reason: 'not_found' }
   const attempt = await store.findAttempt(examId, studentId)
   if (!attempt) return { ok: false, reason: 'not_started' }
-  return { ok: true, attempt: await buildAttemptView(store, exam, attempt) }
+  if (!(await store.claimSession(attempt.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
+  const active = attempt.submitted_at === null && now.getTime() >= toDate(attempt.deadline_at).getTime()
+    ? await store.saveSubmission(attempt.id, attempt.answers ?? '{}', now.toISOString()) : attempt
+  return { ok: true, attempt: await buildAttemptView(store, exam, active) }
 }
 
 export type SubmitAttemptOutcome =
   | { ok: true; attempt: ExamAttemptView }
-  | { ok: false; reason: 'not_found' | 'not_started' | 'already_submitted' }
+  | { ok: false; reason: 'not_found' | 'not_started' | 'already_submitted' | 'session_conflict' | 'revision_conflict' }
 
 /**
  * Nop bai. Het gio (qua deadline) KHONG khoa nop: van chap nhan, chi tinh cac cau da lam.
@@ -359,18 +392,39 @@ export async function submitAttempt(
   studentId: string,
   answers: Record<string, string>,
   now: Date,
+  sessionKey = 'internal',
 ): Promise<SubmitAttemptOutcome> {
   const exam = await store.findExamById(examId)
   if (!exam) return { ok: false, reason: 'not_found' }
   const attempt = await store.findAttempt(examId, studentId)
   if (!attempt) return { ok: false, reason: 'not_started' }
-  if (attempt.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
-  // Het gio giua chung khong khoa nop — ep nop, lam duoc cau nao tinh cau do.
+  if (!(await store.claimSession(attempt.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
+  if (attempt.submitted_at !== null) return { ok: true, attempt: await buildAttemptView(store, exam, attempt) }
+  // Late finalization may use persisted checkpoints only, never late request answers.
   const paperIds = new Set(parseIds(attempt.question_ids))
   const filtered: Record<string, string> = {}
   for (const [k, v] of Object.entries(answers)) {
     if (paperIds.has(k)) filtered[k] = v
   }
-  const saved = await store.saveSubmission(attempt.id, JSON.stringify(filtered), now.toISOString())
+  const payload = now.getTime() >= toDate(attempt.deadline_at).getTime()
+    ? attempt.answers ?? '{}' : JSON.stringify(filtered)
+  const saved = await store.saveSubmission(attempt.id, payload, now.toISOString())
+  return { ok: true, attempt: await buildAttemptView(store, exam, saved) }
+}
+
+export async function saveAttemptAnswers(
+  store: ExamsStore, examId: string, studentId: string,
+  answers: Record<string, string>, revision: number, now: Date, sessionKey: string,
+): Promise<SubmitAttemptOutcome> {
+  const current = await getAttempt(store, examId, studentId, now, sessionKey)
+  if (!current.ok || current.attempt.status === 'submitted') return current
+  const attempt = await store.findAttempt(examId, studentId)
+  if (!attempt) return { ok: false, reason: 'not_started' }
+  const ids = new Set(parseIds(attempt.question_ids))
+  const filtered = Object.fromEntries(Object.entries(answers).filter(([id]) => ids.has(id)))
+  const saved = await store.saveAnswers(attempt.id, JSON.stringify(filtered), revision, now.toISOString())
+  if (!saved) return { ok: false, reason: 'revision_conflict' }
+  const exam = await store.findExamById(examId)
+  if (!exam) return { ok: false, reason: 'not_found' }
   return { ok: true, attempt: await buildAttemptView(store, exam, saved) }
 }

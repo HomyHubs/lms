@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ExamsPage } from './ExamsPage'
 
+vi.mock('@/features/auth/useAuth', () => ({ useSession: () => ({ user: { role: 'student' } }) }))
+
 const EXAM_ID = '11111111-1111-1111-1111-111111111111'
 const QUESTION_ID = '22222222-2222-2222-2222-222222222222'
 
@@ -75,6 +77,7 @@ describe('ExamsPage', () => {
 
   it('bat dau, chon dap an va nop bai', async () => {
     let submittedBody: unknown
+    let checkpointBody: unknown
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -86,6 +89,11 @@ describe('ExamsPage', () => {
           submittedBody = JSON.parse(String(init?.body))
           return response(attempt('submitted', new Date(Date.now() + 60_000).toISOString()))
         }
+        if (url.endsWith('/answers')) {
+          checkpointBody = JSON.parse(String(init?.body))
+          const saved = attempt('in_progress', new Date(Date.now() + 60_000).toISOString())
+          return response({ attempt: { ...saved.attempt, answers: { [QUESTION_ID]: 'Blue' }, revision: 1 } })
+        }
         throw new Error(`unexpected fetch: ${url}`)
       }),
     )
@@ -94,6 +102,8 @@ describe('ExamsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Bắt đầu/ }))
     await screen.findByText(/What color is the sky/)
     fireEvent.click(screen.getByLabelText('Blue'))
+    await screen.findByText('Đã lưu đáp án')
+    expect(checkpointBody).toEqual({ answers: { [QUESTION_ID]: 'Blue' }, revision: 0 })
     fireEvent.click(screen.getByRole('button', { name: 'Nộp bài' }))
     await screen.findByText(/Đã nộp bài thành công/)
     expect(submittedBody).toEqual({ answers: { [QUESTION_ID]: 'Blue' } })

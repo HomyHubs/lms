@@ -1,3 +1,4 @@
+import { sql } from 'kysely'
 import type { AppDb } from '../../platform/db.js'
 import type {
   AttemptRow,
@@ -29,6 +30,9 @@ const ATTEMPT_COLUMNS = [
   'exam_id',
   'student_id',
   'question_ids',
+  'question_snapshot',
+  'session_key',
+  'answer_revision',
   'answers',
   'started_at',
   'deadline_at',
@@ -105,7 +109,7 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       if (ids.length === 0) return []
       return db
         .selectFrom('questions')
-        .select(['id', 'question_text', 'question_type', 'skill', 'points', 'options'])
+        .select(['id', 'question_text', 'question_type', 'skill', 'points', 'options', 'correct_answer', 'explanation'])
         .where('id', 'in', ids)
         .execute()
     },
@@ -132,6 +136,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
           exam_id: input.examId,
           student_id: input.studentId,
           question_ids: JSON.stringify(input.questionIds),
+          question_snapshot: JSON.stringify(input.questionSnapshot),
+          session_key: input.sessionKey,
           started_at: input.startedAt,
           deadline_at: input.deadlineAt,
         })
@@ -140,14 +146,45 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       return requireAttemptById(inserted.id)
     },
 
-    async saveSubmission(attemptId, answersJson, submittedAtIso) {
-      const updated = await db
-        .updateTable('exam_attempts')
-        .set({ answers: answersJson, submitted_at: submittedAtIso })
+    async claimSession(attemptId, sessionKey) {
+      const updated = await db.updateTable('exam_attempts').set({ session_key: sessionKey })
         .where('id', '=', attemptId)
-        .returning('id')
-        .executeTakeFirstOrThrow()
-      return requireAttemptById(updated.id)
+        .where((eb) => eb.or([eb('session_key', 'is', null), eb('session_key', '=', sessionKey)]))
+        .returning('id').executeTakeFirst()
+      return updated !== undefined
+    },
+
+    async saveAnswers(attemptId, answersJson, revision, nowIso) {
+      return db.transaction().execute(async (trx) => {
+        const row = await trx.selectFrom('exam_attempts').selectAll().where('id', '=', attemptId)
+          .forUpdate().executeTakeFirstOrThrow()
+        const clock = await sql<{ now: Date }>`select clock_timestamp() as now`.execute(trx)
+        const now = new Date(Math.max(Date.parse(nowIso), clock.rows[0]!.now.getTime()))
+        if (row.submitted_at !== null) return row
+        if (now.getTime() >= row.deadline_at.getTime()) {
+          return trx.updateTable('exam_attempts').set({ submitted_at: row.deadline_at.toISOString() })
+            .where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
+        }
+        if (row.answer_revision !== revision) return undefined
+        return trx.updateTable('exam_attempts').set({ answers: answersJson, answer_revision: revision + 1 })
+          .where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
+      })
+    },
+
+    async saveSubmission(attemptId, answersJson, submittedAtIso) {
+      return db.transaction().execute(async (trx) => {
+        const row = await trx.selectFrom('exam_attempts').selectAll().where('id', '=', attemptId)
+          .forUpdate().executeTakeFirstOrThrow()
+        if (row.submitted_at !== null) return row
+        // Read the database clock AFTER acquiring the row lock; waiting cannot extend the deadline.
+        const clock = await sql<{ now: Date }>`select clock_timestamp() as now`.execute(trx)
+        const now = new Date(Math.max(Date.parse(submittedAtIso), clock.rows[0]!.now.getTime()))
+        const late = now.getTime() >= row.deadline_at.getTime()
+        return trx.updateTable('exam_attempts').set({
+          answers: late ? row.answers : answersJson,
+          submitted_at: late ? row.deadline_at.toISOString() : now.toISOString(),
+        }).where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
+      })
     },
   }
 }

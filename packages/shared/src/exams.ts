@@ -93,6 +93,7 @@ export const ExamAttemptView = z.object({
   startedAt: z.string(),
   deadlineAt: z.string(),
   submittedAt: z.string().nullable(),
+  revision: z.number().int().nonnegative().default(0),
   questions: z.array(ExamQuestionView),
   answers: z.record(z.string(), z.string()),
 })
@@ -103,6 +104,13 @@ export type AttemptResponse = z.infer<typeof AttemptResponse>
 
 /** Nop bai: map questionId -> dap an hoc vien chon/nhap. */
 export const SubmitExamRequest = z.object({
-  answers: z.record(z.string(), z.string()),
-})
+  answers: z.record(z.string(), z.string().max(10000)),
+}).strict()
 export type SubmitExamRequest = z.infer<typeof SubmitExamRequest>
+
+/** Full checkpoint, accepted only before the server deadline and at the expected revision. */
+export const SaveExamAnswersRequest = z.object({
+  answers: z.record(z.string(), z.string().max(10000)),
+  revision: z.number().int().nonnegative(),
+}).strict()
+export type SaveExamAnswersRequest = z.infer<typeof SaveExamAnswersRequest>

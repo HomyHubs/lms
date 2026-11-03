@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Clock3, Send } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { ExamAttemptView } from '@lms/shared'
+import { saveExamAnswers } from '@/lib/api'
+import { useSession } from '@/features/auth/useAuth'
+import { BlueprintForm } from './BlueprintForm'
 import { Button } from '@/components/ui/button'
 import { useExams, useStartExamAttempt, useSubmitExamAttempt } from './useExams'
 
@@ -14,6 +17,11 @@ function formatRemaining(seconds: number): string {
 /** UI hoc vien cho slice-4: list de dang mo -> start/resume -> dem nguoc -> nop bai. */
 export function ExamsPage(): React.ReactElement {
   const exams = useExams()
+  const { user } = useSession()
+  const manager = user?.role === 'admin' || user?.role === 'teacher'
+  const revision = useRef(0)
+  const saveQueue = useRef<Promise<void>>(Promise.resolve())
+  const [checkpointMessage, setCheckpointMessage] = useState('')
   const start = useStartExamAttempt()
   const submit = useSubmitExamAttempt()
   const [attempt, setAttempt] = useState<ExamAttemptView | null>(null)
@@ -25,6 +33,7 @@ export function ExamsPage(): React.ReactElement {
   useEffect(() => {
     if (!attempt) return
     setAnswers(attempt.answers)
+    revision.current = attempt.revision
     autoSubmitting.current = attempt.status === 'submitted'
   }, [attempt])
 
@@ -62,6 +71,21 @@ export function ExamsPage(): React.ReactElement {
     return () => window.clearInterval(timer)
   }, [attempt, submitNow])
 
+  function changeAnswer(id: string, value: string): void {
+    if (!attempt || attempt.status === 'submitted' || autoSubmitting.current || Date.now() >= Date.parse(attempt.deadlineAt)) return
+    const next = { ...answers, [id]: value }
+    setAnswers(next)
+    setCheckpointMessage('Đang lưu…')
+    saveQueue.current = saveQueue.current.then(async () => {
+      const saved = await saveExamAnswers(attempt.examId, { answers: next, revision: revision.current })
+      revision.current = saved.revision
+      if (saved.status === 'submitted') setAttempt(saved)
+      setCheckpointMessage('Đã lưu đáp án')
+    }).catch((error: unknown) => {
+      setCheckpointMessage(`Chưa lưu: ${(error as Error).message}. Chỉ đáp án lưu trước hạn được tính.`)
+    })
+  }
+
   function begin(examId: string): void {
     setMessage(null)
     start.mutate(examId, {
@@ -90,6 +114,7 @@ export function ExamsPage(): React.ReactElement {
           </p>
         )}
 
+        {checkpointMessage && <p role="status">{checkpointMessage}</p>}
         {attempt.questions.map((question, index) => (
           <section key={question.id} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="mb-3 font-medium text-slate-900">
@@ -104,8 +129,8 @@ export function ExamsPage(): React.ReactElement {
                       name={question.id}
                       value={option}
                       checked={answers[question.id] === option}
-                      disabled={submitted}
-                      onChange={() => setAnswers((old) => ({ ...old, [question.id]: option }))}
+                      disabled={submitted || remaining === 0 || submit.isPending}
+                      onChange={() => changeAnswer(question.id, option)}
                     />
                     {option}
                   </label>
@@ -115,9 +140,9 @@ export function ExamsPage(): React.ReactElement {
               <textarea
                 aria-label={`Trả lời câu ${index + 1}`}
                 value={answers[question.id] ?? ''}
-                disabled={submitted}
+                disabled={submitted || remaining === 0 || submit.isPending}
                 onChange={(event) =>
-                  setAnswers((old) => ({ ...old, [question.id]: event.target.value }))
+                  changeAnswer(question.id, event.target.value)
                 }
                 className="min-h-24 w-full rounded-md border border-slate-300 p-3 text-sm"
               />
@@ -150,6 +175,7 @@ export function ExamsPage(): React.ReactElement {
           <ArrowLeft className="h-4 w-4" /> Trang chủ
         </Link>
       </div>
+      {manager && <BlueprintForm onCreated={() => void exams.refetch()} />}
       {exams.isLoading && <p>Đang tải danh sách đề…</p>}
       {exams.isError && <p role="alert">Không tải được danh sách đề thi.</p>}
       {exams.data?.length === 0 && <p>Hiện không có đề thi nào đang mở.</p>}

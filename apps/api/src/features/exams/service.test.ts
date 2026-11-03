@@ -16,6 +16,7 @@ import {
   listOpenExams,
   startAttempt,
   submitAttempt,
+  saveAttemptAnswers,
 } from './service.js'
 
 const LEVELS: LevelRef[] = [
@@ -95,6 +96,9 @@ function makeFakeStore(seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } =
         exam_id: input.examId,
         student_id: input.studentId,
         question_ids: JSON.stringify(input.questionIds),
+        question_snapshot: JSON.stringify(input.questionSnapshot),
+        session_key: input.sessionKey,
+        answer_revision: 0,
         answers: null,
         started_at: input.startedAt,
         deadline_at: input.deadlineAt,
@@ -103,11 +107,28 @@ function makeFakeStore(seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } =
       attempts.push(row)
       return row
     },
+    async claimSession(id, key) {
+      const row = attempts.find((a) => a.id === id)!
+      if (row.session_key && row.session_key !== key) return false
+      row.session_key = key
+      return true
+    },
+    async saveAnswers(id, answers, revision, now) {
+      const row = attempts.find((a) => a.id === id)!
+      if (row.submitted_at !== null) return row
+      if (Date.parse(now) >= new Date(row.deadline_at).getTime()) { row.submitted_at = row.deadline_at; return row }
+      if ((row.answer_revision ?? 0) !== revision) return undefined
+      row.answers = answers
+      row.answer_revision = revision + 1
+      return row
+    },
     async saveSubmission(attemptId, answersJson, submittedAtIso) {
       const row = attempts.find((a) => a.id === attemptId)
       if (!row) throw new Error('attempt not found')
-      row.answers = answersJson
-      row.submitted_at = submittedAtIso
+      if (row.submitted_at !== null) return row
+      const late = Date.parse(submittedAtIso) >= new Date(row.deadline_at).getTime()
+      if (!late) row.answers = answersJson
+      row.submitted_at = late ? row.deadline_at : submittedAtIso
       return row
     },
   }
@@ -150,7 +171,7 @@ describe('generatePaper — sinh de ngau nhien, khong trung lien tiep', () => {
     const paper = generatePaper(pool, 3, null)
     expect(paper).toHaveLength(3)
     expect(new Set(paper).size).toBe(3)
-    expect(paper.every((id) => pool.includes(id))).toBe(true)
+    expect(paper!.every((id) => pool.includes(id))).toBe(true)
   })
 
   it('rut lai khi trung y het de gan nhat (con to hop khac)', () => {
@@ -159,13 +180,19 @@ describe('generatePaper — sinh de ngau nhien, khong trung lien tiep', () => {
     let i = 0
     const rng = (): number => (i < queue.length ? (queue[i++] as number) : 0)
     const paper = generatePaper(['a', 'b', 'c', 'd'], 2, ['a', 'b'], rng)
-    expect([...paper].sort()).not.toEqual(['a', 'b'])
-    expect([...paper].sort()).toEqual(['c', 'd'])
+    expect([...paper!].sort()).not.toEqual(['a', 'b'])
+    expect(new Set(paper).size).toBe(2)
   })
 
-  it('giu nguyen khi pool chi du mot to hop (khong the tranh trung)', () => {
-    const paper = generatePaper(['a', 'b'], 2, ['a', 'b'])
-    expect([...paper].sort()).toEqual(['a', 'b'])
+  it('reports impossible rather than repeating the only combination', () => {
+    expect(generatePaper(['a', 'b'], 2, ['a', 'b'])).toBeNull()
+  })
+
+  it('guarantees no repeat even with constant random and duplicate content variants', () => {
+    expect(generatePaper(['a', 'b', 'c'], 2, ['a', 'b'], () => 0)).toEqual(['a', 'c'])
+    const variants = new Map([['a', 'same'], ['b', 'same'], ['c', 'other']])
+    expect(generatePaper(['a', 'b'], 1, ['a'], () => 0, variants)).toBeNull()
+    expect(generatePaper(['a', 'b', 'c'], 2, null, () => 0, variants)).toEqual(['b', 'c'])
   })
 })
 
@@ -310,12 +337,15 @@ describe('startAttempt — sinh de, lich thi, resume', () => {
     const store: ExamsStore = {
       ...base,
       findAttempt: async () => raced,
+      claimSession: async (_id, key) => raced?.session_key === key,
       createAttempt: async (input) => {
         raced = {
           id: 'attempt-raced',
           exam_id: input.examId,
           student_id: input.studentId,
           question_ids: JSON.stringify(input.questionIds),
+          question_snapshot: JSON.stringify(input.questionSnapshot),
+          session_key: input.sessionKey,
           answers: null,
           started_at: input.startedAt,
           deadline_at: input.deadlineAt,
@@ -391,7 +421,7 @@ describe('submitAttempt — nop 1 lan, het gio thi ep nop', () => {
       {},
       new Date('2026-09-21T10:11:00Z'),
     )
-    expect(again).toEqual({ ok: false, reason: 'already_submitted' })
+    expect(again).toEqual(submitted)
     // Vao lai (start) sau khi nop -> khong lam lai duoc.
     const restart = await startAttempt(
       store,
@@ -408,7 +438,9 @@ describe('submitAttempt — nop 1 lan, het gio thi ep nop', () => {
     expect(started.ok).toBe(true)
     if (!started.ok) return
     const firstQid = started.attempt.questions[0]?.id ?? ''
-    // Het gio giua chung -> ep nop; cau da lam van duoc tinh, khong bi khoa.
+    await saveAttemptAnswers(store, 'exam-open', 'student-1', { [firstQid]: 'saved' }, 0,
+      new Date('2026-09-21T10:29:59Z'), 'internal')
+    // The late request must not replace the checkpoint.
     const out = await submitAttempt(
       store,
       'exam-open',
@@ -419,14 +451,14 @@ describe('submitAttempt — nop 1 lan, het gio thi ep nop', () => {
     expect(out.ok).toBe(true)
     if (!out.ok) return
     expect(out.attempt.status).toBe('submitted')
-    expect(out.attempt.submittedAt).toBe('2026-09-21T10:31:00.000Z')
-    expect(out.attempt.answers).toEqual({ [firstQid]: 'a' })
+    expect(out.attempt.submittedAt).toBe('2026-09-21T10:30:00.000Z')
+    expect(out.attempt.answers).toEqual({ [firstQid]: 'saved' })
   })
 
   it('getAttempt tra ve trang thai luot hien tai', async () => {
     const store = seeded()
     await startAttempt(store, 'exam-open', 'student-1', NOW)
-    const got = await getAttempt(store, 'exam-open', 'student-1')
+    const got = await getAttempt(store, 'exam-open', 'student-1', NOW)
     expect(got.ok).toBe(true)
     if (!got.ok) return
     expect(got.attempt.status).toBe('in_progress')
