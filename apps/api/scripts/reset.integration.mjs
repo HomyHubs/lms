@@ -117,7 +117,11 @@ try {
   assert.equal(await store.completeReset(rollbackId, user.id, 'accepted'), true)
   console.log('PASS failed password update rolls back OTP consumption')
 } finally {
-  if (db) await db.destroy()
-  else if (pool) await pool.end()
-  docker('stop', id)
+  try {
+    if (db) await db.destroy()
+    else if (pool) await pool.end()
+  } finally {
+    docker('stop', id)
+  }
 }
+console.log('RESET_PG_INTEGRATION_PASS')
