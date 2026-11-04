@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Clock3, Send } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ClipboardList, Clock3, Send } from 'lucide-react'
 import type { ExamAttemptView } from '@lms/shared'
 import { saveExamAnswers } from '@/lib/api'
 import { useSession } from '@/features/auth/useAuth'
 import { BlueprintForm } from './BlueprintForm'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/card'
 import { useExams, useStartExamAttempt, useSubmitExamAttempt } from './useExams'
 
 function formatRemaining(seconds: number): string {
@@ -35,7 +35,7 @@ function AttemptOutcome(props: {
   }, [availableAt, now])
   const passed = result?.passed === true
   const tone = result?.status === 'pending_manual' ? 'bg-slate-50 text-slate-800'
-    : passed ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-900'
+    : passed ? 'bg-success-50 text-success-800' : 'bg-warning-50 text-warning-900'
   return (
     <section aria-label="Kết quả bài thi" className={`flex flex-col gap-3 rounded-lg p-4 ${tone}`}>
       <p className="font-medium">Lần thi {attemptNumber}{retake ? `/${retake.maxAttempts}` : ''}</p>
@@ -150,26 +150,26 @@ export function ExamsPage(): React.ReactElement {
   if (attempt) {
     const submitted = attempt.status === 'submitted'
     return (
-      <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-5 p-6">
+      <>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500">Bài thi đang làm</p>
             <h1 className="text-2xl font-semibold text-slate-900">{attempt.examTitle}</h1>
           </div>
-          <div className="flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 font-mono text-white">
+          <div className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 font-mono text-white">
             <Clock3 className="h-4 w-4" /> {submitted ? 'Đã nộp' : formatRemaining(remaining)}
           </div>
         </div>
 
         {message && (
-          <p role="status" className={submitted ? 'text-green-700' : 'text-slate-700'}>
+          <p role="status" className={submitted ? 'text-success-700' : 'text-slate-700'}>
             {message}
           </p>
         )}
 
         {checkpointMessage && <p role="status">{checkpointMessage}</p>}
         {attempt.questions.map((question, index) => (
-          <section key={question.id} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <section key={question.id} className="c-card">
             <h2 className="mb-3 font-medium text-slate-900">
               Câu {index + 1}. {question.questionText}
             </h2>
@@ -210,25 +210,20 @@ export function ExamsPage(): React.ReactElement {
         )}
         {submitted && <AttemptOutcome attempt={attempt} retaking={start.isPending}
           onRetake={() => begin(attempt.examId)} onBack={() => setAttempt(null)} />}
-      </main>
+      </>
     )
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Bài thi đang mở</h1>
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-500 underline">
-          <ArrowLeft className="h-4 w-4" /> Trang chủ
-        </Link>
-      </div>
+    <>
+      <PageHeader icon={ClipboardList} title="Bài thi đang mở" />
       {manager && <BlueprintForm onCreated={() => void exams.refetch()} />}
       {exams.isLoading && <p>Đang tải danh sách đề…</p>}
       {exams.isError && <p role="alert">Không tải được danh sách đề thi.</p>}
       {exams.data?.length === 0 && <p>Hiện không có đề thi nào đang mở.</p>}
       <div className="grid gap-4 sm:grid-cols-2">
         {exams.data?.map((exam) => (
-          <article key={exam.id} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <article key={exam.id} className="c-card">
             <h2 className="text-lg font-medium text-slate-900">{exam.title}</h2>
             <p className="mt-1 text-sm text-slate-500">
               {exam.levelCode} · {exam.skill} · {exam.questionCount} câu · {exam.durationMinutes} phút
@@ -240,6 +235,6 @@ export function ExamsPage(): React.ReactElement {
         ))}
       </div>
       {message && <p role="alert">{message}</p>}
-    </main>
+    </>
   )
 }

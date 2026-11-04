@@ -1,6 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { ArrowLeft, ListChecks, Trash2, Upload } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ListChecks, Trash2, Upload } from 'lucide-react'
 import {
   CreateQuestionRequest,
   LEVEL_CODES,
@@ -9,6 +8,7 @@ import {
   QUESTION_TYPES,
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/card'
 import { ApiError, parseQuestionsCsv } from '@/lib/api'
 import { checkImportFile, parseQuestionsXlsx } from '@/lib/question-import'
 import type { Question } from '@lms/shared'
@@ -156,9 +156,10 @@ export function QuestionsPage(): React.ReactElement {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 p-6">
-      <fieldset className="flex flex-wrap gap-3">
-        <legend>Lọc danh sách đã tải</legend>
+    <>
+      <PageHeader icon={ListChecks} title="Ngân hàng câu hỏi" />
+      <fieldset className="c-card flex-row flex-wrap items-end">
+        <legend className="sr-only">Lọc danh sách đã tải</legend>
         {(
           [
             ['levelCode', 'Lọc cấp độ', LEVEL_CODES],
@@ -167,9 +168,10 @@ export function QuestionsPage(): React.ReactElement {
             ['questionType', 'Lọc loại câu hỏi', QUESTION_TYPES],
           ] as const
         ).map(([key, label, values]) => (
-          <label key={key}>
+          <label key={key} className="flex flex-col gap-1 text-sm text-slate-600">
             {label}
             <select
+              className="c-input"
               aria-label={label}
               value={filters[key]}
               onChange={(e) => setFilters((old) => ({ ...old, [key]: e.target.value }))}
@@ -190,24 +192,13 @@ export function QuestionsPage(): React.ReactElement {
           Xóa bộ lọc
         </Button>
       </fieldset>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Ngân hàng câu hỏi</h1>
-        <div className="flex gap-4 text-sm text-slate-500">
-          <Link to="/ai-questions" className="underline">
-            Sinh câu hỏi AI
-          </Link>
-          <Link to="/" className="flex items-center gap-1 underline">
-            <ArrowLeft className="h-4 w-4" /> Trang chủ
-          </Link>
-        </div>
-      </div>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="flex items-center gap-2 text-lg font-medium text-slate-800">
+      <section className="c-card">
+        <h2 className="c-section-title">
           <ListChecks className="h-5 w-5" /> Thêm câu hỏi
         </h2>
         {formError && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-600">
             {formError}
           </p>
         )}
@@ -216,7 +207,7 @@ export function QuestionsPage(): React.ReactElement {
             aria-label="Cấp độ"
             value={level}
             onChange={(e) => setLevel(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             {LEVEL_CODES.map((c) => (
               <option key={c} value={c}>
@@ -228,7 +219,7 @@ export function QuestionsPage(): React.ReactElement {
             aria-label="Kỹ năng"
             value={skill}
             onChange={(e) => setSkill(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             {QUESTION_SKILLS.map((c) => (
               <option key={c} value={c}>
@@ -240,7 +231,7 @@ export function QuestionsPage(): React.ReactElement {
             aria-label="Loại câu hỏi"
             value={questionType}
             onChange={(e) => setQuestionType(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             {QUESTION_TYPES.map((c) => (
               <option key={c} value={c}>
@@ -252,7 +243,7 @@ export function QuestionsPage(): React.ReactElement {
             aria-label="Độ khó"
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             {QUESTION_DIFFICULTIES.map((c) => (
               <option key={c} value={c}>
@@ -272,14 +263,14 @@ export function QuestionsPage(): React.ReactElement {
             value={options}
             onChange={(e) => setOptions(e.target.value)}
             placeholder="Lựa chọn, phân tách bằng | (tùy chọn)"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           />
           <input
             aria-label="Đáp án đúng"
             value={correctAnswer}
             onChange={(e) => setCorrectAnswer(e.target.value)}
             placeholder="Đáp án đúng"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           />
           <input
             aria-label="Điểm"
@@ -287,7 +278,7 @@ export function QuestionsPage(): React.ReactElement {
             value={points}
             onChange={(e) => setPoints(e.target.value)}
             placeholder="Điểm (mặc định 1)"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           />
           <textarea
             aria-label="Giải thích"
@@ -319,8 +310,8 @@ export function QuestionsPage(): React.ReactElement {
         </form>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="flex items-center gap-2 text-lg font-medium text-slate-800">
+      <section className="c-card">
+        <h2 className="c-section-title">
           <Upload className="h-5 w-5" /> Import từ CSV / XLSX
         </h2>
         <p className="text-sm text-slate-500">
@@ -336,44 +327,44 @@ export function QuestionsPage(): React.ReactElement {
           onChange={(e) => void handleImportFile(e)}
           className="text-sm"
         />
-        {importInfo && <p className="text-sm text-green-700">{importInfo}</p>}
+        {importInfo && <p className="text-sm text-success-700">{importInfo}</p>}
         {importError && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-600">
             {importError}
           </p>
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-medium text-slate-800">Danh sách câu hỏi</h2>
+      <section className="c-card">
+        <h2 className="c-section-title">Danh sách câu hỏi</h2>
         {questions.data && (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
+          <table className="c-table">
+            <thead>
               <tr>
-                <th className="p-2">Cấp độ</th>
-                <th className="p-2">Kỹ năng</th>
-                <th className="p-2">Loại</th>
-                <th className="p-2">Độ khó</th>
-                <th className="p-2">Câu hỏi</th>
-                <th className="p-2">Điểm</th>
-                <th className="p-2 text-right">Hành động</th>
+                <th>Cấp độ</th>
+                <th>Kỹ năng</th>
+                <th>Loại</th>
+                <th>Độ khó</th>
+                <th>Câu hỏi</th>
+                <th>Điểm</th>
+                <th className="text-right">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {visibleQuestions?.map((q) => (
-                <tr key={q.id} className="border-b border-slate-100">
-                  <td className="p-2">{q.levelCode}</td>
-                  <td className="p-2">{q.skill}</td>
-                  <td className="p-2">{q.questionType}</td>
-                  <td className="p-2">{q.difficulty}</td>
-                  <td className="p-2">
+                <tr key={q.id}>
+                  <td>{q.levelCode}</td>
+                  <td>{q.skill}</td>
+                  <td>{q.questionType}</td>
+                  <td>{q.difficulty}</td>
+                  <td>
                     {q.questionText}
                     {q.source === 'ai_generated' && (
-                      <span className="ml-2 rounded bg-violet-100 px-1.5 text-xs text-violet-700">AI</span>
+                      <span className="ml-2 rounded bg-accent-100 px-1.5 text-xs text-accent-700">AI</span>
                     )}
                   </td>
-                  <td className="p-2">{q.points}</td>
-                  <td className="p-2 text-right">
+                  <td>{q.points}</td>
+                  <td className="text-right">
                     <Button
                       variant="outline"
                       size="sm"
@@ -397,6 +388,6 @@ export function QuestionsPage(): React.ReactElement {
           </table>
         )}
       </section>
-    </main>
+    </>
   )
 }

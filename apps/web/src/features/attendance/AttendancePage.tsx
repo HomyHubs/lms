@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowLeft, CalendarCheck, Trash2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { CalendarCheck, Trash2 } from 'lucide-react'
 import {
   AttendanceStatus,
   CreateClassSessionRequest,
@@ -9,6 +8,7 @@ import {
   type StudentAttendance,
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/card'
 import { useSession } from '@/features/auth/useAuth'
 import {
   useAdminClasses,
@@ -34,8 +34,6 @@ const STATUS_LABEL: Record<AttendanceStatus, string> = {
   excused: 'Có phép',
 }
 
-const SECTION = 'flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm'
-const INPUT = 'rounded-md border border-slate-300 px-3 py-2 text-sm'
 
 function formatRate(summary: AttendanceSummary): string {
   return summary.ratePercent === null ? '—' : `${summary.ratePercent}%`
@@ -53,10 +51,10 @@ function SummaryLine({ summary }: { summary: AttendanceSummary }): React.ReactEl
 function HistoryTable({ data }: { data: StudentAttendance }): React.ReactElement {
   if (data.history.length === 0) return <p className="text-sm text-slate-500">Chưa có buổi học nào được điểm danh.</p>
   return (
-    <table className="w-full text-left text-sm">
+    <table className="c-table">
       <thead>
-        <tr className="text-slate-500">
-          <th className="py-1">Ngày</th>
+        <tr>
+          <th>Ngày</th>
           <th>Giờ</th>
           <th>Lớp</th>
           <th>Chủ đề</th>
@@ -66,8 +64,8 @@ function HistoryTable({ data }: { data: StudentAttendance }): React.ReactElement
       </thead>
       <tbody>
         {data.history.map((h) => (
-          <tr key={h.sessionId} className="border-t border-slate-100">
-            <td className="py-1">{h.sessionDate}</td>
+          <tr key={h.sessionId}>
+            <td>{h.sessionDate}</td>
             <td>{h.startsAt}</td>
             <td>{h.className}</td>
             <td>{h.topic ?? ''}</td>
@@ -97,7 +95,7 @@ function SessionRoster({ sessionId, editable }: { sessionId: string; editable: b
   }, [attendance.data])
 
   if (attendance.isLoading) return <p className="text-sm text-slate-500">Đang tải danh sách…</p>
-  if (attendance.isError) return <p className="text-sm text-red-600">{(attendance.error as Error).message}</p>
+  if (attendance.isError) return <p className="text-sm text-danger-600">{(attendance.error as Error).message}</p>
   const roster = attendance.data?.roster ?? []
   if (roster.length === 0) return <p className="text-sm text-slate-500">Lớp chưa có học viên ghi danh.</p>
 
@@ -123,23 +121,23 @@ function SessionRoster({ sessionId, editable }: { sessionId: string; editable: b
 
   return (
     <div className="flex flex-col gap-2">
-      <table className="w-full text-left text-sm">
+      <table className="c-table">
         <thead>
-          <tr className="text-slate-500">
-            <th className="py-1">Học viên (SĐT)</th>
+          <tr>
+            <th>Học viên (SĐT)</th>
             <th>Trạng thái</th>
             <th>Ghi chú</th>
           </tr>
         </thead>
         <tbody>
           {roster.map((r) => (
-            <tr key={r.studentId} className="border-t border-slate-100">
-              <td className="py-1">{r.phoneNumber}</td>
+            <tr key={r.studentId}>
+              <td>{r.phoneNumber}</td>
               <td>
                 {editable ? (
                   <select
                     aria-label={`Trạng thái ${r.phoneNumber}`}
-                    className={INPUT}
+                    className="c-input"
                     value={draft[r.studentId]?.status ?? 'present'}
                     onChange={(e) => update(r.studentId, { status: e.target.value as AttendanceStatus })}
                   >
@@ -159,7 +157,7 @@ function SessionRoster({ sessionId, editable }: { sessionId: string; editable: b
                 {editable ? (
                   <input
                     aria-label={`Ghi chú ${r.phoneNumber}`}
-                    className={INPUT}
+                    className="c-input"
                     value={draft[r.studentId]?.note ?? ''}
                     onChange={(e) => update(r.studentId, { note: e.target.value })}
                   />
@@ -239,16 +237,16 @@ function SessionsSection({ classId, canCreate }: { classId: string; canCreate: b
   }
 
   return (
-    <section className={SECTION}>
-      <h2 className="text-lg font-medium text-slate-800">Buổi học</h2>
+    <section className="c-card">
+      <h2 className="c-section-title">Buổi học</h2>
       {canCreate && (
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2">
-          <input aria-label="Ngày học" type="date" className={INPUT} value={date} onChange={(e) => setDate(e.target.value)} />
-          <input aria-label="Giờ bắt đầu" type="time" className={INPUT} value={time} onChange={(e) => setTime(e.target.value)} />
+          <input aria-label="Ngày học" type="date" className="c-input" value={date} onChange={(e) => setDate(e.target.value)} />
+          <input aria-label="Giờ bắt đầu" type="time" className="c-input" value={time} onChange={(e) => setTime(e.target.value)} />
           <input
             aria-label="Chủ đề"
             placeholder="Chủ đề (tuỳ chọn)"
-            className={INPUT}
+            className="c-input"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
           />
@@ -258,12 +256,12 @@ function SessionsSection({ classId, canCreate }: { classId: string; canCreate: b
             min={15}
             max={480}
             step={15}
-            className={INPUT}
+            className="c-input"
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
           />
           {cancelled.length > 0 && (
-            <select aria-label="Dạy bù cho buổi" className={INPUT} value={makeupFor} onChange={(e) => setMakeupFor(e.target.value)}>
+            <select aria-label="Dạy bù cho buổi" className="c-input" value={makeupFor} onChange={(e) => setMakeupFor(e.target.value)}>
               <option value="">— Buổi thường —</option>
               {cancelled.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -278,11 +276,11 @@ function SessionsSection({ classId, canCreate }: { classId: string; canCreate: b
         </form>
       )}
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-600">
           {error}
         </p>
       )}
-      {sessions.isError && <p className="text-sm text-red-600">{(sessions.error as Error).message}</p>}
+      {sessions.isError && <p className="text-sm text-danger-600">{(sessions.error as Error).message}</p>}
       {sessions.data?.length === 0 && <p className="text-sm text-slate-500">Chưa có buổi học.</p>}
       <ul className="flex flex-wrap gap-2">
         {sessions.data?.map((s) => (
@@ -316,16 +314,16 @@ function RatesSection({ classId, showHistory }: { classId: string; showHistory: 
   useEffect(() => setStudentId(null), [classId])
 
   return (
-    <section className={SECTION}>
-      <h2 className="text-lg font-medium text-slate-800">Tỷ lệ chuyên cần của lớp</h2>
-      {rates.isError && <p className="text-sm text-red-600">{(rates.error as Error).message}</p>}
+    <section className="c-card">
+      <h2 className="c-section-title">Tỷ lệ chuyên cần của lớp</h2>
+      {rates.isError && <p className="text-sm text-danger-600">{(rates.error as Error).message}</p>}
       {rates.data && (
         <>
           <SummaryLine summary={rates.data.overall} />
-          <table className="w-full text-left text-sm">
+          <table className="c-table">
             <thead>
-              <tr className="text-slate-500">
-                <th className="py-1">Học viên (SĐT)</th>
+              <tr>
+                <th>Học viên (SĐT)</th>
                 <th>Tỷ lệ</th>
                 <th>Có mặt</th>
                 <th>Đi muộn</th>
@@ -336,8 +334,8 @@ function RatesSection({ classId, showHistory }: { classId: string; showHistory: 
             </thead>
             <tbody>
               {rates.data.students.map((s) => (
-                <tr key={s.studentId} className="border-t border-slate-100">
-                  <td className="py-1">{s.phoneNumber}</td>
+                <tr key={s.studentId}>
+                  <td>{s.phoneNumber}</td>
                   <td>{formatRate(s.summary)}</td>
                   <td>{s.summary.present}</td>
                   <td>{s.summary.late}</td>
@@ -382,10 +380,10 @@ function TeachersSection({ classId }: { classId: string }): React.ReactElement {
   }
 
   return (
-    <section className={SECTION}>
-      <h2 className="text-lg font-medium text-slate-800">Giáo viên phụ trách</h2>
+    <section className="c-card">
+      <h2 className="c-section-title">Giáo viên phụ trách</h2>
       <form onSubmit={handleAssign} className="flex gap-2">
-        <select aria-label="Chọn giáo viên" className={INPUT} value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+        <select aria-label="Chọn giáo viên" className="c-input" value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
           <option value="">— Chọn giáo viên —</option>
           {teachers.data?.map((t) => (
             <option key={t.id} value={t.id}>
@@ -398,7 +396,7 @@ function TeachersSection({ classId }: { classId: string }): React.ReactElement {
         </Button>
       </form>
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-600">
           {error}
         </p>
       )}
@@ -431,12 +429,12 @@ function StaffView({ isAdmin }: { isAdmin: boolean }): React.ReactElement {
 
   return (
     <>
-      <section className={SECTION}>
+      <section className="c-card">
         <label className="flex items-center gap-3 text-sm text-slate-700">
           Lớp
           <select
             aria-label="Chọn lớp"
-            className={INPUT}
+            className="c-input"
             value={classId ?? ''}
             onChange={(e) => setClassId(e.target.value === '' ? null : e.target.value)}
           >
@@ -462,9 +460,9 @@ function StaffView({ isAdmin }: { isAdmin: boolean }): React.ReactElement {
 function StudentView(): React.ReactElement {
   const mine = useMyAttendance(true)
   return (
-    <section className={SECTION}>
-      <h2 className="text-lg font-medium text-slate-800">Lịch sử điểm danh của tôi</h2>
-      {mine.isError && <p className="text-sm text-red-600">{(mine.error as Error).message}</p>}
+    <section className="c-card">
+      <h2 className="c-section-title">Lịch sử điểm danh của tôi</h2>
+      {mine.isError && <p className="text-sm text-danger-600">{(mine.error as Error).message}</p>}
       {mine.data && (
         <>
           <SummaryLine summary={mine.data.summary} />
@@ -482,16 +480,9 @@ function StudentView(): React.ReactElement {
 export function AttendancePage(): React.ReactElement {
   const { user } = useSession()
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <CalendarCheck className="h-6 w-6" /> Điểm danh
-        </h1>
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-500 underline">
-          <ArrowLeft className="h-4 w-4" /> Trang chủ
-        </Link>
-      </div>
+    <>
+      <PageHeader icon={CalendarCheck} title="Điểm danh" />
       {user?.role === 'student' ? <StudentView /> : <StaffView isAdmin={user?.role === 'admin'} />}
-    </main>
+    </>
   )
 }

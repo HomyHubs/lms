@@ -636,6 +636,11 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-2.1 | Reset security (fail-closed destination) | Dọc | Done | 8 | 2026-11-04 |
 | slice-4 | Tạo đề & Thi online (+ slice-4.1 integrity) | Dọc | Done | 6 | 2026-11-04 |
 | slice-5 | Chấm điểm tự động & Thi lại | Dọc | Done | 9 | 2026-11-04 |
+| slice-6 | Điểm danh | Dọc | Done | 10 | 2026-11-05 |
+| slice-4.5 | Sinh prompt AI & import ngược câu hỏi | Dọc | Done | 12 | 2026-11-06 |
+| slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Done | 13 | 2026-11-07 |
+| slice-8 | Ngày công & giờ dạy | Dọc | Done | 14 | 2026-11-08 |
+| slice-10 | Giao diện chung (AppShell, dashboard theo vai trò) | Dọc | Done | 15 | 2026-11-09 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

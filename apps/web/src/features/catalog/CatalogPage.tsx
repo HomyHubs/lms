@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowLeft, BookOpen, GraduationCap, Trash2, Users } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { BookOpen, GraduationCap, Trash2, Users } from 'lucide-react'
 import { CreateClassRequest, CreateCourseRequest, CreateEnrollmentRequest } from '@lms/shared'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/card'
 import { useBranches } from '@/features/centers/useCenters'
 import { useUsers } from '@/features/users/useUsers'
 import {
@@ -101,22 +101,17 @@ export function CatalogPage(): React.ReactElement {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Quản lý chương trình học</h1>
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-500 underline">
-          <ArrowLeft className="h-4 w-4" /> Trang chủ
-        </Link>
-      </div>
+    <>
+      <PageHeader icon={BookOpen} title="Quản lý chương trình học" />
 
       {formError && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-600">
           {formError}
         </p>
       )}
 
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="flex items-center gap-2 text-lg font-medium text-slate-800">
+      <section className="c-card">
+        <h2 className="c-section-title">
           <BookOpen className="h-5 w-5" /> Khoá học
         </h2>
         <form onSubmit={handleCreateCourse} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -124,7 +119,7 @@ export function CatalogPage(): React.ReactElement {
             aria-label="Cấp độ"
             value={courseLevelId}
             onChange={(e) => setCourseLevelId(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             <option value="">-- Chọn cấp độ --</option>
             {levels.data?.map((l) => (
@@ -138,7 +133,7 @@ export function CatalogPage(): React.ReactElement {
             value={courseName}
             onChange={(e) => setCourseName(e.target.value)}
             placeholder="Tên khoá học"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           />
           <Button type="submit" disabled={createCourse.isPending}>
             Thêm khoá học
@@ -168,8 +163,8 @@ export function CatalogPage(): React.ReactElement {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="flex items-center gap-2 text-lg font-medium text-slate-800">
+      <section className="c-card">
+        <h2 className="c-section-title">
           <GraduationCap className="h-5 w-5" /> Lớp học
         </h2>
         <form onSubmit={handleCreateClass} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
@@ -177,7 +172,7 @@ export function CatalogPage(): React.ReactElement {
             aria-label="Khoá học của lớp"
             value={classCourseId}
             onChange={(e) => setClassCourseId(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             <option value="">-- Chọn khoá học --</option>
             {courses.data?.map((c) => (
@@ -190,7 +185,7 @@ export function CatalogPage(): React.ReactElement {
             aria-label="Cơ sở của lớp"
             value={classBranchId}
             onChange={(e) => setClassBranchId(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             <option value="">-- Chọn cơ sở --</option>
             {branches.data?.map((b) => (
@@ -204,29 +199,29 @@ export function CatalogPage(): React.ReactElement {
             value={className}
             onChange={(e) => setClassName(e.target.value)}
             placeholder="Tên lớp"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           />
           <Button type="submit" disabled={createClass.isPending}>
             Thêm lớp
           </Button>
         </form>
         {classes.data && (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
+          <table className="c-table">
+            <thead>
               <tr>
-                <th className="p-2">Tên lớp</th>
-                <th className="p-2">Cơ sở</th>
-                <th className="p-2 text-right">Hành động</th>
+                <th>Tên lớp</th>
+                <th>Cơ sở</th>
+                <th className="text-right">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {classes.data.map((k) => (
-                <tr key={k.id} className="border-b border-slate-100">
-                  <td className="p-2">{k.name}</td>
-                  <td className="p-2">
+                <tr key={k.id}>
+                  <td>{k.name}</td>
+                  <td>
                     {branches.data?.find((b) => b.id === k.branchId)?.name ?? '—'}
                   </td>
-                  <td className="p-2 text-right">
+                  <td className="text-right">
                     <Button
                       variant="outline"
                       size="sm"
@@ -243,8 +238,8 @@ export function CatalogPage(): React.ReactElement {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="flex items-center gap-2 text-lg font-medium text-slate-800">
+      <section className="c-card">
+        <h2 className="c-section-title">
           <Users className="h-5 w-5" /> Ghi danh học viên
         </h2>
         <form onSubmit={handleEnroll} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -252,7 +247,7 @@ export function CatalogPage(): React.ReactElement {
             aria-label="Lớp"
             value={selectedClassId ?? ''}
             onChange={(e) => setSelectedClassId(e.target.value === '' ? null : e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             <option value="">-- Chọn lớp --</option>
             {classes.data?.map((k) => (
@@ -265,7 +260,7 @@ export function CatalogPage(): React.ReactElement {
             aria-label="Học viên"
             value={enrollStudentId}
             onChange={(e) => setEnrollStudentId(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             <option value="">-- Chọn học viên --</option>
             {students.map((s) => (
@@ -296,6 +291,6 @@ export function CatalogPage(): React.ReactElement {
           </ul>
         )}
       </section>
-    </main>
+    </>
   )
 }

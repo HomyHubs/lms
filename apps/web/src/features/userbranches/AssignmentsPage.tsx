@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, MapPin, Save } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { MapPin, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/card'
 import { useBranches } from '@/features/centers/useCenters'
 import { useUsers } from '@/features/users/useUsers'
 import { useSetUserBranches, useUserBranches } from './useUserBranches'
@@ -47,22 +47,17 @@ export function AssignmentsPage(): React.ReactElement {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Gán cơ sở cho người dùng</h1>
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-500 underline">
-          <ArrowLeft className="h-4 w-4" /> Trang chủ
-        </Link>
-      </div>
+    <>
+      <PageHeader icon={MapPin} title="Gán cơ sở cho người dùng" />
 
-      <section className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="c-card">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-600">Người dùng</span>
           <select
             aria-label="Người dùng"
             value={selectedUserId ?? ''}
             onChange={(e) => setSelectedUserId(e.target.value === '' ? null : e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="c-input"
           >
             <option value="">-- Chọn người dùng --</option>
             {users.data?.map((u) => (
@@ -100,9 +95,9 @@ export function AssignmentsPage(): React.ReactElement {
               <Button onClick={handleSave} disabled={setUserBranches.isPending}>
                 <Save className="mr-1 h-4 w-4" /> Lưu
               </Button>
-              {saved && <span className="text-sm text-green-600">Đã lưu</span>}
+              {saved && <span className="text-sm text-success-600">Đã lưu</span>}
               {setUserBranches.isError && (
-                <span role="alert" className="text-sm text-red-600">
+                <span role="alert" className="text-sm text-danger-600">
                   {(setUserBranches.error as Error).message}
                 </span>
               )}
@@ -110,6 +105,6 @@ export function AssignmentsPage(): React.ReactElement {
           </>
         )}
       </section>
-    </main>
+    </>
   )
 }
