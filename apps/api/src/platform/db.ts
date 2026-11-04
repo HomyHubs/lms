@@ -260,6 +260,23 @@ export interface StudentGradingPoliciesTable {
   updated_at: Timestamp
 }
 
+/** Table `notifications` — slice-9b: in-app notification + outbox row for the external channel. */
+export interface NotificationsTable {
+  id: Generated<string>
+  user_id: string
+  kind: string
+  title: string
+  body: string
+  dedupe_key: string
+  channel: string
+  delivery_status: ColumnType<string, string | undefined, string>
+  delivery_attempts: ColumnType<number, number | undefined, number>
+  last_error: ColumnType<string | null, string | null | undefined, string | null>
+  sent_at: ColumnType<Date | null, string | null | undefined, string | null>
+  read_at: ColumnType<Date | null, string | null | undefined, string | null>
+  created_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -282,6 +299,7 @@ export interface Database {
   ai_generated_items: AiGeneratedItemsTable
   student_grading_policies: StudentGradingPoliciesTable
   staff_shifts: StaffShiftsTable
+  notifications: NotificationsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

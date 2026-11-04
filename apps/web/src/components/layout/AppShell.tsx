@@ -5,6 +5,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { TONE_TILE } from '@/components/ui/tone'
 import { useLogout, useSession } from '@/features/auth/useAuth'
+import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { fetchHealth } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { navItemsFor, ROLE_LABELS } from './nav'
@@ -76,6 +77,7 @@ export function AppShell(): React.ReactElement | null {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="ml-auto flex items-center gap-3">
+            <NotificationBell canRunReminders={user.role === 'admin'} />
             <HealthChip />
             <div className="text-right leading-tight">
               <p className="text-sm font-medium text-slate-800">{user.phoneNumber}</p>

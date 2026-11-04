@@ -15,6 +15,8 @@ import {
   EnrollmentResponse,
   ExamList,
   HealthResponse,
+  NotificationList,
+  RunRemindersResult,
   ImportQuestionsResult,
   LevelList,
   LoginResponse,
@@ -728,6 +730,29 @@ export async function cancelClassSession(sessionId: string): Promise<ClassSessio
   const res = await fetch(`/api/sessions/${sessionId}/cancel`, { method: 'POST', credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Huy buoi hoc that bai')
   return ClassSessionResponse.parse(await res.json()).session
+}
+
+/** slice-9b: in-app notifications of the signed-in user + admin reminder trigger. */
+export async function getNotifications(): Promise<NotificationList> {
+  const res = await fetch('/api/notifications', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc thong bao')
+  return NotificationList.parse(await res.json())
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  const res = await fetch(`/api/notifications/${id}/read`, { method: 'POST', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong danh dau duoc thong bao')
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const res = await fetch('/api/notifications/read-all', { method: 'POST', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong danh dau duoc thong bao')
+}
+
+export async function runReminders(): Promise<RunRemindersResult> {
+  const res = await fetch('/api/notifications/run', { method: 'POST', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Chay nhac nho that bai')
+  return RunRemindersResult.parse(await res.json())
 }
 
 /** slice-4.5: AI prompt generation + reverse import. The backend never calls an AI provider. */

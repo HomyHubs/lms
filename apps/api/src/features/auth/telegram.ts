@@ -4,6 +4,17 @@ export interface OtpTelegramSender {
   sendOtp(args: { chatId: string; otp: string; expiresAt: Date }): Promise<void>
 }
 
+/** Sends one HTML text message via Telegram Bot API (shared by OTP and slice-9b reminders). */
+export async function sendTelegramText(botToken: string, chatId: string, text: string): Promise<void> {
+  const url = `https://api.telegram.org/bot${botToken}/sendMessage`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, parse_mode: 'HTML', text }),
+  })
+  if (!res.ok) throw new Error(`Telegram delivery failed (HTTP ${res.status})`)
+}
+
 /**
  * Slice-2: gửi OTP qua Telegram Bot API.
  * Yêu cầu: TELEGRAM_BOT_TOKEN
@@ -30,24 +41,19 @@ export function makeTelegramSender(logger: FastifyBaseLogger): OtpTelegramSender
         throw new Error('Telegram: không xác định được chat_id để gửi OTP')
       }
 
-      const url = `https://api.telegram.org/bot${botToken}/sendMessage`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: targetChatId,
-          parse_mode: 'HTML',
-          text: [
+      try {
+        await sendTelegramText(
+          botToken,
+          targetChatId,
+          [
             `Mã OTP đặt lại mật khẩu: <b>${otp}</b>`,
             `Hiệu lực đến: ${expiresAt.toISOString()}`,
             'Không chia sẻ mã này với bất kỳ ai.',
           ].join('\n'),
-        }),
-      })
-
-      if (!res.ok) {
-        logger.error({ status: res.status }, 'Telegram Bot API error')
-        throw new Error(`Telegram delivery failed (HTTP ${res.status})`)
+        )
+      } catch (err) {
+        logger.error({ err }, 'Telegram Bot API error')
+        throw err
       }
 
       logger.info('OTP sent via Telegram')

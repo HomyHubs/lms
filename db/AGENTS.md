@@ -21,6 +21,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 
+- slice-9b: `20261111000000_notifications.sql` tạo bảng `notifications` (outbox + hộp thư: `dedupe_key` unique, `kind`, `channel`, `delivery_status` pending|sent|failed, `delivery_attempts`, `read_at`; FK users cascade). Down bỏ bảng. Đã chạy up → down → up trên DB test.
 - slice-9a: `20261110000000_manual_grading.sql` thêm `exam_attempts.graded_by` (FK users, set null) và `grader_feedback` (≤ 2000 ký tự); `protect_exam_grade()` chặn sửa 2 cột sau khi chấm. Down khôi phục hàm cũ và bỏ cột. Đã chạy up → down → up trên DB test.
 
 ### 2026-11-08

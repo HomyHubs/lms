@@ -23,6 +23,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-11
+
+**Đã xong**
+
+- slice-9b (Thông báo): feature `notifications` — quét nhắc thi lại + buổi dạy 24 giờ tới → enqueue vào bảng `notifications` (dedupe key) → gửi qua `NOTIFY_CHANNEL` (whatsapp|telegram|console, dùng lại helper `sendWhatsAppText`/`sendTelegramText` của `auth`), thử lại tối đa 3 lần. Lịch trong process mỗi `NOTIFY_INTERVAL_MINUTES` (mặc định 15, 0 = tắt, không chạy khi test). `GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`, `POST /notifications/run` (Admin). Xem ADR 0010.
+
 ### 2026-11-10
 
 **Đã xong**

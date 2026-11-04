@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-11
+
+**Đã xong**
+
+- slice-9b (Thông báo): chuông `NotificationBell` trên header `AppShell` (mọi vai trò) — badge số chưa đọc, danh sách 20 thông báo gần nhất (bấm → đã đọc), "Đánh dấu đã đọc"; Admin có nút "Gửi nhắc nhở ngay". Hook `useNotifications` (refetch 60 giây); test trong `App.test.tsx`.
+
 ### 2026-11-10
 
 **Đã xong**

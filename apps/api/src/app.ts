@@ -26,6 +26,12 @@ import { attendanceRoutes, makeAttendanceStore } from './features/attendance/ind
 import { aiGenerationRoutes, makeAiGenerationStore } from './features/aigeneration/index.js'
 import { makeReportsStore, reportsRoutes } from './features/reports/index.js'
 import { makeWorkHoursStore, workHoursRoutes } from './features/workhours/index.js'
+import {
+  makeNotificationSender,
+  makeNotificationsStore,
+  makeReminderRunner,
+  notificationsRoutes,
+} from './features/notifications/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -143,6 +149,26 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
     workHoursStore: makeWorkHoursStore(db),
     branchScope: userBranchesStore,
   })
+
+  // slice-9b: retake + teaching reminders (in-app bell + outbox to WhatsApp/Telegram/console).
+  const notificationsStore = makeNotificationsStore(db)
+  const reminderRunner = makeReminderRunner(notificationsStore, makeNotificationSender(app.log))
+  await notificationsRoutes(app, { rbac, notificationsStore, reminderRunner })
+  if (config.NODE_ENV !== 'test' && config.NOTIFY_INTERVAL_MINUTES > 0) {
+    let timer: NodeJS.Timeout | undefined
+    const runOnce = (): void => {
+      reminderRunner
+        .run(new Date())
+        .then((result) => app.log.info(result, 'Reminder scan finished'))
+        .catch((err: unknown) => app.log.error({ err }, 'Reminder scan failed'))
+    }
+    app.addHook('onReady', async () => {
+      runOnce()
+      timer = setInterval(runOnce, config.NOTIFY_INTERVAL_MINUTES * 60_000)
+      timer.unref()
+    })
+    app.addHook('onClose', async () => clearInterval(timer))
+  }
 
   return app
 }
