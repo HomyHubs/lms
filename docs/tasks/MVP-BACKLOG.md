@@ -21,7 +21,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-4 | Tạo đề & Thi online | Dọc | Done | — | feature/slice-4-tao-de-thi-online | 6 | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
 | slice-4.5 | Sinh prompt AI & import ngược câu hỏi | Dọc | Chưa bắt đầu | — | — | — | slice-3 | `slices/slice-4.5-sinh-prompt-ai-import.md` |
 | slice-5 | Chấm điểm tự động & Thi lại | Dọc | Done (ngoại lệ §9.4 đã đóng: PR #6 merge trước, slice-5 rebase lên dev) | — | feature/slice-5-cham-diem-thi-lai | 9 | slice-4 | `slices/slice-5-cham-diem-thi-lai.md` |
-| slice-6 | Điểm danh | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-6-diem-danh.md` |
+| slice-6 | Điểm danh | Dọc | Done | — | feature/slice-6-diem-danh | 10 | slice-1 | `slices/slice-6-diem-danh.md` |
 | slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Chưa bắt đầu | — | — | — | slice-5, slice-6 | `slices/slice-7-xep-loai-dashboard.md` |
 | slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Chưa bắt đầu | — | — | — | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
 | slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Hoãn | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |

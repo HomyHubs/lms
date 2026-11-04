@@ -22,6 +22,7 @@ import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
 import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranches/index.js'
 import { makeQuestionsStore, questionsRoutes } from './features/questions/index.js'
 import { examsRoutes, makeExamsStore } from './features/exams/index.js'
+import { attendanceRoutes, makeAttendanceStore } from './features/attendance/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -115,6 +116,13 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
 
   // slice-4: Tao de & Thi online. Admin/Teacher tao de; Student lam/nop bai (de an dap an).
   await examsRoutes(app, { rbac, examsStore: makeExamsStore(db) })
+
+  // slice-6: Attendance. Only the assigned class teacher marks; admin reads within branch scope.
+  await attendanceRoutes(app, {
+    rbac,
+    attendanceStore: makeAttendanceStore(db),
+    branchScope: userBranchesStore,
+  })
 
   return app
 }

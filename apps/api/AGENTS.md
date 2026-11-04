@@ -23,6 +23,17 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-05
+
+**Đã xong**
+
+- slice-6 (Điểm danh) — feature `attendance` (`attendanceRoutes(app, { rbac, attendanceStore, branchScope })`): Admin gán giáo viên cho lớp (`/classes/:id/teachers`), GV phụ trách tạo buổi học + điểm danh (`/classes/:id/sessions`, `PUT /sessions/:id/attendance`), học viên xem `/me/attendance`, Admin xem `/attendance/students/:id` + `/attendance/rates`. Migration `20261105000000_attendance.sql` (3 bảng mới, down/up đã chạy trên Postgres thật). Công thức tỷ lệ chuyên cần: ADR 0004.
+- Test: `attendance/service.test.ts` (công thức), `routes.test.ts` (RBAC + nghiệm thu), `store.integration.test.ts` (Postgres thật).
+
+**Bước tiếp theo**
+
+- slice-7 dùng `summarize`/`GET /attendance/rates` làm đầu vào xếp loại.
+
 ### 2026-09-23
 
 **Đã xong**
