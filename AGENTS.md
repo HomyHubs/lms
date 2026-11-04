@@ -635,6 +635,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-3.1 | Question completion (strict CSV/XLSX import) | Dọc | Done | 7 | 2026-11-04 |
 | slice-2.1 | Reset security (fail-closed destination) | Dọc | Done | 8 | 2026-11-04 |
 | slice-4 | Tạo đề & Thi online (+ slice-4.1 integrity) | Dọc | Done | 6 | 2026-11-04 |
+| slice-5 | Chấm điểm tự động & Thi lại | Dọc | Done | 9 | 2026-11-04 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
