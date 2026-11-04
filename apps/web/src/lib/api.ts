@@ -50,6 +50,19 @@ import {
   ExamResponse,
   type UpdateQuestionRequest,
   type UpdateUserRequest,
+  AttendanceRates,
+  ClassSessionList,
+  ClassSessionResponse,
+  ClassTeacherList,
+  SessionAttendance,
+  StudentAttendance,
+  TeachingClassList,
+  type AttendanceRatesQuery,
+  type ClassSession,
+  type ClassTeacher,
+  type CreateClassSessionRequest,
+  type MarkAttendanceRequest,
+  type TeachingClass,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -522,4 +535,98 @@ export async function submitExamAttempt(
   })
   if (!res.ok) return throwApiError(res, 'Nop bai that bai')
   return AttemptResponse.parse(await res.json()).attempt
+}
+
+/**
+ * slice-6: attendance. The backend enforces RBAC: only the assigned class teacher marks,
+ * admins read within their branch scope, students read their own history.
+ */
+export async function listTeachingClasses(): Promise<TeachingClass[]> {
+  const res = await fetch('/api/attendance/classes', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc danh sach lop phu trach')
+  return TeachingClassList.parse(await res.json()).classes
+}
+
+export async function listClassTeachers(classId: string): Promise<ClassTeacher[]> {
+  const res = await fetch(`/api/classes/${classId}/teachers`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc giao vien cua lop')
+  return ClassTeacherList.parse(await res.json()).teachers
+}
+
+export async function assignClassTeacher(classId: string, teacherId: string): Promise<void> {
+  const res = await fetch(`/api/classes/${classId}/teachers`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ teacherId }),
+  })
+  if (!res.ok) return throwApiError(res, 'Gan giao vien that bai')
+}
+
+export async function removeClassTeacher(classId: string, teacherId: string): Promise<void> {
+  const res = await fetch(`/api/classes/${classId}/teachers/${teacherId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) return throwApiError(res, 'Go giao vien that bai')
+}
+
+export async function listClassSessions(classId: string): Promise<ClassSession[]> {
+  const res = await fetch(`/api/classes/${classId}/sessions`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc danh sach buoi hoc')
+  return ClassSessionList.parse(await res.json()).sessions
+}
+
+export async function createClassSession(
+  classId: string,
+  input: CreateClassSessionRequest,
+): Promise<ClassSession> {
+  const res = await fetch(`/api/classes/${classId}/sessions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Tao buoi hoc that bai')
+  return ClassSessionResponse.parse(await res.json()).session
+}
+
+export async function getSessionAttendance(sessionId: string): Promise<SessionAttendance> {
+  const res = await fetch(`/api/sessions/${sessionId}/attendance`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc diem danh')
+  return SessionAttendance.parse(await res.json())
+}
+
+export async function markSessionAttendance(
+  sessionId: string,
+  input: MarkAttendanceRequest,
+): Promise<SessionAttendance> {
+  const res = await fetch(`/api/sessions/${sessionId}/attendance`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Luu diem danh that bai')
+  return SessionAttendance.parse(await res.json())
+}
+
+export async function getMyAttendance(): Promise<StudentAttendance> {
+  const res = await fetch('/api/me/attendance', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc lich su diem danh')
+  return StudentAttendance.parse(await res.json())
+}
+
+export async function getStudentAttendance(studentId: string): Promise<StudentAttendance> {
+  const res = await fetch(`/api/attendance/students/${studentId}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc lich su diem danh')
+  return StudentAttendance.parse(await res.json())
+}
+
+export async function getAttendanceRates(query: AttendanceRatesQuery): Promise<AttendanceRates> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
+  const res = await fetch(`/api/attendance/rates?${params.toString()}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc ty le chuyen can')
+  return AttendanceRates.parse(await res.json())
 }

@@ -3,6 +3,7 @@ import {
   Activity,
   BookOpen,
   Building2,
+  CalendarCheck,
   CheckCircle2,
   ClipboardList,
   LogOut,
@@ -48,6 +49,14 @@ export function HomePage(): React.ReactElement {
               className="flex items-center gap-1 text-sm text-slate-600 underline"
             >
               <ClipboardList className="h-4 w-4" /> Bài thi của tôi
+            </Link>
+          )}
+          {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'student') && (
+            <Link
+              to="/attendance"
+              className="flex items-center gap-1 text-sm text-slate-600 underline"
+            >
+              <CalendarCheck className="h-4 w-4" /> Điểm danh
             </Link>
           )}
           {user?.role === 'admin' && (

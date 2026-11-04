@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-05
+
+**Đã xong**
+
+- slice-6 (Điểm danh): route `/attendance` (Admin/Teacher/Student), link "Điểm danh" ở trang chủ. GV: chọn lớp phụ trách → tạo buổi → điểm danh từng học viên. Admin: gán GV cho lớp, xem buổi/điểm danh (chỉ đọc), tỷ lệ chuyên cần + lịch sử từng học viên. Học viên: lịch sử + tỷ lệ của mình. API client + hook `useAttendance`; test `AttendancePage.test.tsx`.
+
 ### 2026-09-14
 
 **Đã xong**

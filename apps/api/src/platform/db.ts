@@ -171,6 +171,36 @@ export interface ExamAttemptsTable {
   grading_detail: ColumnType<string | null, string | null | undefined, string | null>
 }
 
+/** Table `class_teachers` — slice-6: teachers assigned to a class (attendance RBAC). */
+export interface ClassTeachersTable {
+  class_id: string
+  teacher_id: string
+  created_at: Timestamp
+}
+
+/** Table `class_sessions` — slice-6: one session of a class (date + local start time). */
+export interface ClassSessionsTable {
+  id: Generated<string>
+  class_id: string
+  // Postgres `date`/`time`: written as 'YYYY-MM-DD' / 'HH:MM'; read back via to_char in the store.
+  session_date: string
+  starts_at: ColumnType<string, string | undefined, string>
+  topic: ColumnType<string | null, string | null | undefined, string | null>
+  created_by: string
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+/** Table `attendance_records` — slice-6: status of one student in one session. */
+export interface AttendanceRecordsTable {
+  session_id: string
+  student_id: string
+  status: string
+  note: ColumnType<string | null, string | null | undefined, string | null>
+  recorded_by: string
+  recorded_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -186,6 +216,9 @@ export interface Database {
   exams: ExamsTable
   exam_attempts: ExamAttemptsTable
   exam_grading_policies: ExamGradingPoliciesTable
+  class_teachers: ClassTeachersTable
+  class_sessions: ClassSessionsTable
+  attendance_records: AttendanceRecordsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

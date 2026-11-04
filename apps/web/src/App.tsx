@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { CentersPage } from '@/features/centers/CentersPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
@@ -69,6 +70,14 @@ export function App(): React.ReactElement {
         element={
           <RequireAuth role="student">
             <ExamsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/attendance"
+        element={
+          <RequireAuth role={['admin', 'teacher', 'student']}>
+            <AttendancePage />
           </RequireAuth>
         }
       />
