@@ -1,6 +1,7 @@
 import { questionRowsToRecords, importFailure, type ImportIssue } from './question-import'
 import {
   AdminUserList,
+  AttemptResponse,
   AdminUserResponse,
   BranchList,
   BranchResponse,
@@ -12,6 +13,7 @@ import {
   CourseResponse,
   EnrollmentList,
   EnrollmentResponse,
+  ExamList,
   HealthResponse,
   ImportQuestionsResult,
   LevelList,
@@ -34,12 +36,18 @@ import {
   type CreateQuestionRequest,
   type CreateUserRequest,
   type Enrollment,
+  type Exam,
+  type ExamAttemptView,
   type ForgotPasswordRequest,
   type Level,
   type LoginRequest,
   type PublicUser,
   type Question,
   type ResetPasswordRequest,
+  type SubmitExamRequest,
+  type SaveExamAnswersRequest,
+  type CreateExamRequest,
+  ExamResponse,
   type UpdateQuestionRequest,
   type UpdateUserRequest,
 } from '@lms/shared'
@@ -456,4 +464,62 @@ function parseCsvRows(text: string): string[][] {
  */
 export function parseQuestionsCsv(text: string): Record<string, string>[] {
   return questionRowsToRecords(parseCsvRows(text))
+}
+
+
+export async function saveExamAnswers(examId: string, input: SaveExamAnswersRequest): Promise<ExamAttemptView> {
+  const res = await fetch(`/api/exams/${examId}/answers`, {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong luu duoc dap an; vui long thu lai')
+  return AttemptResponse.parse(await res.json()).attempt
+}
+
+export async function createExamBlueprint(input: CreateExamRequest): Promise<Exam> {
+  const res = await fetch('/api/exams', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong tao duoc de thi')
+  return ExamResponse.parse(await res.json()).exam
+}
+
+/** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */
+export async function listExams(): Promise<Exam[]> {
+  const res = await fetch('/api/exams', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc danh sach de thi')
+  return ExamList.parse(await res.json()).exams
+}
+
+/** Bat dau hoac resume dung luot thi cu cua hoc vien. */
+export async function startExamAttempt(examId: string): Promise<ExamAttemptView> {
+  const res = await fetch(`/api/exams/${examId}/attempts`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+  if (!res.ok) return throwApiError(res, 'Khong the bat dau bai thi')
+  return AttemptResponse.parse(await res.json()).attempt
+}
+
+/** Lay luot thi hien tai neu trang duoc tai lai. */
+export async function getExamAttempt(examId: string): Promise<ExamAttemptView> {
+  const res = await fetch(`/api/exams/${examId}/attempt`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc luot thi')
+  return AttemptResponse.parse(await res.json()).attempt
+}
+
+/** Nop bai mot lan; backend loc bo dap an khong thuoc de da sinh. */
+export async function submitExamAttempt(
+  examId: string,
+  input: SubmitExamRequest,
+): Promise<ExamAttemptView> {
+  const res = await fetch(`/api/exams/${examId}/submit`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Nop bai that bai')
+  return AttemptResponse.parse(await res.json()).attempt
 }

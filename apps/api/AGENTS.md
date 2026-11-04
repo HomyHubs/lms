@@ -5,10 +5,10 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 ## Bối cảnh feature
 
 - Nhiệm vụ: Backend Fastify + TypeScript cho LMS. Slice-0 dựng khung + endpoint health-check nối thông FE-BE-DB thật (Postgres qua Kysely).
-- Slice/Task đang triển khai: slice-0, xem `docs/tasks/slices/slice-0-nen-tang-auth.md`
+- Slice/Task đang triển khai: slice-4, xem `docs/tasks/slices/slice-4-tao-de-thi-online.md`
 - Phụ thuộc module nào, qua cửa công khai nào: `@lms/shared` (contract `HealthResponse`).
 - Owner hiện tại: An Vo
-- Nhánh: feature/slice-0-nen-tang-auth
+- Nhánh: feature/slice-4-tao-de-thi-online
 
 ## Contract (cửa công khai — chốt trước, không đổi giữa chừng)
 
@@ -22,6 +22,26 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
   - Task 3: `requestPasswordReset/resetPassword`, `generateOtp/hashOtp`, `MAX_OTP_ATTEMPTS`; store `makePasswordResetStore`; sender `makeConsoleEmailSender`.
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
+
+### 2026-09-23
+
+**Đã xong**
+
+- slice-4 (Tạo đề & Thi online) — xử lý finding review **N001** "hết giờ giữa chừng bị khóa nộp": bỏ chặn `deadline_passed` trong `submitAttempt`; hết giờ vẫn cho nộp (ép nộp), chỉ tính đáp án các câu thuộc đề đã làm. Bỏ `deadline_passed` khỏi `SubmitAttemptOutcome` và khỏi map lỗi ở `routes.ts`.
+- Viết lại unit test deadline thành "qua deadline vẫn cho nộp (ép nộp) — chỉ tính câu đã làm" (`service.test.ts`).
+- **N003** (đua khi `startAttempt` chạy song song → resume thay vì lỗi 500) đã xử lý cùng commit, kèm 2 unit test.
+- Commit `b18e667`. Cổng gác toàn repo XANH: `pnpm -r build && lint && typecheck && test` — apps/api 118 test pass (exams: service 16 + routes 9), shared 14, web 12.
+- **N002** (GET /exams lọc theo vai trò): thêm `isExamOpenAt` + `listOpenExams` (`service.ts`); `GET /exams` phân nhánh theo role — học viên chỉ thấy đề đang mở trong cửa sổ lịch (`opens_at..closes_at`), quản trị (Admin/Teacher/Staff) vẫn xem toàn bộ qua `listExams`. Kèm 2 unit test + 2 route test. Cổng gác `@lms/api` XANH: lint + typecheck + 122 test pass (exams: service 18 + routes 11). Không đổi contract (`ExamList` giữ nguyên).
+
+**Đang làm dở**
+
+- (không) — N001/N003 đã commit (`b18e667`); N002 code + test xong, cổng gác xanh, commit ngay sau khi cập nhật nhật ký.
+
+**Bước tiếp theo**
+
+- Finding còn lại của slice-4: N004 (info). N002 đã xử lý (xem mục Đã xong); gán đề theo lớp/học viên (assignment) hoãn → sau MVP.
+- V002 đã đóng: CI dùng PostgreSQL thật, chạy migration + integration exams + rollback/re-apply; guard xanh trên `ca45ef8`.
+- Tiếp tục review/PR slice-4 vào `dev`.
 
 ### 2026-09-14
 
@@ -42,3 +62,14 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - Chạy migrate + seed trên Postgres thật, kiểm tra end-to-end; chuẩn bị PR slice-0 vào `dev`.
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)
+
+### 2026-09-27 — xử lý review PR #6
+
+**Đã xong**
+
+- Thêm `store.integration.test.ts` chạy với PostgreSQL thật: Kysely store round-trip, hai start đồng thời chỉ tạo một attempt, student-safe view và submit sau deadline.
+- CI cấp PostgreSQL service, chạy migration trước test và xác minh migration mới nhất down/up.
+
+**Bước tiếp theo**
+
+- CI guard đã xanh trên `ca45ef8`; review lại đúng HEAD bằng identity độc lập.

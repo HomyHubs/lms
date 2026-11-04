@@ -4,6 +4,7 @@ import {
   BookOpen,
   Building2,
   CheckCircle2,
+  ClipboardList,
   LogOut,
   MapPin,
   Users,
@@ -41,6 +42,14 @@ export function HomePage(): React.ReactElement {
         </div>
         <div className="flex items-center gap-3">
           {user && <span className="text-sm text-slate-500">{user.phoneNumber}</span>}
+          {user?.role === 'student' && (
+            <Link
+              to="/exams"
+              className="flex items-center gap-1 text-sm text-slate-600 underline"
+            >
+              <ClipboardList className="h-4 w-4" /> Bài thi của tôi
+            </Link>
+          )}
           {user?.role === 'admin' && (
             <Link
               to="/users"
