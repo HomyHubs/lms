@@ -1,3 +1,4 @@
+import { questionRowsToRecords, importFailure, type ImportIssue } from './question-import'
 import {
   AdminUserList,
   AttemptResponse,
@@ -63,6 +64,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    public readonly errors: ImportIssue[] = [],
   ) {
     super(message)
     this.name = 'ApiError'
@@ -157,8 +159,7 @@ export async function createUser(input: CreateUserRequest): Promise<AdminUser> {
     body: JSON.stringify(input),
   })
   if (!res.ok) {
-    const message =
-      res.status === 409 ? 'So dien thoai da duoc su dung' : 'Tao nguoi dung that bai'
+    const message = res.status === 409 ? 'So dien thoai da duoc su dung' : 'Tao nguoi dung that bai'
     throw new ApiError(res.status, message)
   }
   const json: unknown = await res.json()
@@ -297,7 +298,8 @@ export async function createEnrollment(input: CreateEnrollmentRequest): Promise<
     body: JSON.stringify(input),
   })
   if (!res.ok) {
-    const message = res.status === 409 ? 'Hoc vien da duoc ghi danh vao lop nay' : 'Ghi danh that bai'
+    const message =
+      res.status === 409 ? 'Hoc vien da duoc ghi danh vao lop nay' : 'Ghi danh that bai'
     throw new ApiError(res.status, message)
   }
   return EnrollmentResponse.parse(await res.json()).enrollment
@@ -336,13 +338,30 @@ export async function setUserBranches(userId: string, branchIds: string[]): Prom
 /** Doc `{ error }` tu body loi cua backend de UI hien thong bao ro rang (fallback neu thieu). */
 async function throwApiError(res: Response, fallback: string): Promise<never> {
   let message = fallback
+  const errors: ImportIssue[] = []
   try {
-    const body = (await res.json()) as { error?: unknown }
+    const body = (await res.json()) as { error?: unknown; errors?: unknown }
     if (typeof body.error === 'string' && body.error.trim() !== '') message = body.error
+    if (Array.isArray(body.errors)) {
+      for (const issue of body.errors) {
+        if (
+          typeof issue === 'object' &&
+          issue !== null &&
+          'row' in issue &&
+          'field' in issue &&
+          'message' in issue &&
+          typeof issue.row === 'number' &&
+          typeof issue.field === 'string' &&
+          typeof issue.message === 'string'
+        ) {
+          errors.push({ row: issue.row, field: issue.field, message: issue.message })
+        }
+      }
+    }
   } catch {
-    // Body khong phai JSON hop le -> dung fallback.
+    // Invalid JSON uses the fallback; no server stack/body leaks.
   }
-  throw new ApiError(res.status, message)
+  throw new ApiError(res.status, message, errors)
 }
 
 export async function listQuestions(): Promise<Question[]> {
@@ -397,44 +416,46 @@ export async function importQuestions(
 
 /** Tach CSV thanh cac dong (mang o), ho tro o co dau ngoac kep "" (chua dau phay / xuong dong). */
 function parseCsvRows(text: string): string[][] {
-  let src = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  if (src.charCodeAt(0) === 0xfeff) src = src.slice(1) // bo BOM cua file Excel/CSV
+  const src = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
   const rows: string[][] = []
   let row: string[] = []
   let field = ''
   let inQuotes = false
+  let closed = false
+  const pushField = () => {
+    row.push(field)
+    field = ''
+    closed = false
+  }
   for (let i = 0; i < src.length; i++) {
     const ch = src[i]
     if (inQuotes) {
-      if (ch === '"') {
-        if (src[i + 1] === '"') {
-          field += '"'
-          i++
-        } else {
-          inQuotes = false
-        }
-      } else {
-        field += ch
-      }
-    } else if (ch === '"') {
-      inQuotes = true
-    } else if (ch === ',') {
-      row.push(field)
-      field = ''
-    } else if (ch === '\n') {
-      row.push(field)
-      field = ''
+      if (ch === '"' && src[i + 1] === '"') {
+        field += '"'
+        i++
+      } else if (ch === '"') {
+        inQuotes = false
+        closed = true
+      } else field += ch
+    } else if (ch === ',') pushField()
+    else if (ch === '\n') {
+      pushField()
       rows.push(row)
       row = []
+    } else if (ch === '"') {
+      if (field !== '' || closed) importFailure(rows.length + 1, 'csv', 'Dấu nháy không hợp lệ')
+      inQuotes = true
     } else {
+      if (closed) importFailure(rows.length + 1, 'csv', 'Ký tự sau dấu nháy đóng')
       field += ch
     }
   }
-  if (field !== '' || row.length > 0) {
-    row.push(field)
+  if (inQuotes) importFailure(rows.length + 1, 'csv', 'Thiếu dấu nháy đóng')
+  if (field !== '' || row.length > 0 || closed) {
+    pushField()
     rows.push(row)
   }
-  return rows.filter((r) => r.some((c) => c.trim() !== ''))
+  return rows
 }
 
 /**
@@ -442,19 +463,7 @@ function parseCsvRows(text: string): string[][] {
  * backend validate strict — sai/thua field se bi bao loi va khong luu. O duoc trim.
  */
 export function parseQuestionsCsv(text: string): Record<string, string>[] {
-  const rows = parseCsvRows(text)
-  if (rows.length === 0) return []
-  const header = (rows[0] ?? []).map((h) => h.trim())
-  return rows
-    .slice(1)
-    .filter((cells) => cells.some((c) => c.trim() !== ''))
-    .map((cells) => {
-      const record: Record<string, string> = {}
-      header.forEach((key, i) => {
-        record[key] = (cells[i] ?? '').trim()
-      })
-      return record
-    })
+  return questionRowsToRecords(parseCsvRows(text))
 }
 
 

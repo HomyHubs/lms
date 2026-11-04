@@ -36,8 +36,6 @@ export function ForgotPasswordPage(): React.ReactElement {
     const parsed = ForgotPasswordRequest.safeParse({
       email,
       channel,
-      // Voi kenh email, dia chi nhan mac dinh la chinh email (khong can nhap rieng).
-      recipient: channel === 'email' ? undefined : recipient,
     })
     if (!parsed.success) {
       setFieldError(parsed.error.issues[0]?.message ?? 'Du lieu khong hop le')
@@ -118,8 +116,6 @@ export function ForgotPasswordPage(): React.ReactElement {
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="email">Email</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="telegram">Telegram</option>
             </select>
           </div>
 

@@ -36,6 +36,34 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   const app = Fastify({
     logger: {
       level: config.NODE_ENV === 'test' ? 'silent' : 'info',
+      redact: {
+        paths: [
+          'req.headers.authorization',
+          'req.headers.cookie',
+          'res.headers["set-cookie"]',
+          'req.body',
+          'body',
+          'email',
+          'phone',
+          'phoneNumber',
+          'phone_number',
+          'chatId',
+          '*.phone',
+          '*.phoneNumber',
+          '*.phone_number',
+          '*.chatId',
+          'recipient',
+          'otp',
+          'password',
+          'newPassword',
+          '*.email',
+          '*.recipient',
+          '*.otp',
+          '*.password',
+          '*.newPassword',
+        ],
+        censor: '[REDACTED]',
+      },
     },
   })
 
