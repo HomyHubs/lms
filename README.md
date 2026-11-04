@@ -23,6 +23,7 @@ pnpm install
 pnpm --filter @lms/db migrate                  # chạy migrations (cần dbmate)
 SEED_ADMIN_PHONE=0901234567 SEED_ADMIN_PASSWORD=changeme8 \
   pnpm --filter @lms/api seed                   # tạo tài khoản admin đầu tiên (bcrypt)
+pnpm --filter @lms/api seed:demo [--reset]      # (tùy chọn, chỉ DB dev/demo) dữ liệu mẫu: 3 cơ sở, 6 lớp, GV, 72 HV, điểm thi, điểm danh; mật khẩu demo1234
 pnpm dev                                        # chạy api + web
 ```
 
