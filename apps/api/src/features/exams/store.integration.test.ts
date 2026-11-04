@@ -132,7 +132,7 @@ describeWithPostgres('exams store on real Postgres', () => {
       .rejects.toThrow('exam_attempts_exam_student_attempt_key')
   })
 
-  async function freshAttempt(deadlineMs = 60_000, skill = 'reading') {
+  async function freshAttempt(deadlineMs = 60_000, skill: 'reading' | 'writing' = 'reading') {
     const store = makeExamsStore(db)
     const level = (await store.findLevelByCode('starter'))!
     const now = new Date()
