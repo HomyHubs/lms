@@ -23,6 +23,7 @@ import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranch
 import { makeQuestionsStore, questionsRoutes } from './features/questions/index.js'
 import { examsRoutes, makeExamsStore } from './features/exams/index.js'
 import { attendanceRoutes, makeAttendanceStore } from './features/attendance/index.js'
+import { aiGenerationRoutes, makeAiGenerationStore } from './features/aigeneration/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -123,6 +124,9 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
     attendanceStore: makeAttendanceStore(db),
     branchScope: userBranchesStore,
   })
+
+  // slice-4.5: AI prompt generation + reverse import with a review queue (no AI provider call).
+  await aiGenerationRoutes(app, { rbac, aiGenerationStore: makeAiGenerationStore(db) })
 
   return app
 }

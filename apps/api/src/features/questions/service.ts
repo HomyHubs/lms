@@ -7,6 +7,7 @@ import {
   type QuestionDifficulty,
   type QuestionImportError,
   type QuestionSkill,
+  type QuestionSource,
   type QuestionType,
   type UpdateQuestionRequest,
 } from '@lms/shared'
@@ -31,6 +32,7 @@ export interface QuestionRow {
   points: number
   explanation: string | null
   source_reference: string | null
+  source?: string
   created_at: Date | string
 }
 
@@ -51,6 +53,8 @@ export interface CreateQuestionFields {
   points?: number
   explanation: string | null
   sourceReference: string | null
+  // Omitted -> DB default 'manual'.
+  source?: QuestionSource
 }
 
 export interface UpdateQuestionFields {
@@ -107,6 +111,7 @@ function toQuestion(row: QuestionRow): Question {
     points: row.points,
     explanation: row.explanation,
     sourceReference: row.source_reference,
+    source: row.source === 'ai_generated' ? 'ai_generated' : 'manual',
     createdAt: toIso(row.created_at),
   }
 }

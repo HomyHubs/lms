@@ -21,6 +21,10 @@ export const QuestionType = z.enum(QUESTION_TYPES)
 export type QuestionType = z.infer<typeof QuestionType>
 export const QuestionDifficulty = z.enum(QUESTION_DIFFICULTIES)
 export type QuestionDifficulty = z.infer<typeof QuestionDifficulty>
+// slice-4.5: provenance of a bank question.
+export const QUESTION_SOURCES = ['manual', 'ai_generated'] as const
+export const QuestionSource = z.enum(QUESTION_SOURCES)
+export type QuestionSource = z.infer<typeof QuestionSource>
 
 const QuestionText = z.string().trim().min(1, 'Noi dung cau hoi khong duoc de trong').max(4000)
 const CorrectAnswer = z.string().trim().min(1, 'Dap an dung khong duoc de trong').max(2000)
@@ -47,6 +51,7 @@ export const Question = z.object({
   points: z.number().int(),
   explanation: z.string().nullable(),
   sourceReference: z.string().nullable(),
+  source: QuestionSource.optional(),
   createdAt: z.string(),
 })
 export type Question = z.infer<typeof Question>

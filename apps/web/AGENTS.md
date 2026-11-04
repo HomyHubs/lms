@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-06
+
+**Đã xong**
+
+- slice-4.5 (Sinh prompt AI): route `/ai-questions` (Admin/Teacher), link "Ngân hàng câu hỏi" + "Sinh câu hỏi AI" ở trang chủ. Chọn level/skill/type/difficulty/số lượng + đề mẫu → prompt để copy; dán JSON/CSV (`parseAiResultText` bỏ ``` fence) → hàng chờ duyệt (sửa/duyệt/loại) → lưu vào ngân hàng. Badge "AI" ở `QuestionsPage`. Hook `useAiGeneration`; test `AiQuestionsPage.test.tsx`.
+
 ### 2026-11-05
 
 **Đã xong**

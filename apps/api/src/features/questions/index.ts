@@ -1,5 +1,5 @@
 export { questionsRoutes } from './routes.js'
-export { makeQuestionsStore } from './store.js'
+export { makeQuestionsStore, insertValues as questionInsertValues } from './store.js'
 export {
   listQuestions,
   createQuestion,

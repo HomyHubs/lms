@@ -1,9 +1,9 @@
 # Slice/Task slice-4.5 — Sinh prompt AI & import nguoc cau hoi
 
 - Co che: Doc
-- Owner hien tai: ...
-- Nhanh: ...
-- PR: ...
+- Owner hien tai: An Vo
+- Nhanh: feature/slice-4.5-sinh-prompt-ai-import
+- PR: xem `../MVP-BACKLOG.md`
 - Trang thai: xem `../MVP-BACKLOG.md`
 - Phu thuoc: slice-3
 - Sua muc goc: de trong (day la tinh nang moi duoc chen giua slice-4 va slice-5 theo yeu cau bo sung, dung so thap phan theo AGENTS.md muc 22.1)
@@ -38,10 +38,13 @@ Validate schema truoc khi cho vao hang cho duyet phai la thuc; khong duoc luu th
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-09-12 | Them tinh nang moi | Tao slice-4.5 (chen giua slice-4 va slice-5) cho luong sinh prompt AI + import nguoc | Yeu cau bo sung tu trang Notion LMS: sinh de bang AI la lay prompt ra ngoai roi import vao, prompt phai dinh nghia dinh dang du lieu thong nhat | - |
+| 2026-11-06 | Hoan thanh | Trang `/ai-questions` (Admin/GV): sinh prompt + de mau, dan JSON/CSV, hang cho duyet (sua/duyet/loai), luu vao ngan hang voi `source = ai_generated`. Validate all-or-nothing + phai khop level/skill/type/difficulty cua yeu cau | Bam sat muc tieu slice | 0005 |
 
 ## Cach nghiem thu
 
 Sinh 1 prompt, dan ket qua JSON mau dung schema vao he thong, thay cau hoi xuat hien trong hang cho duyet, duyet xong thay cau hoi co trong Ngan hang cau hoi voi nguon `ai_generated`.
+
+Da kiem: `apps/api/src/features/aigeneration/routes.test.ts` (luong day du draft -> imported -> reviewed -> saved_to_bank, RBAC teacher/admin, validate sai schema / khong khop request), `store.integration.test.ts` (Postgres that), `packages/shared/src/ai-generation.test.ts` (prompt), `apps/web/src/features/aigeneration/AiQuestionsPage.test.tsx`.
 
 ## Ban giao phien gan nhat
 

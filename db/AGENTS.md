@@ -17,6 +17,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-06
+
+**Đã xong**
+
+- slice-4.5: migration `20261106000000_ai_generation.sql` — cột `questions.source` (`manual | ai_generated`, mặc định `manual`), bảng `ai_generation_requests` và `ai_generated_items` (unique `(request_id, position)`, `question_id` on delete set null). Additive, đảo ngược được; up → down → up đã chạy trên Postgres thật.
+
 ### 2026-09-14
 
 **Đã xong**
