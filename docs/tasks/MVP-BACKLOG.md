@@ -20,7 +20,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-3 | Ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) + import | Dọc | Done | — | feature/slice-3-ngan-hang-cau-hoi | 5 | slice-1 | `slices/slice-3-ngan-hang-cau-hoi.md` |
 | slice-4 | Tạo đề & Thi online | Dọc | Done | — | feature/slice-4-tao-de-thi-online | 6 | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
 | slice-4.5 | Sinh prompt AI & import ngược câu hỏi | Dọc | Chưa bắt đầu | — | — | — | slice-3 | `slices/slice-4.5-sinh-prompt-ai-import.md` |
-| slice-5 | Chấm điểm tự động & Thi lại | Dọc | Review (ngoại lệ §9.4: owner yêu cầu làm nối tiếp khi slice-4 chưa merge; rủi ro: stack trên PR #6, phải merge #6 trước rồi rebase) | An Vo | feature/slice-5-cham-diem-thi-lai | — | slice-4 | `slices/slice-5-cham-diem-thi-lai.md` |
+| slice-5 | Chấm điểm tự động & Thi lại | Dọc | Review (ngoại lệ §9.4: owner yêu cầu làm nối tiếp khi slice-4 chưa merge; rủi ro: stack trên PR #6, phải merge #6 trước rồi rebase) | An Vo | feature/slice-5-cham-diem-thi-lai | 9 | slice-4 | `slices/slice-5-cham-diem-thi-lai.md` |
 | slice-6 | Điểm danh | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-6-diem-danh.md` |
 | slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Chưa bắt đầu | — | — | — | slice-5, slice-6 | `slices/slice-7-xep-loai-dashboard.md` |
 | slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Chưa bắt đầu | — | — | — | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
