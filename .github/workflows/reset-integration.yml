@@ -1,0 +1,29 @@
+name: Reset PostgreSQL integration
+on:
+  pull_request:
+    branches: [dev, main]
+permissions:
+  contents: read
+jobs:
+  reset-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: pnpm rebuild esbuild
+      - run: pnpm -r build
+      # Standalone assertions, no conditional test.skip and no external DATABASE_URL.
+      # Script owns loopback-only disposable PG18, fixtures, up/down/up and cleanup.
+      - name: Mandatory isolated reset transaction gate
+        working-directory: apps/api
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/reset.integration.mjs | tee "$RUNNER_TEMP/reset-integration.txt"
+          grep -Fx 'RESET_PG_INTEGRATION_PASS' "$RUNNER_TEMP/reset-integration.txt"

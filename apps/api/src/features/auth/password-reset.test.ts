@@ -22,7 +22,7 @@ function makeHarness(opts: { email?: string } = {}) {
 
   const store: PasswordResetStore = {
     async findUserByEmail(e) {
-      return e === email ? { id: userId } : undefined
+      return e === email ? { id: userId, verifiedEmail: email } : undefined
     },
     async createOtp({ userId: uid, otpHash, expiresAt, channel }) {
       otps.push({
@@ -51,6 +51,19 @@ function makeHarness(opts: { email?: string } = {}) {
     async markOtpConsumed(id) {
       const rec = otps.find((o) => o.id === id)
       if (rec) rec.consumedAt = new Date()
+    },
+    async completeReset(id, uid, passwordHash) {
+      const rec = otps.find((o) => o.id === id)
+      if (
+        !rec ||
+        rec.consumedAt ||
+        rec.attempts >= MAX_OTP_ATTEMPTS ||
+        rec.expiresAt.getTime() <= Date.now()
+      )
+        return false
+      rec.consumedAt = new Date()
+      passwords.set(uid, passwordHash)
+      return true
     },
     async updateUserPassword(uid, passwordHash) {
       passwords.set(uid, passwordHash)
@@ -120,8 +133,8 @@ describe('requestPasswordReset', () => {
       recipient: '84901234567',
       ttlSeconds: 600,
     })
-    expect(h.sent[0]).toMatchObject({ channel: 'whatsapp', recipient: '84901234567' })
-    expect(h.createdChannels[0]).toBe('whatsapp')
+    expect(h.sent).toHaveLength(0)
+    expect(h.createdChannels).toHaveLength(0)
   })
 
   it('dispatches via Telegram with the provided chat id', async () => {
@@ -132,8 +145,74 @@ describe('requestPasswordReset', () => {
       recipient: '123456789',
       ttlSeconds: 600,
     })
-    expect(h.sent[0]).toMatchObject({ channel: 'telegram', recipient: '123456789' })
-    expect(h.createdChannels[0]).toBe('telegram')
+    expect(h.sent).toHaveLength(0)
+    expect(h.createdChannels).toHaveLength(0)
+  })
+})
+
+describe('security regressions', () => {
+  it('ignores injected recipient and uses only server-verified destination', async () => {
+    const h = makeHarness()
+    h.store.findUserByEmail = async () => ({ id: h.userId, verifiedEmail: 'verified@example.com' })
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      recipient: 'attacker@example.com',
+      ttlSeconds: 600,
+    })
+    expect(h.sent[0]?.recipient).toBe('verified@example.com')
+  })
+
+  it('fails closed for a legacy identity, including outstanding OTPs', async () => {
+    const h = makeHarness()
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      ttlSeconds: 600,
+    })
+    const otp = h.sent[0]!.otp
+    h.store.findUserByEmail = async () => ({ id: h.userId })
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      ttlSeconds: 600,
+    })
+    expect(h.sent).toHaveLength(1)
+    expect(await resetPassword(h.store, { email: h.email, otp, newPassword: 'brandnew8' })).toEqual(
+      { ok: false, reason: 'invalid' },
+    )
+    expect(h.passwords.size).toBe(0)
+  })
+
+  it('does not activate a code when delivery fails', async () => {
+    const h = makeHarness()
+    h.dispatcher.dispatch = async () => {
+      throw new Error('delivery unavailable')
+    }
+    await expect(
+      requestPasswordReset(h.store, h.dispatcher, {
+        email: h.email,
+        channel: 'email',
+        ttlSeconds: 600,
+      }),
+    ).rejects.toThrow('delivery unavailable')
+    expect(h.otps).toHaveLength(0)
+  })
+
+  it('permits one concurrent reset and rejects replay', async () => {
+    const h = makeHarness()
+    await requestPasswordReset(h.store, h.dispatcher, {
+      email: h.email,
+      channel: 'email',
+      ttlSeconds: 600,
+    })
+    const input = { email: h.email, otp: h.sent[0]!.otp, newPassword: 'brandnew8' }
+    const results = await Promise.all([
+      resetPassword(h.store, input),
+      resetPassword(h.store, input),
+    ])
+    expect(results.filter((result) => result.ok)).toHaveLength(1)
+    expect(await resetPassword(h.store, input)).toEqual({ ok: false, reason: 'invalid' })
   })
 })
 

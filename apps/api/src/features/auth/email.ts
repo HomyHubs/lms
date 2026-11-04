@@ -25,12 +25,11 @@ function makeResendEmailSender(apiKey: string, logger: FastifyBaseLogger): OtpEm
       })
 
       if (!res.ok) {
-        const body = await res.text().catch(() => '(unreadable body)')
-        logger.error({ email, status: res.status, body }, 'Resend API error')
+        logger.error({ status: res.status }, 'Resend API error')
         throw new Error(`Resend email delivery failed (HTTP ${res.status})`)
       }
 
-      logger.info({ email }, 'OTP email sent via Resend')
+      logger.info('OTP email sent via Resend')
     },
   }
 }
@@ -39,11 +38,9 @@ function makeResendEmailSender(apiKey: string, logger: FastifyBaseLogger): OtpEm
 
 export function makeConsoleEmailSender(logger: FastifyBaseLogger): OtpEmailSender {
   return {
-    async sendOtp({ email, otp, expiresAt }) {
-      logger.info(
-        { email, otp, expiresAt: expiresAt.toISOString() },
-        '[dev] OTP email (console fallback – đặt RESEND_API_KEY để gửi thật)',
-      )
+    async sendOtp() {
+      logger.warn('OTP delivery unavailable: email provider not configured')
+      throw new Error('Email delivery unavailable')
     },
   }
 }
@@ -52,7 +49,7 @@ export function makeConsoleEmailSender(logger: FastifyBaseLogger): OtpEmailSende
 
 /**
  * Slice-2: trả về Resend adapter khi có RESEND_API_KEY,
- * ngược lại dùng console fallback (dev/CI).
+ * ngược lại từ chối gửi, không log OTP/PII trong bất kỳ môi trường nào.
  */
 export function makeEmailSender(logger: FastifyBaseLogger): OtpEmailSender {
   const apiKey = process.env.RESEND_API_KEY

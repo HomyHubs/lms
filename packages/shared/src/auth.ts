@@ -72,21 +72,15 @@ export type OtpChannel = z.infer<typeof OtpChannel>
  * Buoc 1: yeu cau gui OTP.
  * - `email`     → tai khoan tra cuu theo email nay.
  * - `channel`   → kenh nhan OTP (mac dinh 'email').
- * - `recipient` → dia chi nhan theo kenh:
- *     email: co the bo qua (tu dong dung truong `email`);
- *     whatsapp: so dien thoai E.164 (bat buoc);
- *     telegram: chat_id Telegram (bat buoc).
+ * Email-only: destination resolved from server verification evidence.
+ * Client recipient and optional provider channels are forbidden (ADR0002).
  */
 export const ForgotPasswordRequest = z
   .object({
     email: Email,
-    channel: OtpChannel.default('email'),
-    recipient: z.string().min(1).optional(),
+    channel: z.literal('email').default('email'),
   })
-  .refine(
-    (data) => data.channel === 'email' || data.recipient !== undefined,
-    { message: 'recipient bat buoc khi channel la whatsapp hoac telegram', path: ['recipient'] },
-  )
+  .strict()
 export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequest>
 
 /** Buoc 2: dat lai mat khau bang email + OTP + mat khau moi. */

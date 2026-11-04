@@ -26,6 +26,13 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Chưa bắt đầu | — | — | — | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
 | slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Hoãn | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
 
+## Công việc bổ sung theo mục 22
+
+| ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| slice-2.1 | Reset security (thay đổi slice-2) | Dọc | Done | — | bugfix/slice-2.1-reset-security | 8 | slice-1/2 merged PR3/4 (bảng lịch sử stale) | `slices/slice-2.1-reset-security.md` |
+| slice-3.1 | Question completion: edit filters, strict CSV/XLSX import (thay đổi slice-3) | Dọc | Done | — | bugfix/slice-3.1-question-completion | 7 | slice-3 | `slices/slice-3.1-question-completion.md` |
+
 ## Trạng thái hợp lệ
 
 Chưa bắt đầu, Đang làm, Review, Done, Done (còn nợ), Hoãn, Đã hủy, Đã thay thế. Định nghĩa đầy đủ: xem `../../AGENTS.md`, mục "Quy trình thay đổi phạm vi".

@@ -113,6 +113,43 @@ export function makePasswordResetStore(db: AppDb): PasswordResetStore {
         .execute()
     },
 
+    async completeReset(id, userId, passwordHash) {
+      return db.transaction().execute(async (trx) => {
+        // Serialize resets for one identity, including different outstanding codes.
+        await trx
+          .selectFrom('users')
+          .select('id')
+          .where('id', '=', userId)
+          .forUpdate()
+          .executeTakeFirstOrThrow()
+        const now = new Date().toISOString()
+        const consumed = await trx
+          .updateTable('password_reset_otps')
+          .set({ consumed_at: now })
+          .where('id', '=', id)
+          .where('user_id', '=', userId)
+          .where('consumed_at', 'is', null)
+          .where('attempts', '<', 5)
+          .where('expires_at', '>', new Date())
+          .returning('id')
+          .executeTakeFirst()
+        if (!consumed) return false
+        await trx
+          .updateTable('users')
+          .set({ password_hash: passwordHash, updated_at: now })
+          .where('id', '=', userId)
+          .executeTakeFirstOrThrow()
+        await trx
+          .updateTable('password_reset_otps')
+          .set({ consumed_at: now })
+          .where('user_id', '=', userId)
+          .where('consumed_at', 'is', null)
+          .execute()
+        await trx.deleteFrom('sessions').where('user_id', '=', userId).execute()
+        return true
+      })
+    },
+
     async updateUserPassword(userId, passwordHash) {
       await db
         .updateTable('users')
