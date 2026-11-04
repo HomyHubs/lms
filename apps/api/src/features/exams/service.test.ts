@@ -11,6 +11,7 @@ import type {
   QuestionLite,
 } from './service.js'
 import {
+  arrangeFixedPaper,
   createExam,
   generatePaper,
   getAttempt,
@@ -38,10 +39,19 @@ interface SeedQuestion extends QuestionLite {
   level_id: string
 }
 
+interface SeedExamSet {
+  id: string
+  status: string
+  level_id: string
+  skill: string
+  questionIds: string[]
+}
+
 /** Store gia lap trong bo nho — test logic ma khong can Postgres. */
 function makeFakeStore(
-  seed: { questions?: SeedQuestion[]; exams?: ExamRow[]; policies?: GradingPolicyRow[] } = {},
+  seed: { questions?: SeedQuestion[]; exams?: ExamRow[]; policies?: GradingPolicyRow[]; examSets?: SeedExamSet[] } = {},
 ): ExamsStore {
+  const examSets = seed.examSets ?? []
   const questions: SeedQuestion[] = seed.questions ? [...seed.questions] : []
   const exams: ExamRow[] = seed.exams ? [...seed.exams] : []
   const attempts: AttemptRow[] = []
@@ -74,6 +84,12 @@ function makeFakeStore(
         pass_percent: input.passPercent,
         max_attempts: input.maxAttempts,
         retake_cooldown_minutes: input.retakeCooldownMinutes,
+        mode: input.mode ?? 'random',
+        exam_set_id: input.examSetIds?.[0] ?? null,
+        exam_set_ids: input.examSetIds ?? [],
+        shuffle_questions: input.shuffleQuestions ?? false,
+        shuffle_options: input.shuffleOptions ?? false,
+        retake_strategy: input.retakeStrategy ?? 'same_set_shuffled',
         created_by: input.createdBy,
         created_at: new Date('2026-09-21T00:00:00.000Z'),
       }
@@ -88,6 +104,14 @@ function makeFakeStore(
     },
     async listQuestionIdsFor(levelId, skill) {
       return questions.filter((q) => q.level_id === levelId && q.skill === skill).map((q) => q.id)
+    },
+    async findExamSetRefs(ids) {
+      return examSets.filter((s) => ids.includes(s.id))
+        .map(({ id, status, level_id, skill, questionIds }) => ({ id, status, level_id, skill, item_count: questionIds.length }))
+    },
+    async listExamSetQuestions(examSetId) {
+      const set = examSets.find((s) => s.id === examSetId)!
+      return set.questionIds.map((id) => questions.find((q) => q.id === id)!)
     },
     async findQuestionsByIds(ids) {
       // Nhu store that: kem dap an dung de dong bang vao snapshot (view hoc vien loc bo).
@@ -133,6 +157,7 @@ function makeFakeStore(
         started_at: input.startedAt,
         deadline_at: input.deadlineAt,
         submitted_at: null,
+        exam_set_id: input.examSetId ?? null,
       }
       attempts.push(row)
       return row
@@ -283,6 +308,7 @@ describe('createExam', () => {
         title: 'Reading Starter',
         level: 'starter',
         skill: 'reading',
+        mode: 'random',
         questionCount: 2,
         durationMinutes: 30,
         opensAt: '2026-09-21T09:00:00.000Z',
@@ -304,6 +330,7 @@ describe('createExam', () => {
         title: 'X',
         level: 'starter',
         skill: 'reading',
+        mode: 'random',
         questionCount: 1,
         durationMinutes: 10,
         opensAt: '2026-09-21T09:00:00.000Z',
@@ -689,8 +716,8 @@ describe('cham diem & thi lai', () => {
 
 describe('chinh sach cham theo cap do', () => {
   const blueprint = {
-    title: 'Reading Starter', level: 'starter' as const, skill: 'reading' as const, questionCount: 2,
-    durationMinutes: 30, opensAt: '2026-09-21T09:00:00.000Z', closesAt: '2026-09-21T12:00:00.000Z',
+    title: 'Reading Starter', level: 'starter' as const, skill: 'reading' as const, mode: 'random' as const,
+    questionCount: 2, durationMinutes: 30, opensAt: '2026-09-21T09:00:00.000Z', closesAt: '2026-09-21T12:00:00.000Z',
   }
 
   it('de moi chot nguong tu chinh sach cap do; gia tri nhap tay ghi de', async () => {
@@ -709,5 +736,79 @@ describe('chinh sach cham theo cap do', () => {
     const store: ExamsStore = { ...makeFakeStore(), findLevelByCode: async () => undefined }
     expect(await updateGradingPolicy(store, 'x', { passPercent: 50, maxAttempts: 1, retakeCooldownMinutes: 0 }))
       .toEqual({ ok: false, reason: 'level_not_found' })
+  })
+})
+
+describe('bo de co dinh (ADR 0011)', () => {
+  const mc = (id: string): SeedQuestion => ({ ...q(id, 'lvl-starter', 'reading'), options: JSON.stringify(['cat', 'dog', 'owl']), correct_answer: 'b' })
+  const sets: SeedExamSet[] = [
+    { id: 'set-a', status: 'published', level_id: 'lvl-starter', skill: 'reading', questionIds: ['s1', 's2', 's3'] },
+    { id: 'set-b', status: 'published', level_id: 'lvl-starter', skill: 'reading', questionIds: ['s4', 's5', 's6'] },
+    { id: 'set-draft', status: 'draft', level_id: 'lvl-starter', skill: 'reading', questionIds: ['s1'] },
+    { id: 'set-mover', status: 'published', level_id: 'lvl-mover', skill: 'reading', questionIds: ['s1'] },
+  ]
+  const blueprint = {
+    title: 'Fixed', level: 'starter' as const, skill: 'reading' as const, mode: 'fixed_set' as const,
+    shuffleQuestions: false, shuffleOptions: false, retakeStrategy: 'same_set_shuffled' as const,
+    durationMinutes: 30, opensAt: '2026-09-21T09:00:00.000Z', closesAt: '2026-09-21T12:00:00.000Z', passPercent: 100,
+    maxAttempts: 3, retakeCooldownMinutes: 0,
+  }
+  const at = (time: string) => new Date(`2026-09-21T${time}:00.000Z`)
+  const fresh = () => makeFakeStore({ examSets: sets, questions: ['s1', 's2', 's3', 's4', 's5', 's6'].map(mc) })
+
+  async function sit(store: ExamsStore, examId: string, start: string, rng: () => number, answer = 'dog') {
+    const started = await startAttempt(store, examId, 'student-1', at(start), rng)
+    if (!started.ok) return started
+    const answers = Object.fromEntries(started.attempt.questions.map((x) => [x.id, answer]))
+    const out = await submitAttempt(store, examId, 'student-1', answers, at(start))
+    if (!out.ok) throw new Error(out.reason)
+    return { ok: true as const, ids: started.attempt.questions.map((x) => x.id), started: started.attempt, submitted: out.attempt }
+  }
+
+  it('tao de: chi nhan bo da xuat ban cung cap do/ky nang; so cau lay tu bo dau', async () => {
+    const store = fresh()
+    expect(await createExam(store, { ...blueprint, examSetIds: ['set-draft'] }, 't')).toEqual({ ok: false, reason: 'exam_set_not_published' })
+    expect(await createExam(store, { ...blueprint, examSetIds: ['set-mover'] }, 't')).toEqual({ ok: false, reason: 'exam_set_mismatch' })
+    expect(await createExam(store, { ...blueprint, examSetIds: ['nope'] }, 't')).toEqual({ ok: false, reason: 'exam_set_not_found' })
+    const ok = await createExam(store, { ...blueprint, examSetIds: ['set-a'] }, 't')
+    expect(ok.ok && ok.exam).toMatchObject({ mode: 'fixed_set', examSetIds: ['set-a'], questionCount: 3 })
+  })
+
+  it('giu thu tu bo, an dap an; thi lai cung bo bi tron lai va van cham dung', async () => {
+    const store = fresh()
+    const created = await createExam(store, { ...blueprint, examSetIds: ['set-a'] }, 't')
+    if (!created.ok) throw new Error(created.reason)
+    expect(await startAttempt(store, created.exam.id, 'student-1', at('08:59'), () => 0)).toEqual({ ok: false, reason: 'not_open' })
+    const one = await sit(store, created.exam.id, '10:00', () => 0, 'cat')
+    if (!one.ok) throw new Error(one.reason)
+    expect(one.ids).toEqual(['s1', 's2', 's3'])
+    expect(JSON.stringify(one.started.questions)).not.toContain('correct')
+    expect(one.submitted.result).toMatchObject({ passed: false })
+
+    let k = 1
+    const two = await sit(store, created.exam.id, '10:10', () => (k -= 0.01))
+    if (!two.ok) throw new Error(two.reason)
+    expect(two.ids).not.toEqual(one.ids)
+    expect(two.started.questions[0]?.options).toEqual(['owl', 'dog', 'cat'])
+    expect(two.submitted.result).toMatchObject({ score: 3, passed: true })
+  })
+
+  it('thi lai trung thu tu cu thi xoay vong', () => {
+    const items = ['s1', 's2', 's3'].map(mc)
+    const order = arrangeFixedPaper(items, { shuffleQuestions: true, shuffleOptions: false }, ['s1', 's2', 's3'], () => 0)
+    expect(order.map((x) => x.id)).toEqual(['s2', 's3', 's1'])
+  })
+
+  it('alternate_sets: lan 2 lay bo ke tiep; het bo -> paper_unavailable', async () => {
+    const store = fresh()
+    const created = await createExam(
+      store, { ...blueprint, retakeStrategy: 'alternate_sets', examSetIds: ['set-a', 'set-b'] }, 't')
+    if (!created.ok) throw new Error(created.reason)
+    const one = await sit(store, created.exam.id, '10:00', () => 0, 'cat')
+    const two = await sit(store, created.exam.id, '10:10', () => 0, 'cat')
+    expect(one.ok && one.ids).toEqual(['s1', 's2', 's3'])
+    expect(two.ok && two.ids).toEqual(['s4', 's5', 's6'])
+    expect(await startAttempt(store, created.exam.id, 'student-1', at('10:20'), () => 0))
+      .toEqual({ ok: false, reason: 'paper_unavailable' })
   })
 })

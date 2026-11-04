@@ -26,6 +26,11 @@ const EXAM_COLUMNS = [
   'exams.pass_percent',
   'exams.max_attempts',
   'exams.retake_cooldown_minutes',
+  'exams.mode',
+  'exams.exam_set_id',
+  'exams.shuffle_questions',
+  'exams.shuffle_options',
+  'exams.retake_strategy',
   'exams.created_by',
   'exams.created_at',
 ] as const
@@ -50,6 +55,7 @@ const ATTEMPT_COLUMNS = [
   'grading_detail',
   'graded_by',
   'grader_feedback',
+  'exam_set_id',
 ] as const
 
 const JOINED_ATTEMPT_COLUMNS = ATTEMPT_COLUMNS.map((column) => `exam_attempts.${column}` as const)
@@ -69,6 +75,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       .selectFrom('exams')
       .innerJoin('levels', 'levels.id', 'exams.level_id')
       .select(EXAM_COLUMNS)
+      .select(sql<string[]>`coalesce((select array_agg(l.exam_set_id::text order by l.position)
+        from exam_set_links l where l.exam_id = exams.id), '{}')`.as('exam_set_ids'))
   }
 
   async function requireExamById(id: string): Promise<ExamRow> {
@@ -111,9 +119,16 @@ export function makeExamsStore(db: AppDb): ExamsStore {
     },
 
     async createExam(input: CreateExamFields) {
-      const inserted = await db
+      const examSetIds = input.examSetIds ?? []
+      const id = await db.transaction().execute(async (trx) => {
+        const inserted = await trx
         .insertInto('exams')
         .values({
+          mode: input.mode ?? 'random',
+          exam_set_id: examSetIds[0] ?? null,
+          shuffle_questions: input.shuffleQuestions ?? false,
+          shuffle_options: input.shuffleOptions ?? false,
+          retake_strategy: input.retakeStrategy ?? 'same_set_shuffled',
           title: input.title,
           level_id: input.levelId,
           skill: input.skill,
@@ -128,7 +143,14 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         })
         .returning('id')
         .executeTakeFirstOrThrow()
-      return requireExamById(inserted.id)
+        if (examSetIds.length > 0) {
+          await trx.insertInto('exam_set_links')
+            .values(examSetIds.map((examSetId, index) => ({ exam_id: inserted.id, exam_set_id: examSetId, position: index + 1 })))
+            .execute()
+        }
+        return inserted.id
+      })
+      return requireExamById(id)
     },
 
     async listExams() {
@@ -145,8 +167,34 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         .select('id')
         .where('level_id', '=', levelId)
         .where('skill', '=', skill)
+        // Set-authored questions stay out of random papers so they cannot leak before the set's exam opens.
+        .where('source', '<>', 'exam_set')
         .execute()
       return rows.map((r) => r.id)
+    },
+
+    async findExamSetRefs(ids) {
+      if (ids.length === 0) return []
+      const rows = await db
+        .selectFrom('exam_sets')
+        .leftJoin('exam_set_items', 'exam_set_items.exam_set_id', 'exam_sets.id')
+        .select(['exam_sets.id', 'exam_sets.status', 'exam_sets.level_id', 'exam_sets.skill'])
+        .select((eb) => eb.fn.count<string>('exam_set_items.question_id').as('item_count'))
+        .where('exam_sets.id', 'in', ids)
+        .groupBy('exam_sets.id')
+        .execute()
+      return rows.map((row) => ({ ...row, item_count: Number(row.item_count) }))
+    },
+
+    async listExamSetQuestions(examSetId): Promise<QuestionLite[]> {
+      return db
+        .selectFrom('exam_set_items')
+        .innerJoin('questions', 'questions.id', 'exam_set_items.question_id')
+        .select(['questions.id', 'questions.question_text', 'questions.question_type', 'questions.skill',
+          'questions.points', 'questions.options', 'questions.correct_answer', 'questions.explanation'])
+        .where('exam_set_items.exam_set_id', '=', examSetId)
+        .orderBy('exam_set_items.position')
+        .execute()
     },
 
     async findQuestionsByIds(ids): Promise<QuestionLite[]> {
@@ -191,6 +239,7 @@ export function makeExamsStore(db: AppDb): ExamsStore {
           question_snapshot: JSON.stringify(input.questionSnapshot),
           attempt_number: input.attemptNumber,
           session_key: input.sessionKey,
+          exam_set_id: input.examSetId ?? null,
           started_at: input.startedAt,
           deadline_at: input.deadlineAt,
         })

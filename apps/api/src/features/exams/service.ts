@@ -4,6 +4,7 @@ import {
   type ExamAttemptRecord,
   type ExamAttemptView,
   type ExamQuestionView,
+  type ExamMode,
   type ExamResult,
   type GradeAttemptRequest,
   type GradingPolicy,
@@ -13,6 +14,7 @@ import {
   type QuestionSkill,
   type QuestionType,
   type RetakeStatus,
+  type RetakeStrategy,
   type UpdateGradingPolicyRequest,
 } from '@lms/shared'
 
@@ -43,6 +45,22 @@ export interface ExamRow {
   retake_cooldown_minutes: number
   created_by: string
   created_at: Date | string
+  // slice-11a (ADR 0011); absent on legacy fakes = random mode.
+  mode?: string
+  exam_set_id?: string | null
+  exam_set_ids?: string[]
+  shuffle_questions?: boolean
+  shuffle_options?: boolean
+  retake_strategy?: string
+}
+
+/** Exam set as seen by exam creation (slice-11a). */
+export interface ExamSetRef {
+  id: string
+  status: string
+  level_id: string
+  skill: string
+  item_count: number
 }
 
 /** Chinh sach cham + thi lai mac dinh cua mot cap do. */
@@ -106,6 +124,7 @@ export interface AttemptRow {
   grading_detail?: string | null
   graded_by?: string | null
   grader_feedback?: string | null
+  exam_set_id?: string | null
 }
 
 /** Attempt joined with its exam and student for the manual grading screens (slice-9a). */
@@ -141,6 +160,12 @@ export interface CreateExamFields {
   maxAttempts: number
   retakeCooldownMinutes: number
   createdBy: string
+  mode?: ExamMode
+  /** fixed_set: serving order; the first one is exams.exam_set_id. */
+  examSetIds?: string[]
+  shuffleQuestions?: boolean
+  shuffleOptions?: boolean
+  retakeStrategy?: RetakeStrategy
 }
 
 export interface CreateAttemptFields {
@@ -152,6 +177,7 @@ export interface CreateAttemptFields {
   sessionKey: string
   startedAt: string
   deadlineAt: string
+  examSetId?: string | null
 }
 
 /** Cong ra DB ma service can — cho phep test bang cach tiem gia lap. */
@@ -162,6 +188,9 @@ export interface ExamsStore {
   findExamById: (id: string) => Promise<ExamRow | undefined>
   listQuestionIdsFor: (levelId: string, skill: string) => Promise<string[]>
   findQuestionsByIds: (ids: string[]) => Promise<QuestionLite[]>
+  findExamSetRefs: (ids: string[]) => Promise<ExamSetRef[]>
+  /** Questions of a set in `position` order, with answers (snapshot source). */
+  listExamSetQuestions: (examSetId: string) => Promise<QuestionLite[]>
   /** Luot MOI NHAT (attempt_number lon nhat) cua hoc vien cho de. */
   findAttempt: (examId: string, studentId: string) => Promise<AttemptRow | undefined>
   /** Moi luot cua de (loc theo hoc vien neu co), sap theo hoc vien roi attempt_number tang dan. */
@@ -244,6 +273,11 @@ function toExam(row: ExamRow): Exam {
     passPercent: row.pass_percent,
     maxAttempts: row.max_attempts,
     retakeCooldownMinutes: row.retake_cooldown_minutes,
+    mode: row.mode === 'fixed_set' ? 'fixed_set' : 'random',
+    examSetIds: row.exam_set_ids ?? [],
+    shuffleQuestions: row.shuffle_questions ?? false,
+    shuffleOptions: row.shuffle_options ?? false,
+    retakeStrategy: row.retake_strategy === 'alternate_sets' ? 'alternate_sets' : 'same_set_shuffled',
     createdBy: row.created_by,
     createdAt: toIso(row.created_at),
   }
@@ -291,6 +325,42 @@ export function generatePaper(
     paper[count - 1] = replacement.id
   }
   return paper
+}
+
+function shuffled<T>(items: readonly T[], rng: () => number): T[] {
+  return items.map((item) => ({ item, k: rng() })).sort((a, b) => a.k - b.k).map((e) => e.item)
+}
+
+/** Reorders multiple-choice options; a letter answer is rewritten to its option text so grading follows. */
+function withShuffledOptions(q: QuestionLite, rng: () => number): QuestionLite {
+  const options = parseOptions(q.options)
+  if (q.question_type !== 'multiple_choice' || !options || options.length < 2) return q
+  const answer = normalizeAnswer(q.correct_answer ?? '')
+  const letterIndex = answer.length === 1 ? LETTERS.indexOf(answer) : -1
+  const correct = letterIndex >= 0 && letterIndex < options.length ? options[letterIndex]! : q.correct_answer
+  return { ...q, options: JSON.stringify(shuffled(options, rng)), correct_answer: correct }
+}
+
+export interface PaperArrangement {
+  shuffleQuestions: boolean
+  shuffleOptions: boolean
+}
+
+/**
+ * Fixed-set paper (ADR 0011): set order, optionally shuffled. A retake of the same set must not repeat
+ * the previous order, so an identical order is rotated by one.
+ */
+export function arrangeFixedPaper(
+  items: readonly QuestionLite[],
+  arrangement: PaperArrangement,
+  previousOrder: readonly string[] | null,
+  rng: () => number = Math.random,
+): QuestionLite[] {
+  let order = arrangement.shuffleQuestions ? shuffled(items, rng) : [...items]
+  if (previousOrder && order.length > 1 && order.every((q, i) => q.id === previousOrder[i])) {
+    order = [...order.slice(1), order[0]!]
+  }
+  return arrangement.shuffleOptions ? order.map((q) => withShuffledOptions(q, rng)) : order
 }
 
 /** Exact content variants only; the bank has no semantic variant-family contract. */
@@ -487,7 +557,27 @@ export async function listOpenExams(store: ExamsStore, now: Date): Promise<Exam[
   return rows.filter((row) => isExamOpenAt(row, now)).map(toExam)
 }
 
-export type CreateExamOutcome = { ok: true; exam: Exam } | { ok: false; reason: 'level_not_found' }
+export type CreateExamOutcome =
+  | { ok: true; exam: Exam }
+  | { ok: false; reason: 'level_not_found' | 'exam_set_not_found' | 'exam_set_not_published' | 'exam_set_mismatch' }
+
+type FixedSetsOutcome =
+  | { ok: true; questionCount: number }
+  | { ok: false; reason: 'exam_set_not_found' | 'exam_set_not_published' | 'exam_set_mismatch' }
+
+/** Every linked set must be published and match the exam level/skill; the first one sizes the exam. */
+async function resolveFixedSets(store: ExamsStore, ids: string[], levelId: string, skill: string): Promise<FixedSetsOutcome> {
+  const refs = new Map((await store.findExamSetRefs(ids)).map((ref) => [ref.id, ref]))
+  let questionCount = 0
+  for (const [index, id] of ids.entries()) {
+    const ref = refs.get(id)
+    if (!ref) return { ok: false, reason: 'exam_set_not_found' }
+    if (ref.status !== 'published') return { ok: false, reason: 'exam_set_not_published' }
+    if (ref.level_id !== levelId || ref.skill !== skill) return { ok: false, reason: 'exam_set_mismatch' }
+    if (index === 0) questionCount = ref.item_count
+  }
+  return { ok: true, questionCount }
+}
 
 export async function createExam(
   store: ExamsStore,
@@ -498,12 +588,29 @@ export async function createExam(
   if (!level) return { ok: false, reason: 'level_not_found' }
   // Nguong cua de duoc CHOT luc tao (sao tu chinh sach cap do neu khong ghi de) de doi chinh
   // sach ve sau khong lam doi ket qua cac de/luot da co.
+  let questionCount: number
+  let fixedFields: Partial<CreateExamFields> = {}
+  if (input.mode === 'fixed_set') {
+    const sets = await resolveFixedSets(store, input.examSetIds, level.id, input.skill)
+    if (!sets.ok) return sets
+    questionCount = sets.questionCount
+    fixedFields = {
+      mode: 'fixed_set',
+      examSetIds: input.examSetIds,
+      shuffleQuestions: input.shuffleQuestions,
+      shuffleOptions: input.shuffleOptions,
+      retakeStrategy: input.retakeStrategy,
+    }
+  } else {
+    questionCount = input.questionCount
+  }
   const policy = await store.findGradingPolicy(level.id)
   const row = await store.createExam({
+    ...fixedFields,
     title: input.title,
     levelId: level.id,
     skill: input.skill,
-    questionCount: input.questionCount,
+    questionCount,
     durationMinutes: input.durationMinutes,
     opensAt: new Date(input.opensAt).toISOString(),
     closesAt: new Date(input.closesAt).toISOString(),
@@ -579,26 +686,19 @@ export async function startAttempt(
   if (nowMs < toDate(exam.opens_at).getTime()) return { ok: false, reason: 'not_open' }
   if (nowMs > toDate(exam.closes_at).getTime()) return { ok: false, reason: 'closed' }
 
-  const pool = await store.listQuestionIdsFor(exam.level_id, exam.skill)
-  if (pool.length < exam.question_count) return { ok: false, reason: 'not_enough_questions' }
-
-  // Thi lai: tranh de cua lan truoc CUNG de thi; lan dau: tranh de gan nhat cua hoc vien.
-  const previous = previousOfExam ?? (await store.findLatestAttemptForStudent(studentId))
   const attemptNumber = (previousOfExam?.attempt_number ?? 0) + 1
-  const previousPaper = previous ? parseIds(previous.question_ids).map((id) => `previous:${id}`) : null
-  const bank = await store.findQuestionsByIds(pool)
-  const variants = new Map(bank.map((q) => [q.id, variantKey(q)]))
-  if (previous) for (const q of snapshot(previous)) variants.set(`previous:${q.id}`, variantKey(q))
-  const paper = generatePaper(bank.map((q) => q.id), exam.question_count, previousPaper, rng, variants)
-  if (!paper) return { ok: false, reason: 'paper_unavailable' }
-  const byId = new Map(bank.map((q) => [q.id, q]))
+  const paper = exam.mode === 'fixed_set'
+    ? await drawFixedPaper(store, exam, studentId, previousOfExam, rng)
+    : await drawRandomPaper(store, exam, studentId, previousOfExam, rng)
+  if (!paper.ok) return paper
 
   try {
     const created = await store.createAttempt({
       examId,
       studentId,
-      questionIds: paper,
-      questionSnapshot: paper.map((id) => byId.get(id)!),
+      questionIds: paper.questions.map((q) => q.id),
+      questionSnapshot: paper.questions,
+      examSetId: paper.examSetId,
       attemptNumber,
       sessionKey,
       startedAt: now.toISOString(),
@@ -615,6 +715,49 @@ export async function startAttempt(
     if (raced.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
     return { ok: true, attempt: await buildAttemptView(store, exam, raced, now) }
   }
+}
+
+type DrawnPaper =
+  | { ok: true; questions: QuestionLite[]; examSetId: string | null }
+  | { ok: false; reason: 'not_enough_questions' | 'paper_unavailable' }
+
+async function drawRandomPaper(
+  store: ExamsStore, exam: ExamRow, studentId: string, previousOfExam: AttemptRow | undefined, rng: () => number,
+): Promise<DrawnPaper> {
+  const pool = await store.listQuestionIdsFor(exam.level_id, exam.skill)
+  if (pool.length < exam.question_count) return { ok: false, reason: 'not_enough_questions' }
+  // Thi lai: tranh de cua lan truoc CUNG de thi; lan dau: tranh de gan nhat cua hoc vien.
+  const previous = previousOfExam ?? (await store.findLatestAttemptForStudent(studentId))
+  const previousPaper = previous ? parseIds(previous.question_ids).map((id) => `previous:${id}`) : null
+  const bank = await store.findQuestionsByIds(pool)
+  const variants = new Map(bank.map((q) => [q.id, variantKey(q)]))
+  if (previous) for (const q of snapshot(previous)) variants.set(`previous:${q.id}`, variantKey(q))
+  const paper = generatePaper(bank.map((q) => q.id), exam.question_count, previousPaper, rng, variants)
+  if (!paper) return { ok: false, reason: 'paper_unavailable' }
+  const byId = new Map(bank.map((q) => [q.id, q]))
+  return { ok: true, questions: paper.map((id) => byId.get(id)!), examSetId: null }
+}
+
+/** ADR 0011: a retake reshuffles the same set, or takes the next linked set this student has not sat. */
+async function drawFixedPaper(
+  store: ExamsStore, exam: ExamRow, studentId: string, previousOfExam: AttemptRow | undefined, rng: () => number,
+): Promise<DrawnPaper> {
+  let examSetId = exam.exam_set_id ?? null
+  let arrangement: PaperArrangement = {
+    shuffleQuestions: exam.shuffle_questions ?? false,
+    shuffleOptions: exam.shuffle_options ?? false,
+  }
+  let previousOrder: string[] | null = null
+  if (previousOfExam && exam.retake_strategy === 'alternate_sets') {
+    const used = new Set((await store.listAttempts(exam.id, studentId)).map((a) => a.exam_set_id))
+    examSetId = (exam.exam_set_ids ?? []).find((id) => !used.has(id)) ?? null
+  } else if (previousOfExam) {
+    arrangement = { shuffleQuestions: true, shuffleOptions: true }
+    previousOrder = parseIds(previousOfExam.question_ids)
+  }
+  if (!examSetId) return { ok: false, reason: 'paper_unavailable' }
+  const items = await store.listExamSetQuestions(examSetId)
+  return { ok: true, questions: arrangeFixedPaper(items, arrangement, previousOrder, rng), examSetId }
 }
 
 export type GetAttemptOutcome =
@@ -698,6 +841,7 @@ async function toRecord(store: ExamsStore, exam: ExamRow, attempt: AttemptRow, n
     studentId: graded.student_id,
     attemptNumber: graded.attempt_number ?? 1,
     questionIds: parseIds(graded.question_ids),
+    examSetId: graded.exam_set_id ?? null,
     startedAt: toIso(graded.started_at),
     deadlineAt: toIso(graded.deadline_at),
     submittedAt: graded.submitted_at !== null ? toIso(graded.submitted_at) : null,

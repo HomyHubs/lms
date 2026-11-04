@@ -23,6 +23,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-12
+
+**Đã xong**
+
+- slice-11a (Bộ đề cố định): feature mới `examsets` (Admin/GV) — `GET/POST /exam-sets`, `GET/PATCH/DELETE /exam-sets/:id` (chỉ nháp), `PUT /:id/items`, `POST /:id/questions` (soạn câu trắc nghiệm/đúng-sai, `source = exam_set`), `/:id/publish` (kiểm từng câu), `/:id/archive`, `/:id/duplicate`; lỗi trigger `23001` → 409. `exams`: `mode = random | fixed_set`, `createExam` nhận 1..10 bộ đã phát hành, `startAttempt` nhánh fixed (`arrangeFixedPaper`: xáo câu/đáp án, thi lại không trùng thứ tự; `alternate_sets` lấy bộ kế tiếp). Câu `exam_set` không vào đề random; sửa/xoá câu bị bộ đề giữ → 409 `held_by_exam_set`. Xem ADR 0011.
+
 ### 2026-11-11
 
 **Đã xong**

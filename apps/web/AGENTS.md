@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-12
+
+**Đã xong**
+
+- slice-11a (Bộ đề cố định): route `/exam-sets` "Bộ đề & đề thi" (Admin/GV, mục trong `NAV_ITEMS`). Danh sách + lọc trạng thái, tạo bộ đề, trình soạn (thêm từ ngân hàng cùng cấp độ/kỹ năng, soạn câu trắc nghiệm/đúng-sai, Lên/Xuống/Bỏ, xem trước kèm đáp án, Phát hành/Lưu trữ/Nhân bản/Xoá; nút "Chèn hình" disabled — slice-12). Trang chứa luôn `BlueprintForm` (thêm "Cách ra đề": ngẫu nhiên / bộ đề cố định + trộn câu/đáp án + cách thi lại) và bảng đề thi. Hook `useExamSets`; test `ExamSetsPage.test.tsx`, `BlueprintForm.test.tsx`.
+
 ### 2026-11-11
 
 **Đã xong**

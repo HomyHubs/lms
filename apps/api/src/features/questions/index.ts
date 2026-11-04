@@ -6,6 +6,7 @@ export {
   updateQuestion,
   deleteQuestion,
   importQuestions,
+  toQuestion,
   type QuestionsStore,
   type QuestionRow,
   type LevelRef,

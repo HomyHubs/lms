@@ -17,6 +17,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-12
+
+**Đã xong**
+
+- slice-11a: `20261112000000_exam_sets.sql` tạo `exam_sets` (draft|published|archived), `exam_set_items` (thứ tự, FK câu hỏi restrict), `exam_set_links` (đề ↔ bộ đề có thứ tự); `exams` thêm `mode`, `exam_set_id`, `shuffle_questions`, `shuffle_options`, `retake_strategy` (+ check mode/bộ đề); `exam_attempts.exam_set_id`; `questions.source` thêm `exam_set`. Trigger chặn sửa/xoá bộ đề không còn nháp, item của nó và câu hỏi nó giữ (`restrict_violation`). Đã chạy up → down → up trên DB test.
+
 ### 2026-11-10
 
 **Đã xong**

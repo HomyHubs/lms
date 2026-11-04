@@ -75,23 +75,65 @@ export const UpdateGradingPolicyRequest = z
   .strict()
 export type UpdateGradingPolicyRequest = z.infer<typeof UpdateGradingPolicyRequest>
 
-/** Tao de (Admin/Teacher). `level` dung ma cap do (starter/mover/flyer). Nguong bo trong -> theo cap do. */
+/** slice-11a: `random` draws from the bank per attempt; `fixed_set` serves published exam sets. */
+export const ExamMode = z.enum(['random', 'fixed_set'])
+export type ExamMode = z.infer<typeof ExamMode>
+
+/** Fixed-set retake: same questions reshuffled (default) or the next unused linked set. */
+export const RetakeStrategy = z.enum(['same_set_shuffled', 'alternate_sets'])
+export type RetakeStrategy = z.infer<typeof RetakeStrategy>
+
+export const EXAM_MAX_LINKED_SETS = 10
+
+const ExamBlueprintFields = {
+  title: Title,
+  level: LevelCode,
+  skill: QuestionSkill,
+  durationMinutes: DurationMinutes,
+  opensAt: DateTimeString,
+  closesAt: DateTimeString,
+  passPercent: optionalFormNumber(PassPercent),
+  maxAttempts: optionalFormNumber(MaxAttempts),
+  retakeCooldownMinutes: optionalFormNumber(RetakeCooldownMinutes),
+}
+
+const RandomExamRequest = z.object({
+  mode: z.literal('random'),
+  ...ExamBlueprintFields,
+  questionCount: QuestionCount,
+})
+
+const FixedSetExamRequest = z.object({
+  mode: z.literal('fixed_set'),
+  ...ExamBlueprintFields,
+  examSetIds: z.array(z.string().uuid('Bo de khong hop le'))
+    .min(1, 'Chon it nhat 1 bo de')
+    .max(EXAM_MAX_LINKED_SETS, `Toi da ${EXAM_MAX_LINKED_SETS} bo de`),
+  shuffleQuestions: z.boolean().default(false),
+  shuffleOptions: z.boolean().default(false),
+  retakeStrategy: RetakeStrategy.default('same_set_shuffled'),
+})
+
+/**
+ * Tao de (Admin/Teacher). `level` dung ma cap do (starter/mover/flyer). Nguong bo trong -> theo cap do.
+ * Thieu `mode` -> `random` (client slice-4 cu van hop le).
+ */
 export const CreateExamRequest = z
-  .object({
-    title: Title,
-    level: LevelCode,
-    skill: QuestionSkill,
-    questionCount: QuestionCount,
-    durationMinutes: DurationMinutes,
-    opensAt: DateTimeString,
-    closesAt: DateTimeString,
-    passPercent: optionalFormNumber(PassPercent),
-    maxAttempts: optionalFormNumber(MaxAttempts),
-    retakeCooldownMinutes: optionalFormNumber(RetakeCooldownMinutes),
-  })
-  .refine((v) => Date.parse(v.closesAt) > Date.parse(v.opensAt), {
-    message: 'Thoi diem dong phai sau thoi diem mo',
-    path: ['closesAt'],
+  .preprocess(
+    (v) => (v !== null && typeof v === 'object' && (v as { mode?: unknown }).mode === undefined ? { ...v, mode: 'random' } : v),
+    z.discriminatedUnion('mode', [RandomExamRequest, FixedSetExamRequest]),
+  )
+  .superRefine((v, ctx) => {
+    if (Date.parse(v.closesAt) <= Date.parse(v.opensAt)) {
+      ctx.addIssue({ code: 'custom', message: 'Thoi diem dong phai sau thoi diem mo', path: ['closesAt'] })
+    }
+    if (v.mode !== 'fixed_set') return
+    if (new Set(v.examSetIds).size !== v.examSetIds.length) {
+      ctx.addIssue({ code: 'custom', message: 'Moi bo de chi chon 1 lan', path: ['examSetIds'] })
+    }
+    if (v.retakeStrategy === 'alternate_sets' && v.examSetIds.length < 2) {
+      ctx.addIssue({ code: 'custom', message: 'Doi bo de khi thi lai can it nhat 2 bo de', path: ['examSetIds'] })
+    }
   })
 export type CreateExamRequest = z.infer<typeof CreateExamRequest>
 
@@ -109,6 +151,12 @@ export const Exam = z.object({
   passPercent: z.number().int(),
   maxAttempts: z.number().int(),
   retakeCooldownMinutes: z.number().int(),
+  mode: ExamMode.default('random'),
+  /** Linked sets in serving order (fixed_set only). */
+  examSetIds: z.array(z.string().uuid()).default([]),
+  shuffleQuestions: z.boolean().default(false),
+  shuffleOptions: z.boolean().default(false),
+  retakeStrategy: RetakeStrategy.default('same_set_shuffled'),
   createdBy: z.string().uuid(),
   createdAt: z.string(),
 })
@@ -190,6 +238,8 @@ export const ExamAttemptRecord = z.object({
   studentId: z.string().uuid(),
   attemptNumber: z.number().int(),
   questionIds: z.array(z.string()),
+  /** Set that served a fixed_set attempt; null for random papers. */
+  examSetId: z.string().uuid().nullable().default(null),
   startedAt: z.string(),
   deadlineAt: z.string(),
   submittedAt: z.string().nullable(),

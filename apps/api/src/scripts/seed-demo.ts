@@ -307,6 +307,7 @@ async function main(): Promise<void> {
             title,
             level,
             skill,
+            mode: 'random',
             questionCount,
             durationMinutes: 30,
             opensAt: new Date(now.getTime() - 40 * DAY_MS).toISOString(),

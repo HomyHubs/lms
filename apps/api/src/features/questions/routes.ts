@@ -17,6 +17,14 @@ import {
   updateQuestion,
 } from './service.js'
 
+/** slice-11a: Postgres codes raised when an exam set holds the question (FK restrict / published-set trigger). */
+function isHeldByExamSet(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code
+  return code === '23503' || code === '23001'
+}
+
+const HELD_BY_EXAM_SET = { error: 'Cau hoi dang thuoc bo de (da phat hanh hoac dang dung); khong the sua/xoa', code: 'held_by_exam_set' }
+
 interface QuestionsRoutesDeps {
   rbac: Rbac
   questionsStore: QuestionsStore
@@ -62,7 +70,13 @@ export async function questionsRoutes(
       reply.code(400)
       return { error: parsed.error.issues[0]?.message ?? 'Du lieu cap nhat khong hop le' }
     }
-    const outcome = await updateQuestion(questionsStore, id, parsed.data)
+    let outcome: Awaited<ReturnType<typeof updateQuestion>>
+    try {
+      outcome = await updateQuestion(questionsStore, id, parsed.data)
+    } catch (err) {
+      if (isHeldByExamSet(err)) return reply.code(409).send(HELD_BY_EXAM_SET)
+      throw err
+    }
     if (!outcome.ok) {
       reply.code(outcome.reason === 'not_found' ? 404 : 400)
       return {
@@ -75,7 +89,13 @@ export async function questionsRoutes(
 
   app.delete('/questions/:id', { preHandler: requireManager }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const ok = await deleteQuestion(questionsStore, id)
+    let ok: boolean
+    try {
+      ok = await deleteQuestion(questionsStore, id)
+    } catch (err) {
+      if (isHeldByExamSet(err)) return reply.code(409).send(HELD_BY_EXAM_SET)
+      throw err
+    }
     if (!ok) {
       reply.code(404)
       return { error: 'Khong tim thay cau hoi' }

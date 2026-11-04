@@ -135,9 +135,43 @@ export interface ExamsTable {
   pass_percent: ColumnType<number, number | undefined, number>
   max_attempts: ColumnType<number, number | undefined, number>
   retake_cooldown_minutes: ColumnType<number, number | undefined, number>
+  // slice-11a: random bank draw vs fixed exam sets (ADR 0011).
+  mode: ColumnType<string, string | undefined, string>
+  exam_set_id: ColumnType<string | null, string | null | undefined, string | null>
+  shuffle_questions: ColumnType<boolean, boolean | undefined, boolean>
+  shuffle_options: ColumnType<boolean, boolean | undefined, boolean>
+  retake_strategy: ColumnType<string, string | undefined, string>
   created_by: string
   created_at: Timestamp
   updated_at: Timestamp
+}
+
+/** Table `exam_sets` — slice-11a: fixed exam set (draft -> published -> archived). */
+export interface ExamSetsTable {
+  id: Generated<string>
+  title: string
+  level_id: string
+  skill: string
+  description: ColumnType<string | null, string | null | undefined, string | null>
+  status: ColumnType<string, string | undefined, string>
+  created_by: string
+  created_at: Timestamp
+  updated_at: Timestamp
+  published_at: ColumnType<Date | null, string | null | undefined, string | null>
+}
+
+/** Table `exam_set_items` — slice-11a: ordered questions of a set. */
+export interface ExamSetItemsTable {
+  exam_set_id: string
+  position: number
+  question_id: string
+}
+
+/** Table `exam_set_links` — slice-11a: sets an exam serves, in order. */
+export interface ExamSetLinksTable {
+  exam_id: string
+  exam_set_id: string
+  position: number
 }
 
 /** Bang `exam_grading_policies` — slice-5: chinh sach cham/thi lai mac dinh theo cap do. */
@@ -174,6 +208,8 @@ export interface ExamAttemptsTable {
   // slice-9a: manual Speaking/Writing grade (part of the immutable grade).
   graded_by: ColumnType<string | null, string | null | undefined, string | null>
   grader_feedback: ColumnType<string | null, string | null | undefined, string | null>
+  // slice-11a: set that served the attempt (null for random papers).
+  exam_set_id: ColumnType<string | null, string | null | undefined, string | null>
 }
 
 /** Table `class_teachers` — slice-6: teachers assigned to a class (attendance RBAC). */
@@ -290,6 +326,9 @@ export interface Database {
   user_branches: UserBranchesTable
   questions: QuestionsTable
   exams: ExamsTable
+  exam_sets: ExamSetsTable
+  exam_set_items: ExamSetItemsTable
+  exam_set_links: ExamSetLinksTable
   exam_attempts: ExamAttemptsTable
   exam_grading_policies: ExamGradingPoliciesTable
   class_teachers: ClassTeachersTable

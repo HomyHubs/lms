@@ -21,8 +21,8 @@ export const QuestionType = z.enum(QUESTION_TYPES)
 export type QuestionType = z.infer<typeof QuestionType>
 export const QuestionDifficulty = z.enum(QUESTION_DIFFICULTIES)
 export type QuestionDifficulty = z.infer<typeof QuestionDifficulty>
-// slice-4.5: provenance of a bank question.
-export const QUESTION_SOURCES = ['manual', 'ai_generated'] as const
+// slice-4.5: provenance of a bank question; slice-11a: authored inside an exam set.
+export const QUESTION_SOURCES = ['manual', 'ai_generated', 'exam_set'] as const
 export const QuestionSource = z.enum(QUESTION_SOURCES)
 export type QuestionSource = z.infer<typeof QuestionSource>
 
