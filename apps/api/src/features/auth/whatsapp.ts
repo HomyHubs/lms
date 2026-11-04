@@ -49,12 +49,11 @@ export function makeWhatsAppSender(logger: FastifyBaseLogger): OtpWhatsAppSender
       })
 
       if (!res.ok) {
-        const body = await res.text().catch(() => '(unreadable body)')
-        logger.error({ phone, status: res.status, body }, 'WhatsApp Cloud API error')
+        logger.error({ status: res.status }, 'WhatsApp Cloud API error')
         throw new Error(`WhatsApp delivery failed (HTTP ${res.status})`)
       }
 
-      logger.info({ phone }, 'OTP sent via WhatsApp')
+      logger.info('OTP sent via WhatsApp')
     },
   }
 }

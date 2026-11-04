@@ -42,31 +42,21 @@ describe('ForgotPasswordPage flow (Task 3 + Slice-2)', () => {
     expect(screen.getByLabelText('Mật khẩu mới')).toBeInTheDocument()
   })
 
-  it('shows a recipient field and sends the chosen channel when WhatsApp is selected', async () => {
+  it('offers only Email and never sends a client recipient', async () => {
     renderPage()
-    fireEvent.change(screen.getByLabelText('Email'), {
-      target: { value: 'admin@example.com' },
-    })
-    fireEvent.change(screen.getByLabelText('Kênh nhận OTP'), {
-      target: { value: 'whatsapp' },
-    })
-    const recipient = await screen.findByLabelText(/Số WhatsApp/)
-    fireEvent.change(recipient, { target: { value: '84901234567' } })
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Email'])
+    expect(screen.queryByLabelText(/Số WhatsApp/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Chat ID/)).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'admin@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: /Gửi mã OTP/ }))
-
-    // Chuyen sang buoc nhap OTP nghia la request da hop le va gui thanh cong.
-    await waitFor(() => expect(screen.getByLabelText('Mã OTP')).toBeInTheDocument())
-
-    // Body gui len backend co channel + recipient da chon.
-    const fetchMock = vi.mocked(fetch)
-    const forgotCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/forgot-password'))
-    expect(forgotCall).toBeDefined()
-    const body = JSON.parse(String((forgotCall![1] as RequestInit).body)) as {
-      channel?: string
-      recipient?: string
-    }
-    expect(body.channel).toBe('whatsapp')
-    expect(body.recipient).toBe('84901234567')
+    await screen.findByLabelText('Mã OTP')
+    const call = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes('/forgot-password'))
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+      email: 'admin@example.com',
+      channel: 'email',
+    })
   })
 
   it('blocks the WhatsApp request when the recipient is empty', async () => {
