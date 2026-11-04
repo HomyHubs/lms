@@ -113,6 +113,8 @@ export interface QuestionsTable {
   points: ColumnType<number, number | undefined, number>
   explanation: ColumnType<string | null, string | null | undefined, string | null>
   source_reference: ColumnType<string | null, string | null | undefined, string | null>
+  // slice-4.5: 'manual' | 'ai_generated' (DB default 'manual').
+  source: ColumnType<string, string | undefined, string>
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -201,6 +203,36 @@ export interface AttendanceRecordsTable {
   recorded_at: Timestamp
 }
 
+/** Table `ai_generation_requests` — slice-4.5: a prompt generated for an external AI tool. */
+export interface AiGenerationRequestsTable {
+  id: Generated<string>
+  created_by: string
+  level_id: string
+  skill: string
+  question_type: string | null
+  difficulty: string | null
+  question_count: number
+  // JSON string[] of sample question ids (display only).
+  sample_question_ids: ColumnType<string, string | undefined, string>
+  prompt: string
+  status: ColumnType<string, string | undefined, string>
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+/** Table `ai_generated_items` — slice-4.5: one pasted AI row in the review queue. */
+export interface AiGeneratedItemsTable {
+  id: Generated<string>
+  request_id: string
+  position: number
+  // JSON object in Question Import Schema shape (validated before insert).
+  payload: string
+  status: ColumnType<string, string | undefined, string>
+  question_id: ColumnType<string | null, string | null | undefined, string | null>
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -219,6 +251,8 @@ export interface Database {
   class_teachers: ClassTeachersTable
   class_sessions: ClassSessionsTable
   attendance_records: AttendanceRecordsTable
+  ai_generation_requests: AiGenerationRequestsTable
+  ai_generated_items: AiGeneratedItemsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

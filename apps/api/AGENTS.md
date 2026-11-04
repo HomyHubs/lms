@@ -23,6 +23,13 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-06
+
+**Đã xong**
+
+- slice-4.5 (Sinh prompt AI & import ngược) — feature `aigeneration` (`aiGenerationRoutes(app, { rbac, aiGenerationStore })`): `POST/GET /ai-requests`, `GET /ai-requests/:id`, `POST /ai-requests/:id/results`, `PATCH /ai-requests/:id/items/:itemId`, `POST /ai-requests/:id/save`. Admin xem tất cả, GV chỉ của mình (khác → 404). Không gọi AI provider; validate dùng lại validator slice-3 + phải khớp level/skill/type/difficulty. Lưu vào `questions` với `source = ai_generated` trong 1 transaction. Thiết kế: ADR 0005.
+- Test: `aigeneration/routes.test.ts` (luồng đủ + RBAC + validate), `store.integration.test.ts` (Postgres thật). Mutation check: đổi chuyển trạng thái `imported/reviewed` → test đỏ, revert → xanh.
+
 ### 2026-11-05
 
 **Đã xong**

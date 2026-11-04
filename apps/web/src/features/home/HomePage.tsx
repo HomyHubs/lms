@@ -7,7 +7,9 @@ import {
   CheckCircle2,
   ClipboardList,
   LogOut,
+  ListChecks,
   MapPin,
+  Sparkles,
   Users,
   XCircle,
 } from 'lucide-react'
@@ -50,6 +52,22 @@ export function HomePage(): React.ReactElement {
             >
               <ClipboardList className="h-4 w-4" /> Bài thi của tôi
             </Link>
+          )}
+          {(user?.role === 'admin' || user?.role === 'teacher') && (
+            <>
+              <Link
+                to="/questions"
+                className="flex items-center gap-1 text-sm text-slate-600 underline"
+              >
+                <ListChecks className="h-4 w-4" /> Ngân hàng câu hỏi
+              </Link>
+              <Link
+                to="/ai-questions"
+                className="flex items-center gap-1 text-sm text-slate-600 underline"
+              >
+                <Sparkles className="h-4 w-4" /> Sinh câu hỏi AI
+              </Link>
+            </>
           )}
           {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'student') && (
             <Link

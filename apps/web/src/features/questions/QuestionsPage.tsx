@@ -192,9 +192,14 @@ export function QuestionsPage(): React.ReactElement {
       </fieldset>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">Ngân hàng câu hỏi</h1>
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-500 underline">
-          <ArrowLeft className="h-4 w-4" /> Trang chủ
-        </Link>
+        <div className="flex gap-4 text-sm text-slate-500">
+          <Link to="/ai-questions" className="underline">
+            Sinh câu hỏi AI
+          </Link>
+          <Link to="/" className="flex items-center gap-1 underline">
+            <ArrowLeft className="h-4 w-4" /> Trang chủ
+          </Link>
+        </div>
       </div>
 
       <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -361,7 +366,12 @@ export function QuestionsPage(): React.ReactElement {
                   <td className="p-2">{q.skill}</td>
                   <td className="p-2">{q.questionType}</td>
                   <td className="p-2">{q.difficulty}</td>
-                  <td className="p-2">{q.questionText}</td>
+                  <td className="p-2">
+                    {q.questionText}
+                    {q.source === 'ai_generated' && (
+                      <span className="ml-2 rounded bg-violet-100 px-1.5 text-xs text-violet-700">AI</span>
+                    )}
+                  </td>
                   <td className="p-2">{q.points}</td>
                   <td className="p-2 text-right">
                     <Button

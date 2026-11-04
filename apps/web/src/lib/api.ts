@@ -63,6 +63,12 @@ import {
   type CreateClassSessionRequest,
   type MarkAttendanceRequest,
   type TeachingClass,
+  AiRequestDetail,
+  AiRequestList,
+  SaveAiRequestResult,
+  type AiGenerationRequest,
+  type CreateAiRequestRequest,
+  type UpdateAiItemRequest,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -629,4 +635,73 @@ export async function getAttendanceRates(query: AttendanceRatesQuery): Promise<A
   const res = await fetch(`/api/attendance/rates?${params.toString()}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc ty le chuyen can')
   return AttendanceRates.parse(await res.json())
+}
+
+/** slice-4.5: AI prompt generation + reverse import. The backend never calls an AI provider. */
+export async function listAiRequests(): Promise<AiGenerationRequest[]> {
+  const res = await fetch('/api/ai-requests', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc danh sach yeu cau AI')
+  return AiRequestList.parse(await res.json()).requests
+}
+
+export async function getAiRequest(id: string): Promise<AiRequestDetail> {
+  const res = await fetch(`/api/ai-requests/${id}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc yeu cau AI')
+  return AiRequestDetail.parse(await res.json())
+}
+
+async function sendAiJson(url: string, method: string, body: unknown, fallback: string): Promise<unknown> {
+  const res = await fetch(url, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return throwApiError(res, fallback)
+  return res.json()
+}
+
+export async function createAiRequest(input: CreateAiRequestRequest): Promise<AiRequestDetail> {
+  return AiRequestDetail.parse(await sendAiJson('/api/ai-requests', 'POST', input, 'Tao prompt that bai'))
+}
+
+export async function submitAiResults(
+  id: string,
+  rows: Record<string, unknown>[],
+): Promise<AiRequestDetail> {
+  return AiRequestDetail.parse(
+    await sendAiJson(`/api/ai-requests/${id}/results`, 'POST', { rows }, 'Import ket qua AI that bai'),
+  )
+}
+
+export async function updateAiItem(
+  id: string,
+  itemId: string,
+  input: UpdateAiItemRequest,
+): Promise<AiRequestDetail> {
+  return AiRequestDetail.parse(
+    await sendAiJson(`/api/ai-requests/${id}/items/${itemId}`, 'PATCH', input, 'Cap nhat cau hoi that bai'),
+  )
+}
+
+export async function saveAiRequest(id: string): Promise<SaveAiRequestResult> {
+  return SaveAiRequestResult.parse(
+    await sendAiJson(`/api/ai-requests/${id}/save`, 'POST', {}, 'Luu vao ngan hang that bai'),
+  )
+}
+
+/** Parses what the external AI returned: a JSON array of rows, or CSV with the import header. */
+export function parseAiResultText(text: string): Record<string, unknown>[] {
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+  if (!trimmed.startsWith('[')) return parseQuestionsCsv(trimmed)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch {
+    return importFailure(1, 'json', 'JSON không hợp lệ')
+  }
+  if (!Array.isArray(parsed) || parsed.some((r) => typeof r !== 'object' || r === null || Array.isArray(r))) {
+    return importFailure(1, 'json', 'Cần một mảng JSON các object câu hỏi')
+  }
+  return parsed as Record<string, unknown>[]
 }

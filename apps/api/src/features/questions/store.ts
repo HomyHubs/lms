@@ -15,6 +15,7 @@ const QUESTION_COLUMNS = [
   'questions.points',
   'questions.explanation',
   'questions.source_reference',
+  'questions.source',
   'questions.created_at',
 ] as const
 
@@ -23,7 +24,7 @@ function serializeOptions(options: string[] | null | undefined): string | null {
   return options === null || options === undefined ? null : JSON.stringify(options)
 }
 
-function insertValues(input: CreateQuestionFields): {
+export function insertValues(input: CreateQuestionFields): {
   level_id: string
   skill: string
   question_type: string
@@ -34,6 +35,7 @@ function insertValues(input: CreateQuestionFields): {
   explanation: string | null
   source_reference: string | null
   points: number | undefined
+  source: string | undefined
 } {
   return {
     level_id: input.levelId,
@@ -47,6 +49,7 @@ function insertValues(input: CreateQuestionFields): {
     source_reference: input.sourceReference,
     // undefined -> Postgres dung DEFAULT (points = 1).
     points: input.points,
+    source: input.source,
   }
 }
 
