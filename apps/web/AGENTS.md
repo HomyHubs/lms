@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-07
+
+**Đã xong**
+
+- slice-7 (Xếp loại & Dashboard): route `/reports` (Admin), link "Báo cáo & xếp loại" ở trang chủ. Lọc cơ sở/cấp độ/lớp/từ-đến ngày; thẻ tổng quan, biểu đồ thanh CSS (xếp loại, đạt/trượt theo lớp/cấp độ/tháng), bảng xếp hạng + thi lại, sửa cấu hình xếp loại theo cấp độ. Xuất Excel: `src/lib/xlsx-export.ts` (`buildXlsx`, `downloadFile`; dùng lại cho slice-8) + `reportToSheets`; In/PDF: `window.print()` (`print:hidden` cho phần điều khiển). Hook `useReports`; test `ReportsPage.test.tsx`.
+
 ### 2026-11-06
 
 **Đã xong**

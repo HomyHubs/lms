@@ -233,6 +233,17 @@ export interface AiGeneratedItemsTable {
   updated_at: Timestamp
 }
 
+/** Table `student_grading_policies` — slice-7: classification weights + bands per level. */
+export interface StudentGradingPoliciesTable {
+  level_id: string
+  exam_weight: ColumnType<number, number | undefined, number>
+  attendance_weight: ColumnType<number, number | undefined, number>
+  excellent_min: ColumnType<number, number | undefined, number>
+  good_min: ColumnType<number, number | undefined, number>
+  average_min: ColumnType<number, number | undefined, number>
+  updated_at: Timestamp
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -253,6 +264,7 @@ export interface Database {
   attendance_records: AttendanceRecordsTable
   ai_generation_requests: AiGenerationRequestsTable
   ai_generated_items: AiGeneratedItemsTable
+  student_grading_policies: StudentGradingPoliciesTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

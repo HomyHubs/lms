@@ -17,6 +17,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-07
+
+**Đã xong**
+
+- slice-7: migration `20261107000000_student_grading.sql` — bảng `student_grading_policies` (1 dòng/cấp độ, seed mặc định 90/10 và ngưỡng 85/70/50; check tổng trọng số = 100 và ngưỡng giảm dần). Additive, đảo ngược được; up → down → up đã chạy trên Postgres thật.
+
 ### 2026-11-06
 
 **Đã xong**
