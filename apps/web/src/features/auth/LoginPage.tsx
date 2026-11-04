@@ -58,7 +58,7 @@ export function LoginPage(): React.ReactElement {
             autoComplete="tel"
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="c-input w-full"
             placeholder="0901234567"
           />
         </div>
@@ -74,13 +74,13 @@ export function LoginPage(): React.ReactElement {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="c-input w-full"
             placeholder="••••••••"
           />
         </div>
 
         {(fieldError || serverError) && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-600">
             {fieldError ?? serverError}
           </p>
         )}

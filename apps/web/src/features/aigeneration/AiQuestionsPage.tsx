@@ -1,6 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { ArrowLeft, ClipboardCopy, Sparkles, Upload } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ClipboardCopy, Sparkles, Upload } from 'lucide-react'
 import {
   LEVEL_CODES,
   MAX_AI_SAMPLES,
@@ -15,6 +14,7 @@ import {
   type QuestionType,
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/card'
 import { ApiError, parseAiResultText } from '@/lib/api'
 import { ImportFileError } from '@/lib/question-import'
 import { useQuestions } from '@/features/questions/useQuestions'
@@ -42,7 +42,6 @@ const ITEM_LABELS: Record<AiGeneratedItem['status'], string> = {
 }
 
 const fieldClass = 'rounded-md border border-slate-300 px-3 py-2 text-sm'
-const sectionClass = 'flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm'
 const headingClass = 'flex items-center gap-2 text-lg font-medium text-slate-800'
 
 function describeError(error: unknown): string {
@@ -167,29 +166,17 @@ export function AiQuestionsPage(): React.ReactElement {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <Sparkles className="h-6 w-6" /> Sinh câu hỏi bằng AI
-        </h1>
-        <div className="flex gap-4 text-sm text-slate-500">
-          <Link to="/questions" className="underline">
-            Ngân hàng câu hỏi
-          </Link>
-          <Link to="/" className="flex items-center gap-1 underline">
-            <ArrowLeft className="h-4 w-4" /> Trang chủ
-          </Link>
-        </div>
-      </div>
+    <>
+      <PageHeader icon={Sparkles} title="Sinh câu hỏi bằng AI" />
 
-      {message && <p className="text-sm text-green-700">{message}</p>}
+      {message && <p className="text-sm text-success-700">{message}</p>}
       {error && (
-        <p role="alert" className="whitespace-pre-line text-sm text-red-600">
+        <p role="alert" className="whitespace-pre-line text-sm text-danger-600">
           {error}
         </p>
       )}
 
-      <section className={sectionClass}>
+      <section className="c-card">
         <h2 className={headingClass}>1. Tạo prompt</h2>
         <form onSubmit={handleCreate} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <select
@@ -286,7 +273,7 @@ export function AiQuestionsPage(): React.ReactElement {
         </form>
       </section>
 
-      <section className={sectionClass}>
+      <section className="c-card">
         <h2 className={headingClass}>Yêu cầu đã tạo</h2>
         {requests.data?.length === 0 && <p className="text-sm text-slate-400">Chưa có yêu cầu nào.</p>}
         <ul className="flex flex-col gap-1 text-sm">
@@ -306,7 +293,7 @@ export function AiQuestionsPage(): React.ReactElement {
       </section>
 
       {request && (
-        <section className={sectionClass}>
+        <section className="c-card">
           <div className="flex items-center justify-between">
             <h2 className={headingClass}>2. Prompt — {STATUS_LABELS[request.status]}</h2>
             <Button variant="outline" size="sm" onClick={() => void copyPrompt()}>
@@ -356,21 +343,21 @@ export function AiQuestionsPage(): React.ReactElement {
       )}
 
       {request && items.length > 0 && (
-        <section className={sectionClass}>
+        <section className="c-card">
           <div className="flex items-center justify-between">
             <h2 className={headingClass}>4. Hàng chờ duyệt</h2>
             <Button onClick={handleSave} disabled={request.status !== 'reviewed' || saveRequest.isPending}>
               Lưu vào ngân hàng
             </Button>
           </div>
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
+          <table className="c-table">
+            <thead>
               <tr>
-                <th className="p-2">#</th>
-                <th className="p-2">Câu hỏi</th>
-                <th className="p-2">Đáp án</th>
-                <th className="p-2">Trạng thái</th>
-                <th className="p-2 text-right">Duyệt</th>
+                <th>#</th>
+                <th>Câu hỏi</th>
+                <th>Đáp án</th>
+                <th>Trạng thái</th>
+                <th className="text-right">Duyệt</th>
               </tr>
             </thead>
             <tbody>
@@ -387,7 +374,7 @@ export function AiQuestionsPage(): React.ReactElement {
           </table>
         </section>
       )}
-    </main>
+    </>
   )
 }
 
@@ -424,8 +411,8 @@ function ReviewRow({ item, editable, busy, onChange }: ReviewRowProps): React.Re
 
   return (
     <tr className="border-b border-slate-100 align-top">
-      <td className="p-2">{item.position}</td>
-      <td className="p-2">
+      <td>{item.position}</td>
+      <td>
         {draft ? (
           <div className="flex flex-col gap-1">
             <input
@@ -452,7 +439,7 @@ function ReviewRow({ item, editable, busy, onChange }: ReviewRowProps): React.Re
           </>
         )}
       </td>
-      <td className="p-2">
+      <td>
         {draft ? (
           <input
             aria-label={`Đáp án câu ${item.position}`}
@@ -464,7 +451,7 @@ function ReviewRow({ item, editable, busy, onChange }: ReviewRowProps): React.Re
           row.correct_answer
         )}
       </td>
-      <td className="p-2">{ITEM_LABELS[item.status]}</td>
+      <td>{ITEM_LABELS[item.status]}</td>
       <td className="flex justify-end gap-1 p-2">
         {editable && !draft && (
           <>

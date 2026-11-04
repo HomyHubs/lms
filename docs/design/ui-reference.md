@@ -1,10 +1,10 @@
 # UI reference — target look for the LMS web app
 
-> updated 2026-11-08 · 615cf06
+> updated 2026-11-09 · 34af6be
 
 The owner sent two dashboard screenshots in chat (2026-11-08) as the look to follow. The images are
-not stored in the repo; this file records what to take from them. Slice-8 `/work-hours` is the first
-page built in this style; the other pages get it in the UI-shell slice proposed below.
+not stored in the repo; this file records what to take from them. Slice-10 applied it to every page;
+the implemented building blocks are listed under "Implemented catalogue" (ADR 0008).
 
 ## Reference A — "EduNova AI ERP" teacher dashboard
 
@@ -39,15 +39,26 @@ page built in this style; the other pages get it in the UI-shell slice proposed 
 - **Colour roles** (name by role, not hue): `primary` blue (active nav, primary buttons, links), `success` emerald, `accent` violet, `warning` amber, `danger` rose. Tinted tile = `bg-<role>-50 text-<role>-600`.
 - **Stat card:** label (xs, slate-500) → value (2xl semibold) → hint/trend (xs), tinted icon square top-right.
 - **Status pills:** small rounded tinted badges for grades, risk levels, session status ("Bù"/"Thay" already used in `/work-hours`).
-- **Hero:** gradient `from-blue-50 to-sky-50`, greeting + one primary action.
+- **Hero:** gradient `from-primary-50 to-sky-50`, greeting + one primary action.
 - **Tables:** header row slate-500, rows separated by `border-slate-100`.
 - **Charts:** keep the slice-7 CSS bars/donut approach before adding a chart library.
 
-## Proposed slice — UI shell (restyle every page)
+## Implemented catalogue (slice-10)
 
-Not in the MVP backlog yet; needs the owner's go-ahead.
+Use these before writing a new class string; a string repeated on two pages becomes an entry here.
 
-1. `AppShell` layout: left sidebar (role-filtered nav, active pill, collapsible on mobile) + top bar (search placeholder, bell, avatar/role, logout); every protected route renders inside it.
-2. Shared components in `src/components/ui/`: `Card`, `StatCard` (tone prop: primary/success/accent/warning/danger), `Input`/`Select`, `Badge`, `PageHeader`; move the local copies out of `WorkHoursPage`, `ReportsPage`, `AttendancePage`.
-3. Role dashboards on `/`: Admin (branch stats, report shortcuts), Teacher (today's sessions, attendance to mark, teaching hours), Staff (check-in hero, timesheet), Student (scores, rank, attendance donut, upcoming exams) — replacing the health-check page (health becomes a small status chip).
-4. Restyle existing pages inside the shell without behaviour changes; keep current tests green and add one shell render test per role.
+| Kind | Name | Where | Use for |
+| --- | --- | --- | --- |
+| Tokens | `primary` blue, `success` emerald, `accent` violet, `warning` amber, `danger` rose | `apps/web/tailwind.config.js` | Every colour in feature code (neutrals = `slate`) |
+| Pattern class | `.c-card` | `apps/web/src/index.css` | White section card (`rounded-xl`, `p-5`, `shadow-sm`, flex column gap 3) |
+| Pattern class | `.c-section-title` | same | Section heading inside a card |
+| Pattern class | `.c-hero` | same | Greeting/summary banner (primary-50 → sky-50 gradient) |
+| Pattern class | `.c-input` | same | Inputs, selects, textareas |
+| Pattern class | `.c-table` | same | Data tables (slate-500 header, slate-100 row lines) |
+| Component | `Card`, `CardTitle`, `StatCard`, `Badge`, `PageHeader` | `src/components/ui/card.tsx` | Cards, stat tiles (tone prop), status pills, page title row with icon + actions |
+| Component | `buttonVariants` / `Button` | `src/components/ui/button-variants.ts`, `button.tsx` | Buttons and links styled as buttons |
+| Map | `TONE_TILE` (`Tone`) | `src/components/ui/tone.ts` | Tinted icon tile `bg-<role>-50 text-<role>-600` |
+| Layout | `AppShell` | `src/components/layout/AppShell.tsx` | Sidebar + top bar around every protected route |
+| Nav SSoT | `NAV_ITEMS`, `navItemsFor`, `ROLE_LABELS` | `src/components/layout/nav.ts` | Sidebar, dashboard shortcuts and route role guards |
+
+Not built yet: search box, notification bell (slice-9b), calendar/timetable widgets, charts beyond the slice-7 CSS bars.

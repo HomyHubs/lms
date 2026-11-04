@@ -25,6 +25,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Done | — | feature/slice-7-xep-loai-dashboard | 13 | slice-5, slice-6 | `slices/slice-7-xep-loai-dashboard.md` |
 | slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Done | — | feature/slice-8-ngay-cong-gio-day | 14 | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
 | slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Hoãn | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
+| slice-10 | Giao diện chung: AppShell, dashboard theo vai trò, restyle | Dọc | Done | — | feature/ui-shell | 15 | slice-8 | `slices/slice-10-giao-dien-chung.md` |
 
 ## Công việc bổ sung theo mục 22
 

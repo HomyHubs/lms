@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-09
+
+**Đã xong**
+
+- slice-10 (Giao diện chung): `AppShell` (sidebar theo vai trò, thanh trên có chip DB, SĐT + vai trò, đăng xuất) bọc mọi route sau đăng nhập. `components/layout/nav.ts` `NAV_ITEMS` là nguồn duy nhất cho sidebar, lối tắt dashboard và guard vai trò trong `App.tsx`. Token màu theo vai trò trong `tailwind.config.js`; pattern class `.c-card/.c-section-title/.c-hero/.c-input/.c-table` (`index.css`); component `Card/CardTitle/StatCard/Badge/PageHeader` (`components/ui/card.tsx`), `buttonVariants`, `TONE_TILE`. Trang chủ = dashboard theo vai trò. Các trang cũ bỏ `<main>`/link "Trang chủ" riêng. Test shell theo 4 vai trò trong `App.test.tsx`. Xem `docs/design/ui-reference.md`, ADR 0008.
+
 ### 2026-11-08
 
 **Đã xong**

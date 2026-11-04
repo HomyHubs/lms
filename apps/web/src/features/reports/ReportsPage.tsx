@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, BarChart3, FileSpreadsheet, Printer } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { BarChart3, FileSpreadsheet, Printer } from 'lucide-react'
 import {
   CLASSIFICATION_LABELS,
   STUDENT_CLASSIFICATIONS,
@@ -10,6 +9,7 @@ import {
   type StudentReportQuery,
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/card'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { reportToSheets } from './report-export'
 import {
@@ -20,8 +20,6 @@ import {
 } from './useReports'
 
 // Same section/input look as AttendancePage; kept inline (two pages) until a third copy appears.
-const SECTION = 'flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm break-inside-avoid'
-const INPUT = 'rounded-md border border-slate-300 px-3 py-2 text-sm'
 
 const fmt = (value: number | null, suffix = ''): string => (value === null ? '—' : `${value}${suffix}`)
 
@@ -38,7 +36,7 @@ function Card({ label, value }: { label: string; value: string }): React.ReactEl
 function Bars({ title, items }: { title: string; items: { label: string; value: number; hint?: string }[] }): React.ReactElement {
   const max = Math.max(1, ...items.map((i) => i.value))
   return (
-    <section className={SECTION} aria-label={title}>
+    <section className="c-card" aria-label={title}>
       <h2 className="font-medium text-slate-800">{title}</h2>
       {items.length === 0 && <p className="text-sm text-slate-500">Chưa có dữ liệu.</p>}
       {items.map((i) => (
@@ -58,10 +56,10 @@ function Bars({ title, items }: { title: string; items: { label: string; value: 
 function RankingTable({ report }: { report: StudentReport }): React.ReactElement {
   if (report.ranking.length === 0) return <p className="text-sm text-slate-500">Không có học viên trong phạm vi lọc.</p>
   return (
-    <table className="w-full text-left text-sm">
+    <table className="c-table">
       <thead>
-        <tr className="text-slate-500">
-          <th className="py-1">Hạng</th>
+        <tr>
+          <th>Hạng</th>
           <th>Học viên</th>
           <th>Lớp</th>
           <th>Điểm thi</th>
@@ -74,8 +72,8 @@ function RankingTable({ report }: { report: StudentReport }): React.ReactElement
       </thead>
       <tbody>
         {report.ranking.map((r) => (
-          <tr key={`${r.classId}-${r.studentId}`} className="border-t border-slate-100">
-            <td className="py-1">{fmt(r.rank)}</td>
+          <tr key={`${r.classId}-${r.studentId}`}>
+            <td>{fmt(r.rank)}</td>
             <td>{r.phoneNumber}</td>
             <td>{r.className}</td>
             <td>{fmt(r.examScore, '%')}</td>
@@ -87,7 +85,7 @@ function RankingTable({ report }: { report: StudentReport }): React.ReactElement
             </td>
             <td>
               {r.retakes}
-              {r.pendingRetakes > 0 && <span className="ml-1 text-amber-700">(chờ thi lại {r.pendingRetakes})</span>}
+              {r.pendingRetakes > 0 && <span className="ml-1 text-warning-700">(chờ thi lại {r.pendingRetakes})</span>}
             </td>
           </tr>
         ))}
@@ -134,7 +132,7 @@ function PolicyRow({ policy }: { policy: ClassificationPolicy }): React.ReactEle
           {label}
           <input
             aria-label={`${policy.levelCode} ${label}`}
-            className={`${INPUT} w-24`}
+            className="c-input w-24"
             type="number"
             min={0}
             max={100}
@@ -154,10 +152,10 @@ function PolicyRow({ policy }: { policy: ClassificationPolicy }): React.ReactEle
 function PolicyEditor(): React.ReactElement {
   const policies = useClassificationPolicies()
   return (
-    <section className={`${SECTION} print:hidden`}>
+    <section className="c-card print:hidden">
       <h2 className="font-medium text-slate-800">Cấu hình xếp loại theo cấp độ</h2>
       <p className="text-xs text-slate-500">Điểm tổng = trọng số thi × điểm thi + trọng số chuyên cần × tỷ lệ chuyên cần.</p>
-      {policies.isError && <p className="text-sm text-red-600">{(policies.error as Error).message}</p>}
+      {policies.isError && <p className="text-sm text-danger-600">{(policies.error as Error).message}</p>}
       {policies.data?.map((p) => <PolicyRow key={p.levelId} policy={p} />)}
     </section>
   )
@@ -178,27 +176,25 @@ export function ReportsPage(): React.ReactElement {
   }
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between print:hidden">
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-600 underline">
-          <ArrowLeft className="h-4 w-4" /> Trang chủ
-        </Link>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportExcel} disabled={!data}>
-            <FileSpreadsheet className="mr-1 h-4 w-4" /> Xuất Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()} disabled={!data}>
-            <Printer className="mr-1 h-4 w-4" /> In / Xuất PDF
-          </Button>
-        </div>
-      </div>
-      <h1 className="flex items-center gap-2 text-2xl font-semibold text-slate-900">
-        <BarChart3 className="h-6 w-6" /> Báo cáo &amp; xếp loại học viên
-      </h1>
+    <>
+      <PageHeader
+        icon={BarChart3}
+        title="Báo cáo & xếp loại học viên"
+        actions={
+          <div className="flex gap-2 print:hidden">
+            <Button variant="outline" size="sm" onClick={exportExcel} disabled={!data}>
+              <FileSpreadsheet className="mr-1 h-4 w-4" /> Xuất Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()} disabled={!data}>
+              <Printer className="mr-1 h-4 w-4" /> In / Xuất PDF
+            </Button>
+          </div>
+        }
+      />
 
-      <section className={`${SECTION} print:hidden`} aria-label="Bộ lọc">
+      <section className="c-card print:hidden" aria-label="Bộ lọc">
         <div className="flex flex-wrap gap-2">
-          <select aria-label="Cơ sở" className={INPUT} value={query.branchId ?? ''} onChange={set('branchId')}>
+          <select aria-label="Cơ sở" className="c-input" value={query.branchId ?? ''} onChange={set('branchId')}>
             <option value="">Tất cả cơ sở</option>
             {filters.branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -206,7 +202,7 @@ export function ReportsPage(): React.ReactElement {
               </option>
             ))}
           </select>
-          <select aria-label="Cấp độ" className={INPUT} value={query.levelId ?? ''} onChange={set('levelId')}>
+          <select aria-label="Cấp độ" className="c-input" value={query.levelId ?? ''} onChange={set('levelId')}>
             <option value="">Tất cả cấp độ</option>
             {filters.levels.map((l) => (
               <option key={l.id} value={l.id}>
@@ -214,7 +210,7 @@ export function ReportsPage(): React.ReactElement {
               </option>
             ))}
           </select>
-          <select aria-label="Lớp" className={INPUT} value={query.classId ?? ''} onChange={set('classId')}>
+          <select aria-label="Lớp" className="c-input" value={query.classId ?? ''} onChange={set('classId')}>
             <option value="">Tất cả lớp</option>
             {filters.classes
               .filter((c) => !query.branchId || c.branchId === query.branchId)
@@ -225,19 +221,19 @@ export function ReportsPage(): React.ReactElement {
               ))}
           </select>
           <label className="flex items-center gap-1 text-sm text-slate-600">
-            Từ <input aria-label="Từ ngày" type="date" className={INPUT} value={query.from ?? ''} onChange={set('from')} />
+            Từ <input aria-label="Từ ngày" type="date" className="c-input" value={query.from ?? ''} onChange={set('from')} />
           </label>
           <label className="flex items-center gap-1 text-sm text-slate-600">
-            Đến <input aria-label="Đến ngày" type="date" className={INPUT} value={query.to ?? ''} onChange={set('to')} />
+            Đến <input aria-label="Đến ngày" type="date" className="c-input" value={query.to ?? ''} onChange={set('to')} />
           </label>
         </div>
       </section>
 
       {report.isLoading && <p className="text-sm text-slate-500">Đang tải báo cáo…</p>}
-      {report.isError && <p className="text-sm text-red-600">{(report.error as Error).message}</p>}
+      {report.isError && <p className="text-sm text-danger-600">{(report.error as Error).message}</p>}
       {data && (
         <>
-          <section className={SECTION} aria-label="Tổng quan">
+          <section className="c-card" aria-label="Tổng quan">
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <Card label="Học viên" value={String(data.totals.students)} />
               <Card label="Điểm thi TB" value={fmt(data.totals.averageExamScore, '%')} />
@@ -267,13 +263,13 @@ export function ReportsPage(): React.ReactElement {
             title="Đạt / trượt theo tháng"
             items={data.byMonth.map((m) => ({ label: m.month, value: m.passed, hint: `đạt ${m.passed} · trượt ${m.failed}` }))}
           />
-          <section className={SECTION} aria-label="Xếp hạng">
+          <section className="c-card" aria-label="Xếp hạng">
             <h2 className="font-medium text-slate-800">Xếp hạng học viên</h2>
             <RankingTable report={data} />
           </section>
         </>
       )}
       <PolicyEditor />
-    </main>
+    </>
   )
 }

@@ -1,183 +1,182 @@
-import { useQuery } from '@tanstack/react-query'
 import {
-  Activity,
-  BarChart3,
-  BookOpen,
+  BookOpenCheck,
   Building2,
   CalendarCheck,
-  CheckCircle2,
+  CalendarDays,
   ClipboardList,
   Clock,
+  GraduationCap,
   LogOut,
-  ListChecks,
-  MapPin,
-  Sparkles,
-  Users,
+  School,
+  UserCheck,
   XCircle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { fetchHealth } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { useLogout, useSession } from '@/features/auth/useAuth'
+import type { PublicUser } from '@lms/shared'
+import { navItemsFor, ROLE_LABELS } from '@/components/layout/nav'
+import { buttonVariants } from '@/components/ui/button-variants'
+import { Card, CardTitle, StatCard } from '@/components/ui/card'
+import { TONE_TILE } from '@/components/ui/tone'
+import { useSession } from '@/features/auth/useAuth'
+import { useMyAttendance, useTeachingClasses } from '@/features/attendance/useAttendance'
+import { useClasses } from '@/features/catalog/useCatalog'
+import { useBranches } from '@/features/centers/useCenters'
+import { useExams } from '@/features/exams/useExams'
+import { useUsers } from '@/features/users/useUsers'
+import { toHours } from '@/features/workhours/work-hours-export'
+import { useMyTimesheet } from '@/features/workhours/useWorkHours'
+import { cn, currentMonth } from '@/lib/utils'
 
-/**
- * Trang chu (sau dang nhap): hien trang thai ket noi Database that va thong tin phien.
- * Giu nguyen health-check cua Task 1, bo sung thanh dieu huong dang nhap/xuat.
- * slice-1 Task 1: hien lien ket "Quan ly nguoi dung" chi khi role === 'admin' (RBAC menu).
- */
-export function HomePage(): React.ReactElement {
-  const { user } = useSession()
-  const logout = useLogout()
+const count = (value: number | undefined): string => (value === undefined ? '—' : String(value))
+const hours = (minutes: number | undefined): string => (minutes === undefined ? '—' : `${toHours(minutes)} giờ`)
 
-  const health = useQuery({
-    queryKey: ['health'],
-    queryFn: fetchHealth,
-    refetchInterval: 10_000,
-  })
+function greeting(): string {
+  const hour = new Date().getHours()
+  return hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'
+}
 
-  const dbUp = health.data?.db.status === 'up'
-
+function Hero({ user, subtitle }: { user: PublicUser; subtitle: string }): React.ReactElement {
+  const [, firstAction] = navItemsFor(user.role)
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 p-6">
-      <div className="flex w-full items-center justify-between">
-        <div className="flex items-center gap-2 text-slate-900">
-          <Activity className="h-6 w-6" />
-          <h1 className="text-2xl font-semibold">LMS — Walking skeleton</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          {user && <span className="text-sm text-slate-500">{user.phoneNumber}</span>}
-          {user?.role === 'student' && (
-            <Link
-              to="/exams"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <ClipboardList className="h-4 w-4" /> Bài thi của tôi
-            </Link>
-          )}
-          {(user?.role === 'admin' || user?.role === 'teacher') && (
-            <>
-              <Link
-                to="/questions"
-                className="flex items-center gap-1 text-sm text-slate-600 underline"
-              >
-                <ListChecks className="h-4 w-4" /> Ngân hàng câu hỏi
-              </Link>
-              <Link
-                to="/ai-questions"
-                className="flex items-center gap-1 text-sm text-slate-600 underline"
-              >
-                <Sparkles className="h-4 w-4" /> Sinh câu hỏi AI
-              </Link>
-            </>
-          )}
-          {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'student') && (
-            <Link
-              to="/attendance"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <CalendarCheck className="h-4 w-4" /> Điểm danh
-            </Link>
-          )}
-          {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'staff') && (
-            <Link
-              to="/work-hours"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <Clock className="h-4 w-4" /> Ngày công &amp; giờ dạy
-            </Link>
-          )}
-          {user?.role === 'admin' && (
-            <Link
-              to="/reports"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <BarChart3 className="h-4 w-4" /> Báo cáo &amp; xếp loại
-            </Link>
-          )}
-          {user?.role === 'admin' && (
-            <Link
-              to="/users"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <Users className="h-4 w-4" /> Quản lý người dùng
-            </Link>
-          )}
-          {user?.role === 'admin' && (
-            <Link
-              to="/centers"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <Building2 className="h-4 w-4" /> Trung tâm &amp; cơ sở
-            </Link>
-          )}
-          {user?.role === 'admin' && (
-            <Link
-              to="/catalog"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <BookOpen className="h-4 w-4" /> Chương trình học
-            </Link>
-          )}
-          {user?.role === 'admin' && (
-            <Link
-              to="/assignments"
-              className="flex items-center gap-1 text-sm text-slate-600 underline"
-            >
-              <MapPin className="h-4 w-4" /> Gán cơ sở
-            </Link>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-          >
-            <LogOut className="mr-1 h-4 w-4" /> Đăng xuất
-          </Button>
-        </div>
+    <section className="c-hero">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">
+          {greeting()}, {ROLE_LABELS[user.role].toLowerCase()} {user.phoneNumber}!
+        </h1>
+        <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
       </div>
+      {firstAction && (
+        <Link to={firstAction.path} className={cn(buttonVariants(), 'gap-2')}>
+          <firstAction.icon className="h-4 w-4" /> {firstAction.label}
+        </Link>
+      )}
+    </section>
+  )
+}
 
-      <section className="w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-medium text-slate-800">Trạng thái kết nối Database</h2>
+function QuickLinks({ user }: { user: PublicUser }): React.ReactElement {
+  const links = navItemsFor(user.role).filter((item) => item.path !== '/')
+  return (
+    <Card>
+      <CardTitle>Truy cập nhanh</CardTitle>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {links.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className="flex flex-col items-center gap-2 rounded-lg border border-slate-100 p-3 text-center text-sm text-slate-700 hover:border-primary-200 hover:bg-primary-50"
+          >
+            <span className={cn('rounded-lg p-2', TONE_TILE[item.tone])}>
+              <item.icon className="h-5 w-5" />
+            </span>
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </Card>
+  )
+}
 
-        {health.isLoading && <p className="text-slate-500">Đang kiểm tra…</p>}
+function StatGrid({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{children}</div>
+}
 
-        {health.isError && (
-          <p className="flex items-center gap-2 text-red-600">
-            <XCircle className="h-5 w-5" /> Không gọi được backend health-check.
-          </p>
-        )}
+function AdminDashboard({ user }: { user: PublicUser }): React.ReactElement {
+  const users = useUsers()
+  const branches = useBranches()
+  const classes = useClasses()
+  const byRole = (role: PublicUser['role']) => users.data?.filter((u) => u.role === role).length
+  return (
+    <>
+      <Hero user={user} subtitle={`${count(branches.data?.length)} cơ sở · ${count(classes.data?.length)} lớp đang quản lý.`} />
+      <StatGrid>
+        <StatCard label="Học viên" value={count(byRole('student'))} icon={GraduationCap} tone="primary" />
+        <StatCard label="Giáo viên" value={count(byRole('teacher'))} icon={UserCheck} tone="success" />
+        <StatCard label="Cơ sở" value={count(branches.data?.length)} icon={Building2} tone="accent" />
+        <StatCard label="Lớp học" value={count(classes.data?.length)} icon={School} tone="warning" />
+      </StatGrid>
+    </>
+  )
+}
 
-        {health.data && (
-          <div className="space-y-2">
-            <p
-              className={cn(
-                'flex items-center gap-2 text-base font-medium',
-                dbUp ? 'text-green-600' : 'text-red-600',
-              )}
-            >
-              {dbUp ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-              Database: {dbUp ? 'Đã kết nối (thật)' : 'Mất kết nối'}
-            </p>
-            <p className="text-sm text-slate-500">
-              Backend: {health.data.status} · Latency:{' '}
-              {health.data.db.latencyMs === null ? '—' : `${health.data.db.latencyMs} ms`}
-            </p>
-            <p className="text-xs text-slate-400">Cập nhật: {health.data.timestamp}</p>
-          </div>
-        )}
+function TeacherDashboard({ user }: { user: PublicUser }): React.ReactElement {
+  const classes = useTeachingClasses(true)
+  const sheet = useMyTimesheet(currentMonth(), true)
+  const teaching = sheet.data?.teaching ?? undefined
+  return (
+    <>
+      <Hero user={user} subtitle={`Bạn phụ trách ${count(classes.data?.length)} lớp. Tháng này đã dạy ${hours(teaching?.taughtMinutes)}.`} />
+      <StatGrid>
+        <StatCard label="Lớp phụ trách" value={count(classes.data?.length)} icon={School} tone="primary" />
+        <StatCard label="Buổi thực dạy (tháng)" value={count(teaching?.held)} hint={teaching && `Theo lịch ${teaching.planned}`} icon={BookOpenCheck} tone="success" />
+        <StatCard label="Giờ dạy (tháng)" value={hours(teaching?.taughtMinutes)} icon={Clock} tone="accent" />
+        <StatCard label="Buổi nghỉ" value={count(teaching?.missed)} icon={XCircle} tone="danger" />
+      </StatGrid>
+      {classes.data && classes.data.length > 0 && (
+        <Card>
+          <CardTitle>Lớp của tôi</CardTitle>
+          <ul className="flex flex-wrap gap-2 text-sm">
+            {classes.data.map((c) => (
+              <li key={c.id} className={cn('rounded-lg px-3 py-1.5', TONE_TILE.primary)}>
+                {c.name}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+    </>
+  )
+}
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-4"
-          onClick={() => void health.refetch()}
-          disabled={health.isFetching}
-        >
-          Kiểm tra lại
-        </Button>
-      </section>
-    </main>
+function StaffDashboard({ user }: { user: PublicUser }): React.ReactElement {
+  const sheet = useMyTimesheet(currentMonth(), true)
+  const open = sheet.data?.openShift ?? null
+  return (
+    <>
+      <Hero user={user} subtitle={open ? 'Bạn đang trong ca — nhớ check-out khi kết thúc.' : 'Bạn chưa check-in hôm nay.'} />
+      <StatGrid>
+        <StatCard label="Ngày công (tháng)" value={count(sheet.data?.summary.workDays)} icon={CalendarDays} tone="primary" />
+        <StatCard label="Giờ công (tháng)" value={hours(sheet.data?.summary.workedMinutes)} icon={Clock} tone="success" />
+        <StatCard label="Ca chưa check-out" value={count(sheet.data?.summary.openShifts)} icon={LogOut} tone="warning" />
+      </StatGrid>
+    </>
+  )
+}
+
+function StudentDashboard({ user }: { user: PublicUser }): React.ReactElement {
+  const attendance = useMyAttendance(true)
+  const exams = useExams()
+  const summary = attendance.data?.summary
+  const rate = summary?.ratePercent
+  return (
+    <>
+      <Hero user={user} subtitle={`Có ${count(exams.data?.length)} bài thi đang mở cho bạn.`} />
+      <StatGrid>
+        <StatCard label="Tỷ lệ chuyên cần" value={rate === undefined || rate === null ? '—' : `${rate}%`} icon={CalendarCheck} tone="primary" />
+        <StatCard label="Buổi đã học" value={count(summary?.total)} icon={BookOpenCheck} tone="success" />
+        <StatCard label="Buổi vắng" value={count(summary?.absent)} icon={XCircle} tone="danger" />
+        <StatCard label="Bài thi đang mở" value={count(exams.data?.length)} icon={ClipboardList} tone="accent" />
+      </StatGrid>
+    </>
+  )
+}
+
+const DASHBOARDS = {
+  admin: AdminDashboard,
+  teacher: TeacherDashboard,
+  staff: StaffDashboard,
+  student: StudentDashboard,
+} satisfies Record<PublicUser['role'], (props: { user: PublicUser }) => React.ReactElement>
+
+/** `/`: role dashboard (greeting, stat cards, shortcuts) inside AppShell. */
+export function HomePage(): React.ReactElement | null {
+  const { user } = useSession()
+  if (!user) return null // rendered only inside RequireAuth
+  const Dashboard = DASHBOARDS[user.role]
+  return (
+    <>
+      <Dashboard user={user} />
+      <QuickLinks user={user} />
+    </>
   )
 }

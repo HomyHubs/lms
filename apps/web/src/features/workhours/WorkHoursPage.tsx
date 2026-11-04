@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  ArrowLeft,
   BookOpenCheck,
   CalendarDays,
   Clock,
@@ -11,9 +10,7 @@ import {
   UserCheck,
   Users,
   XCircle,
-  type LucideIcon,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import {
   WORK_SESSION_STATUS_LABELS,
   type StaffShift,
@@ -22,60 +19,23 @@ import {
   type WorkHoursReportQuery,
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
+import { Badge, Card, CardTitle, PageHeader, StatCard } from '@/components/ui/card'
 import { useSession } from '@/features/auth/useAuth'
+import { currentMonth } from '@/lib/utils'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { toHours, workHoursToSheets } from './work-hours-export'
 import { useBranches, useCheckShift, useMyTimesheet, useWorkHoursReport } from './useWorkHours'
 
-// First page in the docs/design/ui-reference.md look (soft page, rounded cards, tinted stat tiles).
-// Card/input/stat classes move to shared components when the UI-shell slice restyles every page.
-const CARD = 'flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm'
-const INPUT = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm'
-const TONES = {
-  primary: 'bg-blue-50 text-blue-600',
-  success: 'bg-emerald-50 text-emerald-600',
-  accent: 'bg-violet-50 text-violet-600',
-  warning: 'bg-amber-50 text-amber-600',
-  danger: 'bg-rose-50 text-rose-600',
-} as const
-
-function currentMonth(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
 const hoursLabel = (minutes: number): string => `${toHours(minutes)} giờ`
 const timeLabel = (iso: string): string =>
   new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
-
-function StatCard(props: {
-  label: string
-  value: string
-  hint?: string
-  icon: LucideIcon
-  tone: keyof typeof TONES
-}): React.ReactElement {
-  const Icon = props.icon
-  return (
-    <div className="flex items-start justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-      <div>
-        <p className="text-xs font-medium text-slate-500">{props.label}</p>
-        <p className="mt-1 text-2xl font-semibold text-slate-900">{props.value}</p>
-        {props.hint && <p className="mt-1 text-xs text-slate-400">{props.hint}</p>}
-      </div>
-      <span className={`rounded-lg p-2 ${TONES[props.tone]}`}>
-        <Icon className="h-5 w-5" />
-      </span>
-    </div>
-  )
-}
 
 function MonthPicker({ month, onChange }: { month: string; onChange: (m: string) => void }): React.ReactElement {
   return (
     <input
       aria-label="Tháng"
       type="month"
-      className={INPUT}
+      className="c-input"
       value={month}
       onChange={(e) => e.target.value && onChange(e.target.value)}
     />
@@ -96,19 +56,19 @@ function TeachingCards({ teaching }: { teaching: TeacherWorkSummary }): React.Re
 function ShiftTable({ shifts }: { shifts: StaffShift[] }): React.ReactElement {
   if (shifts.length === 0) return <p className="text-sm text-slate-500">Chưa có ca làm trong tháng.</p>
   return (
-    <table className="w-full text-left text-sm">
+    <table className="c-table">
       <thead>
-        <tr className="text-slate-500">
-          <th className="py-1">Check-in</th>
+        <tr>
+          <th>Check-in</th>
           <th>Check-out</th>
           <th>Thời gian</th>
         </tr>
       </thead>
       <tbody>
         {shifts.map((s) => (
-          <tr key={s.id} className="border-t border-slate-100">
-            <td className="py-1">{timeLabel(s.checkInAt)}</td>
-            <td>{s.checkOutAt ? timeLabel(s.checkOutAt) : <span className="text-amber-600">Đang trong ca</span>}</td>
+          <tr key={s.id}>
+            <td>{timeLabel(s.checkInAt)}</td>
+            <td>{s.checkOutAt ? timeLabel(s.checkOutAt) : <Badge tone="warning">Đang trong ca</Badge>}</td>
             <td>{s.workedMinutes === null ? '—' : hoursLabel(s.workedMinutes)}</td>
           </tr>
         ))}
@@ -135,7 +95,7 @@ function MyTimesheetView(): React.ReactElement {
 
   return (
     <>
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-gradient-to-r from-blue-50 to-sky-50 p-6">
+      <section className="c-hero">
         <div>
           <p className="text-lg font-semibold text-slate-900">{open ? 'Bạn đang trong ca' : 'Bạn chưa check-in'}</p>
           <p className="text-sm text-slate-600">
@@ -159,7 +119,7 @@ function MyTimesheetView(): React.ReactElement {
         <h2 className="font-semibold text-slate-800">Bảng công của tôi</h2>
         <MonthPicker month={month} onChange={setMonth} />
       </div>
-      {sheet.isError && <p className="text-sm text-red-600">{(sheet.error as Error).message}</p>}
+      {sheet.isError && <p className="text-sm text-danger-600">{(sheet.error as Error).message}</p>}
       {sheet.data && (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -174,10 +134,10 @@ function MyTimesheetView(): React.ReactElement {
             />
           </div>
           {sheet.data.teaching && <TeachingCards teaching={sheet.data.teaching} />}
-          <section className={CARD}>
-            <h3 className="font-medium text-slate-800">Ca làm trong tháng</h3>
+          <Card>
+            <CardTitle>Ca làm trong tháng</CardTitle>
             <ShiftTable shifts={sheet.data.shifts} />
-          </section>
+          </Card>
         </>
       )}
     </>
@@ -187,15 +147,15 @@ function MyTimesheetView(): React.ReactElement {
 function ReportTables({ report }: { report: WorkHoursReport }): React.ReactElement {
   return (
     <>
-      <section className={CARD} aria-label="Giáo viên">
-        <h3 className="font-medium text-slate-800">Giờ dạy giáo viên</h3>
+      <Card aria-label="Giáo viên">
+        <CardTitle>Giờ dạy giáo viên</CardTitle>
         {report.teachers.length === 0 ? (
           <p className="text-sm text-slate-500">Không có buổi học trong tháng.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <table className="c-table">
             <thead>
-              <tr className="text-slate-500">
-                <th className="py-1">Giáo viên</th>
+              <tr>
+                <th>Giáo viên</th>
                 <th>Theo lịch</th>
                 <th>Thực dạy</th>
                 <th>Nghỉ</th>
@@ -206,8 +166,8 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
             </thead>
             <tbody>
               {report.teachers.map((t) => (
-                <tr key={t.teacherId} className="border-t border-slate-100">
-                  <td className="py-1">{t.phoneNumber}</td>
+                <tr key={t.teacherId}>
+                  <td>{t.phoneNumber}</td>
                   <td>{t.planned}</td>
                   <td className="font-medium">{t.held}</td>
                   <td>{t.missed}</td>
@@ -219,17 +179,17 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
             </tbody>
           </table>
         )}
-      </section>
+      </Card>
 
-      <section className={CARD} aria-label="Nhân viên">
-        <h3 className="font-medium text-slate-800">Ngày công nhân viên &amp; giáo viên</h3>
+      <Card aria-label="Nhân viên">
+        <CardTitle>Ngày công nhân viên &amp; giáo viên</CardTitle>
         {report.staff.length === 0 ? (
           <p className="text-sm text-slate-500">Chưa có nhân viên được gán cơ sở.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <table className="c-table">
             <thead>
-              <tr className="text-slate-500">
-                <th className="py-1">SĐT</th>
+              <tr>
+                <th>SĐT</th>
                 <th>Vai trò</th>
                 <th>Ngày công</th>
                 <th>Giờ công</th>
@@ -238,8 +198,8 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
             </thead>
             <tbody>
               {report.staff.map((s) => (
-                <tr key={s.userId} className="border-t border-slate-100">
-                  <td className="py-1">{s.phoneNumber}</td>
+                <tr key={s.userId}>
+                  <td>{s.phoneNumber}</td>
                   <td>{s.role === 'teacher' ? 'Giáo viên' : 'Nhân viên'}</td>
                   <td className="font-medium">{s.workDays}</td>
                   <td>{hoursLabel(s.workedMinutes)}</td>
@@ -249,14 +209,14 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
             </tbody>
           </table>
         )}
-      </section>
+      </Card>
 
-      <section className={CARD} aria-label="Chi tiết buổi">
-        <h3 className="font-medium text-slate-800">Lịch dự kiến vs thực tế</h3>
-        <table className="w-full text-left text-sm">
+      <Card aria-label="Chi tiết buổi">
+        <CardTitle>Lịch dự kiến vs thực tế</CardTitle>
+        <table className="c-table">
           <thead>
-            <tr className="text-slate-500">
-              <th className="py-1">Ngày</th>
+            <tr>
+              <th>Ngày</th>
               <th>Lớp</th>
               <th>GV theo lịch</th>
               <th>GV dạy</th>
@@ -265,23 +225,25 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
           </thead>
           <tbody>
             {report.sessions.map((s) => (
-              <tr key={s.sessionId} className="border-t border-slate-100">
-                <td className="py-1">
+              <tr key={s.sessionId}>
+                <td>
                   {s.sessionDate} {s.startsAt}
                 </td>
                 <td>{s.className}</td>
                 <td>{s.plannedTeacherPhone ?? '—'}</td>
                 <td>{s.taughtByPhone ?? '—'}</td>
                 <td>
-                  {WORK_SESSION_STATUS_LABELS[s.status]}
-                  {s.isMakeup && <span className="ml-1 rounded bg-violet-50 px-1 text-xs text-violet-700">Bù</span>}
-                  {s.isSubstitute && <span className="ml-1 rounded bg-amber-50 px-1 text-xs text-amber-700">Thay</span>}
+                  <span className="inline-flex items-center gap-1">
+                    {WORK_SESSION_STATUS_LABELS[s.status]}
+                    {s.isMakeup && <Badge tone="accent">Bù</Badge>}
+                    {s.isSubstitute && <Badge tone="warning">Thay</Badge>}
+                  </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </section>
+      </Card>
     </>
   )
 }
@@ -306,7 +268,7 @@ function AdminReportView(): React.ReactElement {
         <MonthPicker month={query.month} onChange={(month) => setQuery((q) => ({ ...q, month }))} />
         <select
           aria-label="Cơ sở"
-          className={INPUT}
+          className="c-input"
           value={query.branchId ?? ''}
           onChange={(e) => setQuery((q) => ({ ...q, branchId: e.target.value || undefined }))}
         >
@@ -322,7 +284,7 @@ function AdminReportView(): React.ReactElement {
         </Button>
       </div>
       {report.isLoading && <p className="text-sm text-slate-500">Đang tải báo cáo…</p>}
-      {report.isError && <p className="text-sm text-red-600">{(report.error as Error).message}</p>}
+      {report.isError && <p className="text-sm text-danger-600">{(report.error as Error).message}</p>}
       {data && (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -345,18 +307,9 @@ function AdminReportView(): React.ReactElement {
 export function WorkHoursPage(): React.ReactElement {
   const { user } = useSession()
   return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="mx-auto flex max-w-5xl flex-col gap-5 p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-slate-900">
-            <Clock className="h-6 w-6 text-blue-600" /> Ngày công &amp; giờ dạy
-          </h1>
-          <Link to="/" className="flex items-center gap-1 text-sm text-slate-500 underline">
-            <ArrowLeft className="h-4 w-4" /> Trang chủ
-          </Link>
-        </div>
-        {user?.role === 'admin' ? <AdminReportView /> : <MyTimesheetView />}
-      </main>
-    </div>
+    <>
+      <PageHeader icon={Clock} title="Ngày công & giờ dạy" />
+      {user?.role === 'admin' ? <AdminReportView /> : <MyTimesheetView />}
+    </>
   )
 }

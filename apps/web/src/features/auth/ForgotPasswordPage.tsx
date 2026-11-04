@@ -72,7 +72,7 @@ export function ForgotPasswordPage(): React.ReactElement {
 
       {done ? (
         <div className="w-full space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <p role="status" className="text-sm text-green-600">
+          <p role="status" className="text-sm text-success-600">
             Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.
           </p>
           <Button className="w-full" onClick={() => navigate('/login', { replace: true })}>
@@ -99,7 +99,7 @@ export function ForgotPasswordPage(): React.ReactElement {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              className="c-input w-full"
               placeholder="admin@example.com"
             />
           </div>
@@ -113,7 +113,7 @@ export function ForgotPasswordPage(): React.ReactElement {
               name="channel"
               value={channel}
               onChange={(e) => setChannel(e.target.value as OtpChannel)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              className="c-input w-full"
             >
               <option value="email">Email</option>
             </select>
@@ -130,14 +130,14 @@ export function ForgotPasswordPage(): React.ReactElement {
                 type="text"
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className="c-input w-full"
                 placeholder={channel === 'whatsapp' ? '84901234567' : '123456789'}
               />
             </div>
           )}
 
           {(fieldError || requestError) && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger-600">
               {fieldError ?? requestError}
             </p>
           )}
@@ -185,13 +185,13 @@ export function ForgotPasswordPage(): React.ReactElement {
               autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              className="c-input w-full"
               placeholder="••••••••"
             />
           </div>
 
           {(fieldError || resetError) && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger-600">
               {fieldError ?? resetError}
             </p>
           )}
