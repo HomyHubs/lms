@@ -7,6 +7,7 @@ import type {
   ExamRow,
   ExamsStore,
   GradingPolicyRow,
+  GradingRow,
   LevelRef,
   QuestionLite,
 } from './service.js'
@@ -47,7 +48,11 @@ const ATTEMPT_COLUMNS = [
   'passed',
   'graded_at',
   'grading_detail',
+  'graded_by',
+  'grader_feedback',
 ] as const
+
+const JOINED_ATTEMPT_COLUMNS = ATTEMPT_COLUMNS.map((column) => `exam_attempts.${column}` as const)
 
 const POLICY_COLUMNS = [
   'exam_grading_policies.level_id',
@@ -76,6 +81,17 @@ export function makeExamsStore(db: AppDb): ExamsStore {
 
   async function requireAttemptById(id: string): Promise<AttemptRow> {
     return selectAttempts().where('id', '=', id).executeTakeFirstOrThrow()
+  }
+
+  function selectGradingRows() {
+    return db
+      .selectFrom('exam_attempts')
+      .innerJoin('exams', 'exams.id', 'exam_attempts.exam_id')
+      .innerJoin('levels', 'levels.id', 'exams.level_id')
+      .innerJoin('users', 'users.id', 'exam_attempts.student_id')
+      .select(JOINED_ATTEMPT_COLUMNS)
+      .select(['exams.title as exam_title', 'levels.code as level_code', 'exams.skill', 'exams.pass_percent',
+        'users.phone_number as student_phone'])
   }
 
   function selectPolicies() {
@@ -232,6 +248,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         passed: grade.passed,
         graded_at: grade.gradedAt,
         grading_detail: grade.detailJson,
+        graded_by: grade.gradedBy ?? null,
+        grader_feedback: grade.feedback ?? null,
       })
         .where('id', '=', attemptId)
         .where('submitted_at', 'is not', null)
@@ -239,6 +257,22 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         .returning(ATTEMPT_COLUMNS)
         .executeTakeFirst()
       return updated ?? requireAttemptById(attemptId)
+    },
+
+    async listUngradedAttempts(skills, nowIso): Promise<GradingRow[]> {
+      return selectGradingRows()
+        .where('exams.skill', 'in', [...skills])
+        .where('exam_attempts.graded_at', 'is', null)
+        .where((eb) => eb.or([
+          eb('exam_attempts.submitted_at', 'is not', null),
+          eb('exam_attempts.deadline_at', '<=', new Date(nowIso)),
+        ]))
+        .orderBy('exam_attempts.deadline_at')
+        .execute()
+    },
+
+    async findGradingRow(attemptId): Promise<GradingRow | undefined> {
+      return selectGradingRows().where('exam_attempts.id', '=', attemptId).executeTakeFirst()
     },
 
     async findGradingPolicy(levelId): Promise<GradingPolicyRow | undefined> {

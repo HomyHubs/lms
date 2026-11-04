@@ -37,6 +37,7 @@ Khong ap dung (slice tuy chon).
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | Hoan | Khong lam slice-9 cho MVP (trang thai -> Hoan). Noi dung con mo ho, lam ro lai neu sau nay can | Quyet dinh chu so huu | - |
+| 2026-11-10 | Tach | Owner mo lai: task 1 -> slice-9a (`slice-9a-cham-tay.md`), task 2 -> slice-9b (thong bao tu dong). Trang thai -> Da thay the | Owner yeu cau lam tiep | 0009 |
 
 ## Cach nghiem thu
 

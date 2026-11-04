@@ -17,6 +17,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-10
+
+**Đã xong**
+
+- slice-9a: `20261110000000_manual_grading.sql` thêm `exam_attempts.graded_by` (FK users, set null) và `grader_feedback` (≤ 2000 ký tự); `protect_exam_grade()` chặn sửa 2 cột sau khi chấm. Down khôi phục hàm cũ và bỏ cột. Đã chạy up → down → up trên DB test.
+
 ### 2026-11-08
 
 **Đã xong**

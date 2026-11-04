@@ -171,6 +171,9 @@ export interface ExamAttemptsTable {
   passed: ColumnType<boolean | null, boolean | null | undefined, boolean | null>
   graded_at: ColumnType<Date | null, string | null | undefined, string | null>
   grading_detail: ColumnType<string | null, string | null | undefined, string | null>
+  // slice-9a: manual Speaking/Writing grade (part of the immutable grade).
+  graded_by: ColumnType<string | null, string | null | undefined, string | null>
+  grader_feedback: ColumnType<string | null, string | null | undefined, string | null>
 }
 
 /** Table `class_teachers` — slice-6: teachers assigned to a class (attendance RBAC). */

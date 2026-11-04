@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { sql } from 'kysely'
 import { createDb, type AppDb } from '../../platform/db.js'
 import { makeExamsStore } from './store.js'
-import { startAttempt, submitAttempt, getAttempt, saveAttemptAnswers } from './service.js'
+import { startAttempt, submitAttempt, getAttempt, saveAttemptAnswers, gradeManually, listManualGradingQueue } from './service.js'
 
 const url = process.env.TEST_DATABASE_URL
 const describeWithPostgres = url ? describe : describe.skip
@@ -132,12 +132,12 @@ describeWithPostgres('exams store on real Postgres', () => {
       .rejects.toThrow('exam_attempts_exam_student_attempt_key')
   })
 
-  async function freshAttempt(deadlineMs = 60_000) {
+  async function freshAttempt(deadlineMs = 60_000, skill: 'reading' | 'writing' = 'reading') {
     const store = makeExamsStore(db)
     const level = (await store.findLevelByCode('starter'))!
     const now = new Date()
     const exam = await store.createExam({ title: 'Integrity regression', levelId: level.id,
-      skill: 'reading', questionCount: 1, durationMinutes: 1,
+      skill, questionCount: 1, durationMinutes: 1,
       opensAt: new Date(now.getTime() - 120_000).toISOString(),
       closesAt: new Date(now.getTime() + 120_000).toISOString(), createdBy: MANAGER_ID,
       passPercent: 50, maxAttempts: 1, retakeCooldownMinutes: 0 })
@@ -227,5 +227,20 @@ describeWithPostgres('exams store on real Postgres', () => {
       .returning('id').executeTakeFirstOrThrow()
     const claimed = await Promise.all([store.claimSession(legacy.id, 'A'), store.claimSession(legacy.id, 'B')])
     expect(claimed.filter(Boolean)).toHaveLength(1)
+  })
+
+  it('manual grade is queued, written once with grader and feedback, then immutable', async () => {
+    const { store, attempt, question, now } = await freshAttempt(60_000, 'writing')
+    await store.saveSubmission(attempt.id, JSON.stringify({ [question.id]: 'essay' }), now.toISOString())
+    const queue = await listManualGradingQueue(store, now)
+    expect(queue.find((item) => item.attemptId === attempt.id)).toMatchObject({ studentPhone: '0900000002', skill: 'writing' })
+
+    const graded = await gradeManually(store, attempt.id, { scores: { [question.id]: question.points }, feedback: 'Good' }, MANAGER_ID, now)
+    expect(graded.ok && graded.attempt.result).toMatchObject({ status: 'graded', passed: true, feedback: 'Good' })
+    expect(await gradeManually(store, attempt.id, { scores: { [question.id]: 0 }, feedback: '' }, MANAGER_ID, now))
+      .toEqual({ ok: false, reason: 'already_graded' })
+    expect((await listManualGradingQueue(store, now)).some((item) => item.attemptId === attempt.id)).toBe(false)
+    await expect(db.updateTable('exam_attempts').set({ grader_feedback: 'Edited' }).where('id', '=', attempt.id).execute())
+      .rejects.toThrow('immutable')
   })
 })

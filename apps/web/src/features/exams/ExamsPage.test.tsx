@@ -176,7 +176,7 @@ describe('ExamsPage', () => {
           starts += 1
           if (starts === 1)
             return response(attempt('submitted', new Date().toISOString(), {
-              result: graded(0, false),
+              result: { ...graded(0, false), feedback: 'Can luyen them' },
               retake: { available: true, reason: 'retake_ready', nextAttemptNumber: 2,
                 availableAt: new Date(Date.now() - 1000).toISOString(), attemptsUsed: 1, maxAttempts: 2 },
             }))
@@ -190,6 +190,7 @@ describe('ExamsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Bắt đầu/ }))
     await screen.findByText('CHƯA ĐẠT')
     expect(screen.getByText(/Điểm: 0\/1 \(0%\)/)).toBeInTheDocument()
+    expect(screen.getByText('Nhận xét của giáo viên: Can luyen them')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Thi lại (lần 2)' }))
     await screen.findByRole('button', { name: 'Nộp bài' })
     expect(starts).toBe(2)

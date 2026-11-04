@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-10
+
+**Đã xong**
+
+- slice-9a (Chấm tay): route `/grading` "Chấm bài" (Admin/GV, mục trong `NAV_ITEMS`). Bảng bài chờ chấm → mở bài (câu hỏi + trả lời) → nhập điểm từng câu + nhận xét → lưu. Học viên thấy "Nhận xét của giáo viên" trong kết quả (`ExamsPage`). Hook `useGrading`; test `GradingPage.test.tsx`.
+
 ### 2026-11-09
 
 **Đã xong**

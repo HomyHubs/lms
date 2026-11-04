@@ -215,6 +215,12 @@ function makeFakeExamsStore(
         graded_at: grade.gradedAt, grading_detail: grade.detailJson })
       return row
     },
+    async listUngradedAttempts() {
+      return []
+    },
+    async findGradingRow() {
+      return undefined
+    },
     async findGradingPolicy() {
       return undefined
     },
@@ -297,6 +303,23 @@ describe('exams routes — RBAC guard', () => {
       headers: { cookie: COOKIE },
     })
     expect(res.statusCode).toBe(403)
+  })
+
+  it('cham tay: student bi chan (403); id sai -> 404; body sai -> 400', async () => {
+    app = await buildTestApp(STUDENT, seededStore())
+    expect((await app.inject({ method: 'GET', url: '/grading/attempts', headers: { cookie: COOKIE } })).statusCode).toBe(403)
+    await app.close()
+
+    app = await buildTestApp(TEACHER, seededStore())
+    const queue = await app.inject({ method: 'GET', url: '/grading/attempts', headers: { cookie: COOKIE } })
+    expect(queue.json()).toEqual({ attempts: [] })
+    const bad = await app.inject({ method: 'GET', url: '/grading/attempts/not-a-uuid', headers: { cookie: COOKIE } })
+    expect([bad.statusCode, bad.json().code]).toEqual([404, 'not_found'])
+    const url = '/grading/attempts/00000000-0000-4000-8000-000000000001/grade'
+    const invalid = await app.inject({ method: 'POST', url, headers: { cookie: COOKIE }, payload: { scores: { q1: -1 } } })
+    expect([invalid.statusCode, invalid.json().code]).toEqual([400, 'invalid_scores'])
+    const missing = await app.inject({ method: 'POST', url, headers: { cookie: COOKIE }, payload: { scores: { q1: 1 } } })
+    expect(missing.statusCode).toBe(404)
   })
 })
 

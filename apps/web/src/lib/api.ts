@@ -79,6 +79,11 @@ import {
   WorkHoursReport,
   type StaffShift,
   type WorkHoursReportQuery,
+  ManualGradingAttemptResponse,
+  ManualGradingQueue,
+  type GradeAttemptRequest,
+  type ManualGradingAttempt,
+  type ManualGradingItem,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -551,6 +556,28 @@ export async function submitExamAttempt(
   })
   if (!res.ok) return throwApiError(res, 'Nop bai that bai')
   return AttemptResponse.parse(await res.json()).attempt
+}
+
+/** slice-9a: Speaking/Writing attempts waiting for a teacher's grade (Admin/Teacher). */
+export async function listGradingQueue(): Promise<ManualGradingItem[]> {
+  const res = await fetch('/api/grading/attempts', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc danh sach bai cho cham')
+  return ManualGradingQueue.parse(await res.json()).attempts
+}
+
+export async function getGradingAttempt(attemptId: string): Promise<ManualGradingAttempt> {
+  const res = await fetch(`/api/grading/attempts/${attemptId}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong mo duoc bai lam')
+  return ManualGradingAttemptResponse.parse(await res.json()).attempt
+}
+
+export async function gradeAttempt(attemptId: string, input: GradeAttemptRequest): Promise<ManualGradingAttempt> {
+  const res = await fetch(`/api/grading/attempts/${attemptId}/grade`, {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong luu duoc diem')
+  return ManualGradingAttemptResponse.parse(await res.json()).attempt
 }
 
 /**

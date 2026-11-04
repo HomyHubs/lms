@@ -6,6 +6,7 @@ import type {
   ExamRow,
   ExamsStore,
   GradingPolicyRow,
+  GradingRow,
   LevelRef,
   QuestionLite,
 } from './service.js'
@@ -14,7 +15,10 @@ import {
   generatePaper,
   getAttempt,
   gradeAttempt,
+  gradeManually,
+  getManualGradingAttempt,
   listAttemptHistory,
+  listManualGradingQueue,
   listExams,
   listGradingPolicies,
   listOpenExams,
@@ -44,6 +48,12 @@ function makeFakeStore(
   const policies: GradingPolicyRow[] = seed.policies ? [...seed.policies] : []
   let examSeq = 0
   let attemptSeq = 0
+  const joinGrading = (a: AttemptRow): GradingRow | undefined => {
+    const exam = exams.find((e) => e.id === a.exam_id)
+    if (!exam) return undefined
+    const { title, level_code, skill, pass_percent } = exam
+    return { ...a, exam_title: title, level_code, skill, pass_percent, student_phone: `phone-${a.student_id}` }
+  }
 
   return {
     async findLevelByCode(code) {
@@ -160,8 +170,20 @@ function makeFakeStore(
         passed: grade.passed,
         graded_at: grade.gradedAt,
         grading_detail: grade.detailJson,
+        graded_by: grade.gradedBy ?? null,
+        grader_feedback: grade.feedback ?? null,
       })
       return row
+    },
+    async listUngradedAttempts(skills, nowIso) {
+      return attempts
+        .map(joinGrading)
+        .filter((r): r is GradingRow => r !== undefined && skills.includes(r.skill) && !r.graded_at)
+        .filter((r) => r.submitted_at !== null || new Date(r.deadline_at).getTime() <= Date.parse(nowIso))
+    },
+    async findGradingRow(attemptId) {
+      const row = attempts.find((a) => a.id === attemptId)
+      return row && joinGrading(row)
     },
     async findGradingPolicy(levelId) {
       return policies.find((p) => p.level_id === levelId)
@@ -609,6 +631,59 @@ describe('cham diem & thi lai', () => {
     expect(one.submitted.retake).toMatchObject({ available: false, reason: 'pending_manual' })
     expect(await startAttempt(store, 'exam-open', 'student-1', at('10:11'), first))
       .toEqual({ ok: false, reason: 'already_submitted' })
+  })
+
+  it('cham tay: hang cho -> cham -> hoc vien thay diem + nhan xet, cham lai bi chan', async () => {
+    const store = seeded({}, 'writing')
+    const one = await sitAndSubmit(store, 'my essay', '10:00', '10:10')
+    const queue = await listManualGradingQueue(store, at('10:11'))
+    expect(queue).toEqual([expect.objectContaining({ attemptId: 'attempt-1', skill: 'writing', maxScore: 2, studentPhone: 'phone-student-1' })])
+    const opened = await getManualGradingAttempt(store, 'attempt-1', at('10:11'))
+    expect(opened.ok && opened.attempt.questions.map((x) => x.answer)).toEqual(['my essay', 'my essay'])
+
+    const [qa, qb] = one.started.questions.map((x) => x.id) as [string, string]
+    const graded = await gradeManually(store, 'attempt-1', { scores: { [qa]: 1, [qb]: 0 }, feedback: 'Them y' }, 'teacher-1', at('10:12'))
+    expect(graded.ok && graded.attempt.result).toMatchObject({ status: 'graded', score: 1, maxScore: 2, passed: true, feedback: 'Them y' })
+    expect(await listManualGradingQueue(store, at('10:13'))).toEqual([])
+    expect(await gradeManually(store, 'attempt-1', { scores: { [qa]: 0, [qb]: 0 }, feedback: '' }, 'teacher-2', at('10:13')))
+      .toEqual({ ok: false, reason: 'already_graded' })
+
+    const seen = await getAttempt(store, 'exam-open', 'student-1', at('10:14'))
+    expect(seen.ok && seen.attempt.result).toMatchObject({ score: 1, passed: true, feedback: 'Them y' })
+  })
+
+  it('cham tay truot -> mo thi lai; diem vuot/thieu/thua cau bi tu choi', async () => {
+    const store = seeded({ pass_percent: 60 }, 'speaking')
+    const one = await sitAndSubmit(store, 'hello', '10:00', '10:10')
+    const [qa, qb] = one.started.questions.map((x) => x.id) as [string, string]
+    const grade = (scores: Record<string, number>) =>
+      gradeManually(store, 'attempt-1', { scores, feedback: '' }, 'teacher-1', at('10:12'))
+    expect(await grade({ [qa]: 1 })).toEqual({ ok: false, reason: 'invalid_scores' })
+    expect(await grade({ [qa]: 2, [qb]: 0 })).toEqual({ ok: false, reason: 'invalid_scores' })
+    expect(await grade({ [qa]: 1, [qb]: 0, other: 0 })).toEqual({ ok: false, reason: 'invalid_scores' })
+
+    const failed = await grade({ [qa]: 1, [qb]: 0 })
+    expect(failed.ok && failed.attempt.result).toMatchObject({ score: 1, passed: false, feedback: null })
+    const retry = await startAttempt(store, 'exam-open', 'student-1', at('10:13'), first)
+    expect(retry.ok && retry.attempt.attemptNumber).toBe(2)
+  })
+
+  it('cham tay: bai dang lam -> in_progress; het gio -> chot bai roi cham; bai tu cham -> not_manual', async () => {
+    const store = seeded({}, 'speaking')
+    const started = await startAttempt(store, 'exam-open', 'student-1', at('10:00'), first)
+    if (!started.ok) throw new Error(started.reason)
+    const id = 'attempt-1'
+    expect(await getManualGradingAttempt(store, id, at('10:10'))).toEqual({ ok: false, reason: 'in_progress' })
+    expect(await listManualGradingQueue(store, at('10:10'))).toEqual([])
+    expect(await listManualGradingQueue(store, at('10:31'))).toHaveLength(1)
+    const expired = await getManualGradingAttempt(store, id, at('10:31'))
+    expect(expired.ok && expired.attempt.result).toMatchObject({ status: 'pending_manual' })
+    expect(expired.ok && expired.attempt.submittedAt).toBe('2026-09-21T10:30:00.000Z')
+    expect(await getManualGradingAttempt(store, 'missing', at('10:31'))).toEqual({ ok: false, reason: 'not_found' })
+
+    const auto = seeded()
+    await sitAndSubmit(auto, 'a', '10:00', '10:10')
+    expect(await getManualGradingAttempt(auto, 'attempt-1', at('10:11'))).toEqual({ ok: false, reason: 'not_manual' })
   })
 })
 
