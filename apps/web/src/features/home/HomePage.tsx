@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
+  BarChart3,
   BookOpen,
   Building2,
   CalendarCheck,
@@ -75,6 +76,14 @@ export function HomePage(): React.ReactElement {
               className="flex items-center gap-1 text-sm text-slate-600 underline"
             >
               <CalendarCheck className="h-4 w-4" /> Điểm danh
+            </Link>
+          )}
+          {user?.role === 'admin' && (
+            <Link
+              to="/reports"
+              className="flex items-center gap-1 text-sm text-slate-600 underline"
+            >
+              <BarChart3 className="h-4 w-4" /> Báo cáo &amp; xếp loại
             </Link>
           )}
           {user?.role === 'admin' && (

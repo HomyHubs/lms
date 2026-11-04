@@ -24,6 +24,7 @@ import { makeQuestionsStore, questionsRoutes } from './features/questions/index.
 import { examsRoutes, makeExamsStore } from './features/exams/index.js'
 import { attendanceRoutes, makeAttendanceStore } from './features/attendance/index.js'
 import { aiGenerationRoutes, makeAiGenerationStore } from './features/aigeneration/index.js'
+import { makeReportsStore, reportsRoutes } from './features/reports/index.js'
 
 export interface BuildAppDeps {
   config: AppConfig
@@ -127,6 +128,13 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
 
   // slice-4.5: AI prompt generation + reverse import with a review queue (no AI provider call).
   await aiGenerationRoutes(app, { rbac, aiGenerationStore: makeAiGenerationStore(db) })
+
+  // slice-7: classification (exam + attendance, per-level weights) + admin dashboard, branch-scoped.
+  await reportsRoutes(app, {
+    rbac,
+    reportsStore: makeReportsStore(db),
+    branchScope: userBranchesStore,
+  })
 
   return app
 }

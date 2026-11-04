@@ -23,6 +23,13 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-07
+
+**Đã xong**
+
+- slice-7 (Xếp loại & Dashboard) — feature `reports` (`reportsRoutes(app, { rbac, reportsStore, branchScope })`): `GET /reports/classification-policies`, `PUT /reports/classification-policies/:levelId` (400 sai cấu hình, 404 cấp độ không tồn tại), `GET /reports/students?branchId&levelId&classId&from&to` (chỉ admin, trong phạm vi cơ sở được gán; cơ sở ngoài phạm vi → 404). Công thức: điểm tổng = trọng số thi × điểm thi (lượt tốt nhất mỗi đề) + trọng số chuyên cần × tỷ lệ chuyên cần slice-6; ADR 0006. Shared types `ClassificationPolicy*` (tách khỏi `GradingPolicy` của `/exam-policies`).
+- Test: `reports/service.test.ts`, `routes.test.ts`, `store.integration.test.ts` (Postgres thật). Mutation check: đảo trọng số trong `finalScore` → test đỏ, revert → xanh.
+
 ### 2026-11-06
 
 **Đã xong**

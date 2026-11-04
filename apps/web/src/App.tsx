@@ -9,6 +9,7 @@ import { CentersPage } from '@/features/centers/CentersPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
 import { HomePage } from '@/features/home/HomePage'
 import { QuestionsPage } from '@/features/questions/QuestionsPage'
+import { ReportsPage } from '@/features/reports/ReportsPage'
 import { AssignmentsPage } from '@/features/userbranches/AssignmentsPage'
 import { UsersPage } from '@/features/users/UsersPage'
 
@@ -87,6 +88,14 @@ export function App(): React.ReactElement {
         element={
           <RequireAuth role={['admin', 'teacher', 'student']}>
             <AttendancePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <RequireAuth role="admin">
+            <ReportsPage />
           </RequireAuth>
         }
       />

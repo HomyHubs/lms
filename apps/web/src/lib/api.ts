@@ -69,6 +69,11 @@ import {
   type AiGenerationRequest,
   type CreateAiRequestRequest,
   type UpdateAiItemRequest,
+  ClassificationPolicy,
+  ClassificationPolicyList,
+  StudentReport,
+  type StudentReportQuery,
+  type UpdateClassificationPolicyRequest,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -635,6 +640,35 @@ export async function getAttendanceRates(query: AttendanceRatesQuery): Promise<A
   const res = await fetch(`/api/attendance/rates?${params.toString()}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc ty le chuyen can')
   return AttendanceRates.parse(await res.json())
+}
+
+/** slice-7: classification policy per level + admin student report (branch-scoped by the API). */
+export async function listClassificationPolicies(): Promise<ClassificationPolicy[]> {
+  const res = await fetch('/api/reports/classification-policies', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc cau hinh xep loai')
+  return ClassificationPolicyList.parse(await res.json()).policies
+}
+
+export async function updateClassificationPolicy(
+  levelId: string,
+  input: UpdateClassificationPolicyRequest,
+): Promise<ClassificationPolicy> {
+  const res = await fetch(`/api/reports/classification-policies/${levelId}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Luu cau hinh xep loai that bai')
+  return ClassificationPolicy.parse(await res.json())
+}
+
+export async function getStudentReport(query: StudentReportQuery): Promise<StudentReport> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
+  const res = await fetch(`/api/reports/students?${params.toString()}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc bao cao hoc vien')
+  return StudentReport.parse(await res.json())
 }
 
 /** slice-4.5: AI prompt generation + reverse import. The backend never calls an AI provider. */
