@@ -5,6 +5,7 @@ import type {
   CreateExamFields,
   ExamRow,
   ExamsStore,
+  GradingPolicyRow,
   LevelRef,
   QuestionLite,
 } from './service.js'
@@ -12,11 +13,15 @@ import {
   createExam,
   generatePaper,
   getAttempt,
+  gradeAttempt,
+  listAttemptHistory,
   listExams,
+  listGradingPolicies,
   listOpenExams,
   startAttempt,
   submitAttempt,
   saveAttemptAnswers,
+  updateGradingPolicy,
 } from './service.js'
 
 const LEVELS: LevelRef[] = [
@@ -30,10 +35,13 @@ interface SeedQuestion extends QuestionLite {
 }
 
 /** Store gia lap trong bo nho — test logic ma khong can Postgres. */
-function makeFakeStore(seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } = {}): ExamsStore {
+function makeFakeStore(
+  seed: { questions?: SeedQuestion[]; exams?: ExamRow[]; policies?: GradingPolicyRow[] } = {},
+): ExamsStore {
   const questions: SeedQuestion[] = seed.questions ? [...seed.questions] : []
   const exams: ExamRow[] = seed.exams ? [...seed.exams] : []
   const attempts: AttemptRow[] = []
+  const policies: GradingPolicyRow[] = seed.policies ? [...seed.policies] : []
   let examSeq = 0
   let attemptSeq = 0
 
@@ -53,6 +61,9 @@ function makeFakeStore(seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } =
         duration_minutes: input.durationMinutes,
         opens_at: input.opensAt,
         closes_at: input.closesAt,
+        pass_percent: input.passPercent,
+        max_attempts: input.maxAttempts,
+        retake_cooldown_minutes: input.retakeCooldownMinutes,
         created_by: input.createdBy,
         created_at: new Date('2026-09-21T00:00:00.000Z'),
       }
@@ -69,20 +80,28 @@ function makeFakeStore(seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } =
       return questions.filter((q) => q.level_id === levelId && q.skill === skill).map((q) => q.id)
     },
     async findQuestionsByIds(ids) {
-      // Tra ve QuestionLite (khong co correct_answer) — dung nhu store that.
+      // Nhu store that: kem dap an dung de dong bang vao snapshot (view hoc vien loc bo).
       return questions
         .filter((q) => ids.includes(q.id))
-        .map(({ id, question_text, question_type, skill, points, options }) => ({
+        .map(({ id, question_text, question_type, skill, points, options, correct_answer }) => ({
           id,
           question_text,
           question_type,
           skill,
           points,
           options,
+          correct_answer,
         }))
     },
     async findAttempt(examId, studentId) {
-      return attempts.find((a) => a.exam_id === examId && a.student_id === studentId)
+      return attempts
+        .filter((a) => a.exam_id === examId && a.student_id === studentId)
+        .sort((a, b) => (b.attempt_number ?? 1) - (a.attempt_number ?? 1))[0]
+    },
+    async listAttempts(examId, studentId) {
+      return attempts
+        .filter((a) => a.exam_id === examId && (studentId === undefined || a.student_id === studentId))
+        .sort((a, b) => a.student_id.localeCompare(b.student_id) || (a.attempt_number ?? 1) - (b.attempt_number ?? 1))
     },
     async findLatestAttemptForStudent(studentId) {
       const mine = attempts
@@ -97,6 +116,7 @@ function makeFakeStore(seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } =
         student_id: input.studentId,
         question_ids: JSON.stringify(input.questionIds),
         question_snapshot: JSON.stringify(input.questionSnapshot),
+        attempt_number: input.attemptNumber,
         session_key: input.sessionKey,
         answer_revision: 0,
         answers: null,
@@ -131,6 +151,38 @@ function makeFakeStore(seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } =
       row.submitted_at = late ? row.deadline_at : submittedAtIso
       return row
     },
+    async saveGrade(attemptId, grade) {
+      const row = attempts.find((a) => a.id === attemptId)!
+      if (row.submitted_at === null || row.graded_at) return row
+      Object.assign(row, {
+        score: grade.score,
+        max_score: grade.maxScore,
+        passed: grade.passed,
+        graded_at: grade.gradedAt,
+        grading_detail: grade.detailJson,
+      })
+      return row
+    },
+    async findGradingPolicy(levelId) {
+      return policies.find((p) => p.level_id === levelId)
+    },
+    async listGradingPolicies() {
+      return [...policies]
+    },
+    async upsertGradingPolicy(levelId, fields) {
+      const level = LEVELS.find((l) => l.id === levelId)!
+      const row: GradingPolicyRow = {
+        level_id: levelId,
+        level_code: level.code,
+        pass_percent: fields.passPercent,
+        max_attempts: fields.maxAttempts,
+        retake_cooldown_minutes: fields.retakeCooldownMinutes,
+      }
+      const index = policies.findIndex((p) => p.level_id === levelId)
+      if (index >= 0) policies[index] = row
+      else policies.push(row)
+      return row
+    },
   }
 }
 
@@ -143,6 +195,7 @@ function q(id: string, levelId: string, skill: string): SeedQuestion {
     question_type: 'multiple_choice',
     points: 1,
     options: JSON.stringify(['a', 'b']),
+    correct_answer: 'a',
   }
 }
 
@@ -157,6 +210,9 @@ function openExam(overrides: Partial<ExamRow> = {}): ExamRow {
     duration_minutes: 30,
     opens_at: '2026-09-21T09:00:00.000Z',
     closes_at: '2026-09-21T12:00:00.000Z',
+    pass_percent: 50,
+    max_attempts: 3,
+    retake_cooldown_minutes: 0,
     created_by: 'teacher-1',
     created_at: '2026-09-21T08:00:00.000Z',
     ...overrides,
@@ -422,14 +478,15 @@ describe('submitAttempt — nop 1 lan, het gio thi ep nop', () => {
       new Date('2026-09-21T10:11:00Z'),
     )
     expect(again).toEqual(submitted)
-    // Vao lai (start) sau khi nop -> khong lam lai duoc.
+    // 1/2 cau dung = 50% >= nguong 50% -> dat; vao lai (start) khong lam lai duoc.
+    expect(submitted.attempt.result).toMatchObject({ status: 'graded', score: 1, maxScore: 2, passed: true })
     const restart = await startAttempt(
       store,
       'exam-open',
       'student-1',
       new Date('2026-09-21T10:12:00Z'),
     )
-    expect(restart).toEqual({ ok: false, reason: 'already_submitted' })
+    expect(restart).toEqual({ ok: false, reason: 'already_passed' })
   })
 
   it('qua deadline van cho nop (ep nop) — chi tinh cac cau da lam', async () => {
@@ -463,5 +520,119 @@ describe('submitAttempt — nop 1 lan, het gio thi ep nop', () => {
     if (!got.ok) return
     expect(got.attempt.status).toBe('in_progress')
     expect(got.attempt.questions).toHaveLength(2)
+  })
+})
+
+describe('gradeAttempt — cham tu dong tu snapshot', () => {
+  const mc: QuestionLite = {
+    id: 'mc', question_text: 'Pick', question_type: 'multiple_choice', skill: 'reading',
+    points: 2, options: JSON.stringify(['Red apple', 'Blue sky']), correct_answer: 'B',
+  }
+  const blank: QuestionLite = {
+    id: 'fb', question_text: 'Fill', question_type: 'fill_blank', skill: 'reading',
+    points: 3, options: null, correct_answer: 'colour|color',
+  }
+
+  it('chap nhan chu cai hoac noi dung lua chon, nhieu dap an dien khuyet, bo qua hoa thuong/khoang trang', () => {
+    expect(gradeAttempt([mc, blank], { mc: '  blue   SKY ', fb: 'Color' }, 50)).toMatchObject({
+      score: 5, maxScore: 5, passed: true,
+    })
+    expect(gradeAttempt([mc, blank], { mc: 'b', fb: 'colours' }, 50).score).toBe(2)
+    expect(gradeAttempt([mc, blank], { mc: 'Red apple' }, 50).score).toBe(0)
+  })
+
+  it('dat khi diem dung bang nguong, truot khi duoi nguong', () => {
+    expect(gradeAttempt([mc, blank], { fb: 'color' }, 60).passed).toBe(true) // 3/5 = 60%
+    expect(gradeAttempt([mc, blank], { fb: 'color' }, 61).passed).toBe(false)
+  })
+})
+
+describe('cham diem & thi lai', () => {
+  function seeded(exam: Partial<ExamRow> = {}, skill = 'reading'): ExamsStore {
+    return makeFakeStore({
+      exams: [openExam({ skill, ...exam })],
+      questions: ['q1', 'q2', 'q3', 'q4'].map((id) => q(id, 'lvl-starter', skill)),
+    })
+  }
+  const first = () => 0
+  const at = (time: string) => new Date(`2026-09-21T${time}:00.000Z`)
+
+  async function sitAndSubmit(store: ExamsStore, answer: string | null, start: string, submit: string) {
+    const started = await startAttempt(store, 'exam-open', 'student-1', at(start), first)
+    if (!started.ok) throw new Error(started.reason)
+    const answers = answer === null ? {} : Object.fromEntries(started.attempt.questions.map((x) => [x.id, answer]))
+    const out = await submitAttempt(store, 'exam-open', 'student-1', answers, at(submit))
+    if (!out.ok) throw new Error(out.reason)
+    return { started: started.attempt, submitted: out.attempt }
+  }
+
+  it('truot -> thi lai voi de khac; dat o lan 2 -> bao dat, khong cho thi lai nua', async () => {
+    const store = seeded()
+    const one = await sitAndSubmit(store, 'b', '10:00', '10:10')
+    expect(one.submitted.result).toMatchObject({ status: 'graded', score: 0, maxScore: 2, passed: false })
+    expect(one.submitted.retake).toMatchObject({ available: true, reason: 'retake_ready', nextAttemptNumber: 2 })
+
+    const two = await sitAndSubmit(store, 'a', '10:11', '10:20')
+    expect(two.started.attemptNumber).toBe(2)
+    expect(two.started.questions.map((x) => x.id)).not.toEqual(one.started.questions.map((x) => x.id))
+    expect(two.submitted.result).toMatchObject({ score: 2, passed: true })
+    expect(two.submitted.retake).toMatchObject({ available: false, reason: 'passed' })
+    expect(await startAttempt(store, 'exam-open', 'student-1', at('10:21'), first)).toEqual({ ok: false, reason: 'already_passed' })
+
+    const history = await listAttemptHistory(store, 'exam-open', 'student-1', at('10:22'))
+    expect(history.ok && history.attempts.map((a) => [a.attemptNumber, a.result?.passed])).toEqual([[1, false], [2, true]])
+  })
+
+  it('het so lan thi -> retake_limit_reached', async () => {
+    const store = seeded({ max_attempts: 2 })
+    await sitAndSubmit(store, null, '10:00', '10:05')
+    const two = await sitAndSubmit(store, null, '10:06', '10:10')
+    expect(two.submitted.retake).toMatchObject({ available: false, reason: 'limit_reached', attemptsUsed: 2 })
+    expect(await startAttempt(store, 'exam-open', 'student-1', at('10:11'), first))
+      .toEqual({ ok: false, reason: 'retake_limit_reached' })
+  })
+
+  it('chua het thoi gian cho -> retake_cooldown; het cho -> duoc thi lai', async () => {
+    const store = seeded({ retake_cooldown_minutes: 30 })
+    const one = await sitAndSubmit(store, null, '10:00', '10:10')
+    expect(one.submitted.retake?.availableAt).toBe('2026-09-21T10:40:00.000Z')
+    expect(await startAttempt(store, 'exam-open', 'student-1', at('10:39'), first))
+      .toEqual({ ok: false, reason: 'retake_cooldown' })
+    const retry = await startAttempt(store, 'exam-open', 'student-1', at('10:40'), first)
+    expect(retry.ok && retry.attempt.attemptNumber).toBe(2)
+  })
+
+  it('Speaking/Writing cho cham tay: khong tu cham, khong mo thi lai', async () => {
+    const store = seeded({}, 'speaking')
+    const one = await sitAndSubmit(store, 'a', '10:00', '10:10')
+    expect(one.submitted.result).toMatchObject({ status: 'pending_manual', score: null, passed: null })
+    expect(one.submitted.retake).toMatchObject({ available: false, reason: 'pending_manual' })
+    expect(await startAttempt(store, 'exam-open', 'student-1', at('10:11'), first))
+      .toEqual({ ok: false, reason: 'already_submitted' })
+  })
+})
+
+describe('chinh sach cham theo cap do', () => {
+  const blueprint = {
+    title: 'Reading Starter', level: 'starter' as const, skill: 'reading' as const, questionCount: 2,
+    durationMinutes: 30, opensAt: '2026-09-21T09:00:00.000Z', closesAt: '2026-09-21T12:00:00.000Z',
+  }
+
+  it('de moi chot nguong tu chinh sach cap do; gia tri nhap tay ghi de', async () => {
+    const store = makeFakeStore()
+    await updateGradingPolicy(store, 'starter', { passPercent: 70, maxAttempts: 2, retakeCooldownMinutes: 15 })
+    const inherited = await createExam(store, blueprint, 'teacher-1')
+    expect(inherited.ok && inherited.exam).toMatchObject({ passPercent: 70, maxAttempts: 2, retakeCooldownMinutes: 15 })
+    const overridden = await createExam(store, { ...blueprint, passPercent: 80 }, 'teacher-1')
+    expect(overridden.ok && overridden.exam).toMatchObject({ passPercent: 80, maxAttempts: 2 })
+    expect(await listGradingPolicies(store)).toEqual([
+      { levelCode: 'starter', passPercent: 70, maxAttempts: 2, retakeCooldownMinutes: 15 },
+    ])
+  })
+
+  it('tu choi cap do khong ton tai', async () => {
+    const store: ExamsStore = { ...makeFakeStore(), findLevelByCode: async () => undefined }
+    expect(await updateGradingPolicy(store, 'x', { passPercent: 50, maxAttempts: 1, retakeCooldownMinutes: 0 }))
+      .toEqual({ ok: false, reason: 'level_not_found' })
   })
 })

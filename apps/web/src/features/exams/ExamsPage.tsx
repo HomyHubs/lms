@@ -14,7 +14,60 @@ function formatRemaining(seconds: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
 }
 
-/** UI hoc vien cho slice-4: list de dang mo -> start/resume -> dem nguoc -> nop bai. */
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleString('vi-VN')
+}
+
+/** Aggregate score, pass/fail and retake eligibility only; per-question correctness stays hidden. */
+function AttemptOutcome(props: {
+  attempt: ExamAttemptView
+  retaking: boolean
+  onRetake: () => void
+  onBack: () => void
+}): React.ReactElement {
+  const { result, retake, attemptNumber } = props.attempt
+  const [now, setNow] = useState(() => Date.now())
+  const availableAt = retake?.available && retake.availableAt ? Date.parse(retake.availableAt) : null
+  useEffect(() => {
+    if (availableAt === null || availableAt <= now) return
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.min(availableAt - now, 60_000))
+    return () => window.clearTimeout(timer)
+  }, [availableAt, now])
+  const passed = result?.passed === true
+  const tone = result?.status === 'pending_manual' ? 'bg-slate-50 text-slate-800'
+    : passed ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-900'
+  return (
+    <section aria-label="Kết quả bài thi" className={`flex flex-col gap-3 rounded-lg p-4 ${tone}`}>
+      <p className="font-medium">Lần thi {attemptNumber}{retake ? `/${retake.maxAttempts}` : ''}</p>
+      {result?.status === 'graded' && (
+        <p>
+          Điểm: {result.score}/{result.maxScore} ({result.percent}%) · Ngưỡng đạt {result.passPercent}% ·{' '}
+          <strong>{passed ? 'ĐẠT' : 'CHƯA ĐẠT'}</strong>
+        </p>
+      )}
+      {result?.status === 'pending_manual' && <p>Đã nộp bài. Bài Speaking/Writing chờ giáo viên chấm.</p>}
+      {!result && <p>Đã nộp bài. Đang chờ kết quả chấm.</p>}
+      {retake?.reason === 'limit_reached' && <p>Bạn đã dùng hết {retake.maxAttempts} lần thi cho đề này.</p>}
+      {retake?.reason === 'exam_closed' && <p>Đề thi đã đóng, không thể thi lại.</p>}
+      <div className="flex flex-wrap items-center gap-3">
+        {retake?.available && (
+          availableAt !== null && availableAt > now ? (
+            <span>Được thi lại từ {formatTime(retake.availableAt!)}</span>
+          ) : (
+            <Button onClick={props.onRetake} disabled={props.retaking}>
+              Thi lại (lần {retake.nextAttemptNumber})
+            </Button>
+          )
+        )}
+        <Button variant="outline" onClick={props.onBack}>
+          Về danh sách
+        </Button>
+      </div>
+    </section>
+  )
+}
+
+/** UI hoc vien: list de dang mo -> start/resume -> dem nguoc -> nop bai -> ket qua/thi lai. */
 export function ExamsPage(): React.ReactElement {
   const exams = useExams()
   const { user } = useSession()
@@ -155,14 +208,8 @@ export function ExamsPage(): React.ReactElement {
             <Send className="mr-2 h-4 w-4" /> {submit.isPending ? 'Đang nộp…' : 'Nộp bài'}
           </Button>
         )}
-        {submitted && (
-          <div className="flex items-center justify-between rounded-lg bg-green-50 p-4 text-green-800">
-            <span>Đã nộp bài. Bạn không thể làm lại đề này.</span>
-            <Button variant="outline" onClick={() => setAttempt(null)}>
-              Về danh sách
-            </Button>
-          </div>
-        )}
+        {submitted && <AttemptOutcome attempt={attempt} retaking={start.isPending}
+          onRetake={() => begin(attempt.examId)} onBack={() => setAttempt(null)} />}
       </main>
     )
   }

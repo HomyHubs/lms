@@ -1,11 +1,16 @@
 import {
   type CreateExamRequest,
   type Exam,
+  type ExamAttemptRecord,
   type ExamAttemptView,
   type ExamQuestionView,
+  type ExamResult,
+  type GradingPolicy,
   type LevelCode,
   type QuestionSkill,
   type QuestionType,
+  type RetakeStatus,
+  type UpdateGradingPolicyRequest,
 } from '@lms/shared'
 
 /**
@@ -13,7 +18,10 @@ import {
  * - Sinh de: rut ngau nhien tu ngan hang cau hoi theo Level + Skill (`generatePaper`, rng tiem duoc).
  *   Chong sinh 2 de giong nhau LIEN TIEP cho cung hoc vien (so voi luot gan nhat).
  * - Thi: co deadline (start + duration) de dem nguoc; het gio -> ep nop (tinh cau da lam); nop 1 lan; vao lai sau nop khong lam lai.
- * - Bao mat: view tra ve cho hoc vien KHONG kem dap an dung/giai thich (cham diem o slice-5).
+ * - Bao mat: view tra ve cho hoc vien KHONG kem dap an dung/giai thich.
+ * Slice-5 (ADR 0003): cham tu dong tu snapshot dong bang khi luot da chot; pass/fail theo nguong
+ * cua de (sao tu chinh sach cap do); truot -> thi lai voi de moi (gioi han so lan + thoi gian cho);
+ * moi luot duoc giu lai lam lich su audit. Speaking/Writing -> cho cham tay (TODO(slice-9)).
  */
 
 /** De doc tu DB (kem level_code qua join levels). */
@@ -27,8 +35,33 @@ export interface ExamRow {
   duration_minutes: number
   opens_at: Date | string
   closes_at: Date | string
+  pass_percent: number
+  max_attempts: number
+  retake_cooldown_minutes: number
   created_by: string
   created_at: Date | string
+}
+
+/** Chinh sach cham + thi lai mac dinh cua mot cap do. */
+export interface GradingPolicyRow {
+  level_id: string
+  level_code: string
+  pass_percent: number
+  max_attempts: number
+  retake_cooldown_minutes: number
+}
+
+export interface GradingPolicyFields {
+  passPercent: number
+  maxAttempts: number
+  retakeCooldownMinutes: number
+}
+
+/** Mac dinh khi cap do chua co dong chinh sach (khop default cua migration). */
+export const DEFAULT_GRADING_POLICY: GradingPolicyFields = {
+  passPercent: 50,
+  maxAttempts: 3,
+  retakeCooldownMinutes: 0,
 }
 
 /** Tham chieu cap do khi resolve ma -> id. */
@@ -62,6 +95,21 @@ export interface AttemptRow {
   started_at: Date | string
   deadline_at: Date | string
   submitted_at: Date | string | null
+  attempt_number?: number
+  score?: number | null
+  max_score?: number | null
+  passed?: boolean | null
+  graded_at?: Date | string | null
+  grading_detail?: string | null
+}
+
+/** Ket qua cham duoc ghi 1 lan (DB trigger chan sua sau khi graded_at co gia tri). */
+export interface GradeFields {
+  score: number
+  maxScore: number
+  passed: boolean
+  gradedAt: string
+  detailJson: string
 }
 
 export interface CreateExamFields {
@@ -72,6 +120,9 @@ export interface CreateExamFields {
   durationMinutes: number
   opensAt: string
   closesAt: string
+  passPercent: number
+  maxAttempts: number
+  retakeCooldownMinutes: number
   createdBy: string
 }
 
@@ -80,6 +131,7 @@ export interface CreateAttemptFields {
   studentId: string
   questionIds: string[]
   questionSnapshot: QuestionLite[]
+  attemptNumber: number
   sessionKey: string
   startedAt: string
   deadlineAt: string
@@ -93,7 +145,10 @@ export interface ExamsStore {
   findExamById: (id: string) => Promise<ExamRow | undefined>
   listQuestionIdsFor: (levelId: string, skill: string) => Promise<string[]>
   findQuestionsByIds: (ids: string[]) => Promise<QuestionLite[]>
+  /** Luot MOI NHAT (attempt_number lon nhat) cua hoc vien cho de. */
   findAttempt: (examId: string, studentId: string) => Promise<AttemptRow | undefined>
+  /** Moi luot cua de (loc theo hoc vien neu co), sap theo hoc vien roi attempt_number tang dan. */
+  listAttempts: (examId: string, studentId?: string) => Promise<AttemptRow[]>
   findLatestAttemptForStudent: (studentId: string) => Promise<AttemptRow | undefined>
   createAttempt: (input: CreateAttemptFields) => Promise<AttemptRow>
   claimSession: (attemptId: string, sessionKey: string) => Promise<boolean>
@@ -103,6 +158,11 @@ export interface ExamsStore {
     answersJson: string,
     submittedAtIso: string,
   ) => Promise<AttemptRow>
+  /** Ghi diem chi khi luot da nop va chua cham; tra ve dong hien tai (idempotent khi dua). */
+  saveGrade: (attemptId: string, grade: GradeFields) => Promise<AttemptRow>
+  findGradingPolicy: (levelId: string) => Promise<GradingPolicyRow | undefined>
+  listGradingPolicies: () => Promise<GradingPolicyRow[]>
+  upsertGradingPolicy: (levelId: string, fields: GradingPolicyFields) => Promise<GradingPolicyRow>
 }
 
 function toDate(v: Date | string): Date {
@@ -161,6 +221,9 @@ function toExam(row: ExamRow): Exam {
     durationMinutes: row.duration_minutes,
     opensAt: toIso(row.opens_at),
     closesAt: toIso(row.closes_at),
+    passPercent: row.pass_percent,
+    maxAttempts: row.max_attempts,
+    retakeCooldownMinutes: row.retake_cooldown_minutes,
     createdBy: row.created_by,
     createdAt: toIso(row.created_at),
   }
@@ -225,25 +288,160 @@ function snapshot(attempt: AttemptRow): QuestionLite[] {
   return rows
 }
 
+/** Ky nang chua cham tu dong duoc — cho giao vien cham tay. TODO(slice-9): cham Speaking/Writing. */
+const MANUAL_SKILLS: ReadonlySet<string> = new Set(['speaking', 'writing'])
+
+export function isManualSkill(skill: string): boolean {
+  return MANUAL_SKILLS.has(skill)
+}
+
+/** So sanh dap an: bo khoang trang thua, NFC, khong phan biet hoa thuong. */
+export function normalizeAnswer(raw: string): string {
+  return raw.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en')
+}
+
+const LETTERS = 'abcdefghijklmnopqrstuvwxyz'
+
+/**
+ * Tap dap an chap nhan cho mot cau. Cau co lua chon: chap nhan ca chu cai (A/B/...) lan noi dung
+ * lua chon tuong ung. Dien khuyet: nhieu dap an dung ngan cach boi `|`.
+ */
+export function acceptedAnswers(q: QuestionLite): Set<string> {
+  const raw = q.correct_answer ?? ''
+  const alternatives = q.question_type === 'fill_blank' ? raw.split('|') : [raw]
+  const accepted = new Set(alternatives.map(normalizeAnswer).filter((a) => a.length > 0))
+  const options = (parseOptions(q.options) ?? []).map(normalizeAnswer)
+  for (const answer of [...accepted]) {
+    const letterIndex = answer.length === 1 ? LETTERS.indexOf(answer) : -1
+    if (letterIndex >= 0 && letterIndex < options.length) accepted.add(options[letterIndex]!)
+    const optionIndex = options.indexOf(answer)
+    if (optionIndex >= 0 && optionIndex < LETTERS.length) accepted.add(LETTERS[optionIndex]!)
+  }
+  return accepted
+}
+
+export interface GradedQuestion {
+  questionId: string
+  answer: string | null
+  correct: boolean
+  points: number
+  awarded: number
+}
+
+export interface GradeOutcome {
+  score: number
+  maxScore: number
+  passed: boolean
+  detail: GradedQuestion[]
+}
+
+/**
+ * Cham thuan tu snapshot dong bang (dap an dung tai thoi diem sinh de). Dat khi
+ * diem*100 >= nguong%*diem toi da (so nguyen, khong sai so lam tron).
+ */
+export function gradeAttempt(
+  questions: QuestionLite[],
+  answers: Record<string, string>,
+  passPercent: number,
+): GradeOutcome {
+  const detail = questions.map((q): GradedQuestion => {
+    const answer = answers[q.id] ?? null
+    const correct = answer !== null && acceptedAnswers(q).has(normalizeAnswer(answer))
+    return { questionId: q.id, answer, correct, points: q.points, awarded: correct ? q.points : 0 }
+  })
+  const score = detail.reduce((sum, d) => sum + d.awarded, 0)
+  const maxScore = detail.reduce((sum, d) => sum + d.points, 0)
+  return { score, maxScore, passed: score * 100 >= passPercent * maxScore, detail }
+}
+
+/** Cham lazily khi luot da chot; ghi 1 lan. Ky nang cham tay -> giu nguyen (chua cham). */
+async function ensureGraded(store: ExamsStore, exam: ExamRow, attempt: AttemptRow, now: Date): Promise<AttemptRow> {
+  if (attempt.submitted_at === null || attempt.graded_at || isManualSkill(exam.skill)) return attempt
+  const outcome = gradeAttempt(snapshot(attempt), parseAnswers(attempt.answers), exam.pass_percent)
+  return store.saveGrade(attempt.id, {
+    score: outcome.score,
+    maxScore: outcome.maxScore,
+    passed: outcome.passed,
+    gradedAt: now.toISOString(),
+    detailJson: JSON.stringify(outcome.detail),
+  })
+}
+
+function toResult(exam: ExamRow, attempt: AttemptRow): ExamResult | null {
+  if (attempt.submitted_at === null) return null
+  if (attempt.graded_at) {
+    const score = attempt.score ?? 0
+    const maxScore = attempt.max_score ?? 0
+    return {
+      status: 'graded',
+      score,
+      maxScore,
+      percent: maxScore > 0 ? Math.round((score * 10_000) / maxScore) / 100 : 0,
+      passPercent: exam.pass_percent,
+      passed: attempt.passed ?? false,
+      gradedAt: toIso(attempt.graded_at),
+    }
+  }
+  if (!isManualSkill(exam.skill)) return null
+  return {
+    status: 'pending_manual',
+    score: null,
+    maxScore: snapshot(attempt).reduce((sum, q) => sum + q.points, 0),
+    percent: null,
+    passPercent: exam.pass_percent,
+    passed: null,
+    gradedAt: null,
+  }
+}
+
+/** Quyen thi lai tinh tu luot moi nhat — khong luu trang thai rieng. */
+export function retakeStatus(exam: ExamRow, attempt: AttemptRow, result: ExamResult | null, now: Date): RetakeStatus | null {
+  if (result === null) return null
+  const attemptsUsed = attempt.attempt_number ?? 1
+  const base = { attemptsUsed, maxAttempts: exam.max_attempts }
+  const closed = (reason: RetakeStatus['reason']): RetakeStatus => ({
+    ...base, available: false, reason, nextAttemptNumber: null, availableAt: null,
+  })
+  if (result.status === 'pending_manual') return closed('pending_manual')
+  if (result.passed) return closed('passed')
+  if (attemptsUsed >= exam.max_attempts) return closed('limit_reached')
+  const submittedMs = toDate(attempt.submitted_at ?? attempt.deadline_at).getTime()
+  const availableMs = submittedMs + exam.retake_cooldown_minutes * 60_000
+  const closesMs = toDate(exam.closes_at).getTime()
+  if (availableMs > closesMs || now.getTime() > closesMs) return closed('exam_closed')
+  return {
+    ...base,
+    available: true,
+    reason: 'retake_ready',
+    nextAttemptNumber: attemptsUsed + 1,
+    availableAt: new Date(availableMs).toISOString(),
+  }
+}
+
 async function buildAttemptView(
   store: ExamsStore,
   exam: ExamRow,
   attempt: AttemptRow,
+  now: Date = new Date(),
 ): Promise<ExamAttemptView> {
   const questions: ExamQuestionView[] = snapshot(attempt).map(toQuestionView)
-  void store
-  const submittedAt = attempt.submitted_at !== null ? toIso(attempt.submitted_at) : null
+  const graded = await ensureGraded(store, exam, attempt, now)
+  const result = toResult(exam, graded)
+  const submittedAt = graded.submitted_at !== null ? toIso(graded.submitted_at) : null
   return {
     examId: exam.id,
     examTitle: exam.title,
+    attemptNumber: graded.attempt_number ?? 1,
     durationMinutes: exam.duration_minutes,
     status: submittedAt !== null ? 'submitted' : 'in_progress',
     startedAt: toIso(attempt.started_at),
     deadlineAt: toIso(attempt.deadline_at),
     submittedAt,
-    revision: attempt.answer_revision ?? 0,
+    revision: graded.answer_revision ?? 0,
     questions,
-    answers: parseAnswers(attempt.answers),
+    answers: parseAnswers(graded.answers),
+    result,
+    retake: retakeStatus(exam, graded, result, now),
   }
 }
 
@@ -276,6 +474,9 @@ export async function createExam(
 ): Promise<CreateExamOutcome> {
   const level = await store.findLevelByCode(input.level)
   if (!level) return { ok: false, reason: 'level_not_found' }
+  // Nguong cua de duoc CHOT luc tao (sao tu chinh sach cap do neu khong ghi de) de doi chinh
+  // sach ve sau khong lam doi ket qua cac de/luot da co.
+  const policy = await store.findGradingPolicy(level.id)
   const row = await store.createExam({
     title: input.title,
     levelId: level.id,
@@ -284,6 +485,10 @@ export async function createExam(
     durationMinutes: input.durationMinutes,
     opensAt: new Date(input.opensAt).toISOString(),
     closesAt: new Date(input.closesAt).toISOString(),
+    passPercent: input.passPercent ?? policy?.pass_percent ?? DEFAULT_GRADING_POLICY.passPercent,
+    maxAttempts: input.maxAttempts ?? policy?.max_attempts ?? DEFAULT_GRADING_POLICY.maxAttempts,
+    retakeCooldownMinutes:
+      input.retakeCooldownMinutes ?? policy?.retake_cooldown_minutes ?? DEFAULT_GRADING_POLICY.retakeCooldownMinutes,
     createdBy,
   })
   return { ok: true, exam: toExam(row) }
@@ -293,12 +498,30 @@ export type StartAttemptOutcome =
   | { ok: true; attempt: ExamAttemptView }
   | {
       ok: false
-      reason: 'not_found' | 'not_open' | 'closed' | 'already_submitted' | 'not_enough_questions' | 'paper_unavailable' | 'session_conflict'
+      reason:
+        | 'not_found'
+        | 'not_open'
+        | 'closed'
+        | 'already_submitted'
+        | 'already_passed'
+        | 'retake_limit_reached'
+        | 'retake_cooldown'
+        | 'not_enough_questions'
+        | 'paper_unavailable'
+        | 'session_conflict'
     }
 
+const RETAKE_BLOCK: Record<Exclude<RetakeStatus['reason'], 'retake_ready'>, 'closed' | 'already_submitted' | 'already_passed' | 'retake_limit_reached'> = {
+  passed: 'already_passed',
+  limit_reached: 'retake_limit_reached',
+  exam_closed: 'closed',
+  pending_manual: 'already_submitted',
+}
+
 /**
- * Bat dau (hoac tiep tuc) mot luot thi. Neu da co luot chua nop -> tra ve luot cu (resume,
- * "1 thiet bi/luot"). Neu da nop -> khong cho lam lai. Chi sinh de moi khi chua co luot nao.
+ * Bat dau (hoac tiep tuc) mot luot thi. Neu luot moi nhat chua nop -> tra ve luot do (resume,
+ * "1 thiet bi/luot"). Neu da nop: dat/het luot/cho cham tay -> khong cho lam lai; truot va con
+ * luot -> sau thoi gian cho, sinh DE MOI (khac de lan truoc) cho lan `attempt_number + 1`.
  */
 export async function startAttempt(
   store: ExamsStore,
@@ -312,12 +535,24 @@ export async function startAttempt(
   if (!exam) return { ok: false, reason: 'not_found' }
   const nowMs = now.getTime()
   const existing = await store.findAttempt(examId, studentId)
-  if (existing) {
+  let previousOfExam: AttemptRow | undefined
+  if (existing && existing.submitted_at === null) {
     if (!(await store.claimSession(existing.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
-    if (existing.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
+    // Con gio -> resume. Het gio -> chot bang checkpoint da luu va tra ket qua; hoc vien chu dong
+    // bam thi lai o request sau (khong tu sinh de moi ngay khi vua bi ep nop).
     const active = nowMs >= toDate(existing.deadline_at).getTime()
       ? await store.saveSubmission(existing.id, existing.answers ?? '{}', now.toISOString()) : existing
-    return { ok: true, attempt: await buildAttemptView(store, exam, active) }
+    return { ok: true, attempt: await buildAttemptView(store, exam, active, now) }
+  }
+  if (existing) {
+    const graded = await ensureGraded(store, exam, existing, now)
+    const retake = retakeStatus(exam, graded, toResult(exam, graded), now)
+    if (!retake) return { ok: false, reason: 'already_submitted' }
+    if (retake.reason !== 'retake_ready') return { ok: false, reason: RETAKE_BLOCK[retake.reason] }
+    // Zero cooldown never blocks: submitted_at comes from the DB clock, which may run slightly ahead of the API clock.
+    const cooling = exam.retake_cooldown_minutes > 0 && retake.availableAt !== null
+    if (cooling && nowMs < Date.parse(retake.availableAt!)) return { ok: false, reason: 'retake_cooldown' }
+    previousOfExam = graded
   }
   if (nowMs < toDate(exam.opens_at).getTime()) return { ok: false, reason: 'not_open' }
   if (nowMs > toDate(exam.closes_at).getTime()) return { ok: false, reason: 'closed' }
@@ -325,7 +560,9 @@ export async function startAttempt(
   const pool = await store.listQuestionIdsFor(exam.level_id, exam.skill)
   if (pool.length < exam.question_count) return { ok: false, reason: 'not_enough_questions' }
 
-  const previous = await store.findLatestAttemptForStudent(studentId)
+  // Thi lai: tranh de cua lan truoc CUNG de thi; lan dau: tranh de gan nhat cua hoc vien.
+  const previous = previousOfExam ?? (await store.findLatestAttemptForStudent(studentId))
+  const attemptNumber = (previousOfExam?.attempt_number ?? 0) + 1
   const previousPaper = previous ? parseIds(previous.question_ids).map((id) => `previous:${id}`) : null
   const bank = await store.findQuestionsByIds(pool)
   const variants = new Map(bank.map((q) => [q.id, variantKey(q)]))
@@ -340,20 +577,21 @@ export async function startAttempt(
       studentId,
       questionIds: paper,
       questionSnapshot: paper.map((id) => byId.get(id)!),
+      attemptNumber,
       sessionKey,
       startedAt: now.toISOString(),
       deadlineAt: new Date(nowMs + exam.duration_minutes * 60_000).toISOString(),
     })
-    return { ok: true, attempt: await buildAttemptView(store, exam, created) }
+    return { ok: true, attempt: await buildAttemptView(store, exam, created, now) }
   } catch (err) {
-    // Chong dua (N003): hai request dau tien dong thoi cung vuot qua findAttempt o tren
-    // roi cung insert -> insert thu hai vi pham unique(exam_id, student_id). Thay vi de
-    // loi lot ra thanh 500, doc lai luot da ton tai va resume (hoac bao da nop).
+    // Chong dua (N003): hai request dong thoi cung vuot qua findAttempt o tren roi cung insert
+    // -> insert thu hai vi pham unique(exam_id, student_id, attempt_number). Thay vi de loi lot ra
+    // thanh 500, doc lai luot cung so thu tu va resume (hoac bao da nop).
     const raced = await store.findAttempt(examId, studentId)
-    if (!raced) throw err
+    if (!raced || (raced.attempt_number ?? 1) !== attemptNumber) throw err
     if (!(await store.claimSession(raced.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
     if (raced.submitted_at !== null) return { ok: false, reason: 'already_submitted' }
-    return { ok: true, attempt: await buildAttemptView(store, exam, raced) }
+    return { ok: true, attempt: await buildAttemptView(store, exam, raced, now) }
   }
 }
 
@@ -375,7 +613,7 @@ export async function getAttempt(
   if (!(await store.claimSession(attempt.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
   const active = attempt.submitted_at === null && now.getTime() >= toDate(attempt.deadline_at).getTime()
     ? await store.saveSubmission(attempt.id, attempt.answers ?? '{}', now.toISOString()) : attempt
-  return { ok: true, attempt: await buildAttemptView(store, exam, active) }
+  return { ok: true, attempt: await buildAttemptView(store, exam, active, now) }
 }
 
 export type SubmitAttemptOutcome =
@@ -399,7 +637,7 @@ export async function submitAttempt(
   const attempt = await store.findAttempt(examId, studentId)
   if (!attempt) return { ok: false, reason: 'not_started' }
   if (!(await store.claimSession(attempt.id, sessionKey))) return { ok: false, reason: 'session_conflict' }
-  if (attempt.submitted_at !== null) return { ok: true, attempt: await buildAttemptView(store, exam, attempt) }
+  if (attempt.submitted_at !== null) return { ok: true, attempt: await buildAttemptView(store, exam, attempt, now) }
   // Late finalization may use persisted checkpoints only, never late request answers.
   const paperIds = new Set(parseIds(attempt.question_ids))
   const filtered: Record<string, string> = {}
@@ -409,7 +647,7 @@ export async function submitAttempt(
   const payload = now.getTime() >= toDate(attempt.deadline_at).getTime()
     ? attempt.answers ?? '{}' : JSON.stringify(filtered)
   const saved = await store.saveSubmission(attempt.id, payload, now.toISOString())
-  return { ok: true, attempt: await buildAttemptView(store, exam, saved) }
+  return { ok: true, attempt: await buildAttemptView(store, exam, saved, now) }
 }
 
 export async function saveAttemptAnswers(
@@ -426,5 +664,68 @@ export async function saveAttemptAnswers(
   if (!saved) return { ok: false, reason: 'revision_conflict' }
   const exam = await store.findExamById(examId)
   if (!exam) return { ok: false, reason: 'not_found' }
-  return { ok: true, attempt: await buildAttemptView(store, exam, saved) }
+  return { ok: true, attempt: await buildAttemptView(store, exam, saved, now) }
+}
+
+async function toRecord(store: ExamsStore, exam: ExamRow, attempt: AttemptRow, now: Date): Promise<ExamAttemptRecord> {
+  // Luot qua gio ma chua ai mo lai van giu nguyen (chua chot) — chi cham luot da chot.
+  const graded = await ensureGraded(store, exam, attempt, now)
+  return {
+    attemptId: graded.id,
+    examId: graded.exam_id,
+    studentId: graded.student_id,
+    attemptNumber: graded.attempt_number ?? 1,
+    questionIds: parseIds(graded.question_ids),
+    startedAt: toIso(graded.started_at),
+    deadlineAt: toIso(graded.deadline_at),
+    submittedAt: graded.submitted_at !== null ? toIso(graded.submitted_at) : null,
+    result: toResult(exam, graded),
+  }
+}
+
+export type AttemptHistoryOutcome = { ok: true; attempts: ExamAttemptRecord[] } | { ok: false; reason: 'not_found' }
+
+/**
+ * Lich su moi luot (audit). `studentId` co -> chi luot cua hoc vien do (hoc vien xem cua minh);
+ * khong co -> moi hoc vien (Admin/Teacher xem ket qua de).
+ */
+export async function listAttemptHistory(
+  store: ExamsStore,
+  examId: string,
+  studentId: string | undefined,
+  now: Date = new Date(),
+): Promise<AttemptHistoryOutcome> {
+  const exam = await store.findExamById(examId)
+  if (!exam) return { ok: false, reason: 'not_found' }
+  const rows = await store.listAttempts(examId, studentId)
+  const attempts: ExamAttemptRecord[] = []
+  for (const row of rows) attempts.push(await toRecord(store, exam, row, now))
+  return { ok: true, attempts }
+}
+
+function toPolicy(row: GradingPolicyRow): GradingPolicy {
+  return {
+    levelCode: row.level_code as LevelCode,
+    passPercent: row.pass_percent,
+    maxAttempts: row.max_attempts,
+    retakeCooldownMinutes: row.retake_cooldown_minutes,
+  }
+}
+
+export async function listGradingPolicies(store: ExamsStore): Promise<GradingPolicy[]> {
+  return (await store.listGradingPolicies()).map(toPolicy)
+}
+
+export type UpdateGradingPolicyOutcome = { ok: true; policy: GradingPolicy } | { ok: false; reason: 'level_not_found' }
+
+/** Doi chinh sach cap do: chi ap dung cho de TAO SAU; de da co giu nguong da chot. */
+export async function updateGradingPolicy(
+  store: ExamsStore,
+  levelCode: string,
+  input: UpdateGradingPolicyRequest,
+): Promise<UpdateGradingPolicyOutcome> {
+  const level = await store.findLevelByCode(levelCode)
+  if (!level) return { ok: false, reason: 'level_not_found' }
+  const row = await store.upsertGradingPolicy(level.id, input)
+  return { ok: true, policy: toPolicy(row) }
 }

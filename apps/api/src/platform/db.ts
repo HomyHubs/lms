@@ -129,12 +129,25 @@ export interface ExamsTable {
   // Cua so lich thi (mo/dong). Insert bang chuoi ISO; doc ra Date.
   opens_at: ColumnType<Date, string, string>
   closes_at: ColumnType<Date, string, string>
+  // Slice-5: nguong dat (%) + so lan thi toi da + thoi gian cho thi lai, chot luc tao de.
+  pass_percent: ColumnType<number, number | undefined, number>
+  max_attempts: ColumnType<number, number | undefined, number>
+  retake_cooldown_minutes: ColumnType<number, number | undefined, number>
   created_by: string
   created_at: Timestamp
   updated_at: Timestamp
 }
 
-/** Bang `exam_attempts` — slice-4: mot luot lam bai cua hoc vien (unique exam+student). */
+/** Bang `exam_grading_policies` — slice-5: chinh sach cham/thi lai mac dinh theo cap do. */
+export interface ExamGradingPoliciesTable {
+  level_id: string
+  pass_percent: ColumnType<number, number | undefined, number>
+  max_attempts: ColumnType<number, number | undefined, number>
+  retake_cooldown_minutes: ColumnType<number, number | undefined, number>
+  updated_at: Timestamp
+}
+
+/** Bang `exam_attempts` — slice-4: mot luot lam bai cua hoc vien; slice-5: nhieu lan thi. */
 export interface ExamAttemptsTable {
   id: Generated<string>
   exam_id: string
@@ -149,6 +162,13 @@ export interface ExamAttemptsTable {
   started_at: ColumnType<Date, string | undefined, string>
   deadline_at: ColumnType<Date, string, string>
   submitted_at: ColumnType<Date | null, string | null | undefined, string | null>
+  // Slice-5: lan thi thu may (unique exam+student+attempt_number) + ket qua cham (ghi 1 lan).
+  attempt_number: ColumnType<number, number | undefined, never>
+  score: ColumnType<number | null, number | null | undefined, number | null>
+  max_score: ColumnType<number | null, number | null | undefined, number | null>
+  passed: ColumnType<boolean | null, boolean | null | undefined, boolean | null>
+  graded_at: ColumnType<Date | null, string | null | undefined, string | null>
+  grading_detail: ColumnType<string | null, string | null | undefined, string | null>
 }
 
 export interface Database {
@@ -165,6 +185,7 @@ export interface Database {
   questions: QuestionsTable
   exams: ExamsTable
   exam_attempts: ExamAttemptsTable
+  exam_grading_policies: ExamGradingPoliciesTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {
