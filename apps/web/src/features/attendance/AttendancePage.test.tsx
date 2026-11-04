@@ -15,6 +15,9 @@ const session = {
   startsAt: '18:00',
   topic: 'Unit 1',
   createdAt: '2026-11-05T00:00:00.000Z',
+  durationMinutes: 90,
+  makeupForSessionId: null,
+  cancelledAt: null,
 }
 const summary = { present: 0, late: 0, absent: 0, excused: 0, total: 0, ratePercent: null }
 

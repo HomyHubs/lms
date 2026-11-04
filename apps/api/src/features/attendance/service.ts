@@ -36,6 +36,9 @@ export interface SessionRow {
   starts_at: string
   topic: string | null
   created_at: Date | string
+  duration_minutes: number
+  makeup_for_session_id: string | null
+  cancelled_at: Date | string | null
 }
 
 export interface RosterStudentRow {
@@ -72,7 +75,10 @@ export interface CreateSessionFields {
   sessionDate: string
   startsAt: string
   topic: string | null
+  /** Also stored as the planned teacher (slice-8 planned vs actual). */
   createdBy: string
+  durationMinutes: number
+  makeupForSessionId: string | null
 }
 
 export interface UpsertRecordFields {
@@ -105,6 +111,8 @@ export interface AttendanceStore {
   findSession(sessionId: string): Promise<SessionRow | undefined>
   /** Returns undefined when (class, date, start time) already exists. */
   createSession(fields: CreateSessionFields): Promise<SessionRow | undefined>
+  /** Cancels a session that has no attendance yet; false when already cancelled or held. */
+  cancelSession(sessionId: string): Promise<boolean>
 
   /** Students currently enrolled in the class. */
   listRoster(classId: string): Promise<RosterStudentRow[]>
@@ -136,7 +144,25 @@ export function toSessionDto(row: SessionRow): ClassSession {
     startsAt: row.starts_at,
     topic: row.topic,
     createdAt: toIso(row.created_at),
+    durationMinutes: row.duration_minutes,
+    makeupForSessionId: row.makeup_for_session_id,
+    cancelledAt: row.cancelled_at === null ? null : toIso(row.cancelled_at),
   }
+}
+
+/**
+ * A make-up session must replace a session of the same class that was not taught
+ * (cancelled or without attendance), otherwise taught hours would be counted twice.
+ */
+export async function canMakeUpFor(
+  store: AttendanceStore,
+  classId: string,
+  originalId: string,
+): Promise<boolean> {
+  const original = await store.findSession(originalId)
+  if (!original || original.class_id !== classId) return false
+  if (original.cancelled_at !== null) return true
+  return (await store.listRecords(originalId)).length === 0
 }
 
 /**

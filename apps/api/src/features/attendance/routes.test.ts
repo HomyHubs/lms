@@ -101,7 +101,7 @@ function makeFakeStore(): AttendanceStore {
     async findSession(id) {
       return sessions.find((s) => s.id === id)
     },
-    async createSession({ classId, sessionDate, startsAt, topic }) {
+    async createSession({ classId, sessionDate, startsAt, topic, durationMinutes, makeupForSessionId }) {
       if (sessions.some((s) => s.class_id === classId && s.session_date === sessionDate && s.starts_at === startsAt)) {
         return undefined
       }
@@ -112,9 +112,18 @@ function makeFakeStore(): AttendanceStore {
         starts_at: startsAt,
         topic,
         created_at: new Date('2026-11-05T00:00:00.000Z'),
+        duration_minutes: durationMinutes,
+        makeup_for_session_id: makeupForSessionId,
+        cancelled_at: null,
       }
       sessions.push(row)
       return row
+    },
+    async cancelSession(id) {
+      const session = sessions.find((s) => s.id === id)
+      if (!session || session.cancelled_at !== null || records.some((r) => r.session_id === id)) return false
+      session.cancelled_at = new Date('2026-11-06T00:00:00.000Z')
+      return true
     },
     async listRoster(classId) {
       return (enrollments[classId] ?? []).map((id) => ({ student_id: id, phone_number: phone(id) }))
@@ -240,6 +249,42 @@ describe('attendance routes', () => {
     })
     expect(notEnrolled.statusCode).toBe(400)
     expect(notEnrolled.json().studentIds).toEqual([STUDENT_3.id])
+  })
+
+  it('cancels only unmarked sessions and accepts make-ups only for untaught sessions of the class', async () => {
+    const store = makeFakeStore()
+    const { teacher, sessionId: heldId } = await createMarkedSession(store)
+    const planned = await teacher('POST', `/classes/${CLASS_1}/sessions`, {
+      sessionDate: '2026-11-06',
+      startsAt: '18:00',
+      durationMinutes: 120,
+    })
+    expect(planned.json().session).toMatchObject({ durationMinutes: 120, cancelledAt: null })
+    const missedId = planned.json().session.id as string
+
+    const admin = await makeClient(store)(ADMIN_B1)
+    expect((await admin('POST', `/sessions/${missedId}/cancel`)).statusCode).toBe(403)
+    expect((await teacher('POST', `/sessions/${heldId}/cancel`)).statusCode).toBe(409)
+    const cancelled = await teacher('POST', `/sessions/${missedId}/cancel`)
+    expect(cancelled.statusCode).toBe(200)
+    expect(cancelled.json().session.cancelledAt).not.toBeNull()
+    expect((await teacher('POST', `/sessions/${missedId}/cancel`)).statusCode).toBe(409)
+    const markCancelled = await teacher('PUT', `/sessions/${missedId}/attendance`, {
+      records: [{ studentId: STUDENT_1.id, status: 'present' }],
+    })
+    expect(markCancelled.statusCode).toBe(409)
+
+    const makeupOfHeld = await teacher('POST', `/classes/${CLASS_1}/sessions`, {
+      sessionDate: '2026-11-08',
+      makeupForSessionId: heldId,
+    })
+    expect(makeupOfHeld.statusCode).toBe(400)
+    const makeup = await teacher('POST', `/classes/${CLASS_1}/sessions`, {
+      sessionDate: '2026-11-08',
+      makeupForSessionId: missedId,
+    })
+    expect(makeup.statusCode).toBe(201)
+    expect(makeup.json().session).toMatchObject({ makeupForSessionId: missedId, durationMinutes: 90 })
   })
 
   it('lets admins assign only teachers to classes in their branch scope', async () => {

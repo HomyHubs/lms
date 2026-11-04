@@ -191,6 +191,19 @@ export interface ClassSessionsTable {
   created_by: string
   created_at: Timestamp
   updated_at: Timestamp
+  // slice-8: planned vs actual schedule (teaching hours).
+  duration_minutes: ColumnType<number, number | undefined, number>
+  planned_teacher_id: ColumnType<string | null, string | null | undefined, string | null>
+  makeup_for_session_id: ColumnType<string | null, string | null | undefined, string | null>
+  cancelled_at: ColumnType<Date | null, string | null | undefined, string | null>
+}
+
+/** Table `staff_shifts` — slice-8: one check-in/check-out of a staff member or teacher. */
+export interface StaffShiftsTable {
+  id: Generated<string>
+  user_id: string
+  check_in_at: Timestamp
+  check_out_at: ColumnType<Date | null, string | null | undefined, string | null>
 }
 
 /** Table `attendance_records` — slice-6: status of one student in one session. */
@@ -265,6 +278,7 @@ export interface Database {
   ai_generation_requests: AiGenerationRequestsTable
   ai_generated_items: AiGeneratedItemsTable
   student_grading_policies: StudentGradingPoliciesTable
+  staff_shifts: StaffShiftsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

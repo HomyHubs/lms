@@ -22,6 +22,9 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         SESSION_TIME.as('starts_at'),
         'class_sessions.topic',
         'class_sessions.created_at',
+        'class_sessions.duration_minutes',
+        'class_sessions.makeup_for_session_id',
+        'class_sessions.cancelled_at',
       ])
 
   return {
@@ -91,7 +94,15 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
     async findSession(sessionId) {
       return sessionQuery().where('class_sessions.id', '=', sessionId).executeTakeFirst()
     },
-    async createSession({ classId, sessionDate, startsAt, topic, createdBy }) {
+    async createSession({
+      classId,
+      sessionDate,
+      startsAt,
+      topic,
+      createdBy,
+      durationMinutes,
+      makeupForSessionId,
+    }) {
       try {
         const inserted = await db
           .insertInto('class_sessions')
@@ -101,6 +112,9 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
             starts_at: startsAt,
             topic,
             created_by: createdBy,
+            planned_teacher_id: createdBy,
+            duration_minutes: durationMinutes,
+            makeup_for_session_id: makeupForSessionId,
           })
           .returning('id')
           .executeTakeFirstOrThrow()
@@ -112,6 +126,24 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         if (isUniqueViolation(err)) return undefined
         throw err
       }
+    },
+    async cancelSession(sessionId) {
+      const res = await db
+        .updateTable('class_sessions')
+        .set({ cancelled_at: sql<string>`now()`, updated_at: sql<string>`now()` })
+        .where('id', '=', sessionId)
+        .where('cancelled_at', 'is', null)
+        .where(({ not, exists, selectFrom }) =>
+          not(
+            exists(
+              selectFrom('attendance_records')
+                .select('attendance_records.session_id')
+                .whereRef('attendance_records.session_id', '=', 'class_sessions.id'),
+            ),
+          ),
+        )
+        .executeTakeFirst()
+      return (res.numUpdatedRows ?? 0n) > 0n
     },
 
     async listRoster(classId) {

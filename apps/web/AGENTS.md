@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-08
+
+**Đã xong**
+
+- slice-8 (Ngày công & giờ dạy): route `/work-hours` (Admin/Teacher/Staff), link "Ngày công & giờ dạy" ở trang chủ. Staff/GV: check-in/check-out, bảng công tháng (+ thẻ giờ dạy cho GV). Admin: lọc tháng/cơ sở, thẻ tổng, bảng GV/nhân viên/lịch dự kiến vs thực tế, xuất Excel (`workHoursToSheets` + `buildXlsx`). Trang Điểm danh: thời lượng buổi, "Dạy bù cho buổi", "Huỷ buổi". Trang đầu tiên theo giao diện tham khảo `docs/design/ui-reference.md` (CARD/StatCard cục bộ — sẽ tách thành component chung ở slice UI shell). Hook `useWorkHours`; test `WorkHoursPage.test.tsx`.
+
 ### 2026-11-07
 
 **Đã xong**

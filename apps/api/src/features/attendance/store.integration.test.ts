@@ -78,6 +78,8 @@ describeWithPostgres('attendance store on real Postgres', () => {
       startsAt: '18:30',
       topic: 'Unit 1',
       createdBy: TEACHER_ID,
+      durationMinutes: 90,
+      makeupForSessionId: null,
     })
     // Date and time come back exactly as written (no timezone shift).
     expect(session).toMatchObject({ class_id: CLASS_ID, session_date: '2026-11-05', starts_at: '18:30' })
@@ -88,6 +90,8 @@ describeWithPostgres('attendance store on real Postgres', () => {
         startsAt: '18:30',
         topic: null,
         createdBy: TEACHER_ID,
+        durationMinutes: 90,
+        makeupForSessionId: null,
       }),
     ).toBeUndefined()
 
@@ -96,6 +100,8 @@ describeWithPostgres('attendance store on real Postgres', () => {
       { studentId: STUDENT_B, status: 'absent', note: null },
     ])
     await store.upsertRecords(session!.id, TEACHER_ID, [{ studentId: STUDENT_B, status: 'late', note: 'bus' }])
+    // A session with attendance is held and can no longer be cancelled.
+    expect(await store.cancelSession(session!.id)).toBe(false)
     const records = await store.listRecords(session!.id)
     expect(records.map((r) => [r.student_id, r.status, r.note]).sort()).toEqual([
       [STUDENT_A, 'present', null],
