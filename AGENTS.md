@@ -642,6 +642,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-8 | Ngày công & giờ dạy | Dọc | Done | 14 | 2026-11-08 |
 | slice-10 | Giao diện chung (AppShell, dashboard theo vai trò) | Dọc | Done | 15 | 2026-11-09 |
 | slice-9a | Chấm tay Speaking/Writing | Dọc | Done | 16 | 2026-11-10 |
+| slice-9b | Thông báo trong app + nhắc nhở tự động | Dọc | Done | 17 | 2026-11-11 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

@@ -24,8 +24,14 @@ export {
   type ResetPasswordOutcome,
 } from './password-reset.js'
 export { makeConsoleEmailSender, makeEmailSender } from './email.js'
-export { makeWhatsAppSender, type OtpWhatsAppSender } from './whatsapp.js'
-export { makeTelegramSender, type OtpTelegramSender } from './telegram.js'
+export {
+  makeWhatsAppSender,
+  sendWhatsAppText,
+  whatsAppConfigFromEnv,
+  type OtpWhatsAppSender,
+  type WhatsAppConfig,
+} from './whatsapp.js'
+export { makeTelegramSender, sendTelegramText, type OtpTelegramSender } from './telegram.js'
 export {
   makeOtpDispatcher,
   type OtpChannel,

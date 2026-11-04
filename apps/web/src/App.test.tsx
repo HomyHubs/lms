@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserRole } from '@lms/shared'
 import { App } from './App'
+
+const NOTIFICATION_ID = '79000000-0000-4000-8000-000000000001'
 
 /** Fetch gia lap dinh tuyen theo URL: /auth/me va /health; other endpoints fail (dashboards show —). */
 function stubFetch(options: { authed: boolean; role?: UserRole }): void {
@@ -35,6 +37,29 @@ function stubFetch(options: { authed: boolean; role?: UserRole }): void {
             status: 'ok',
             db: { status: 'up', latencyMs: 2 },
             timestamp: '2026-09-14T00:00:00.000Z',
+          }),
+        }
+      }
+      if (url.endsWith('/notifications/run')) {
+        return { ok: true, status: 200, json: async () => ({ created: 2, sent: 1, failed: 1 }) }
+      }
+      if (url.includes('/notifications/')) return { ok: true, status: 204, json: async () => ({}) }
+      if (url.endsWith('/notifications')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            unreadCount: 1,
+            notifications: [
+              {
+                id: NOTIFICATION_ID,
+                kind: 'retake_reminder',
+                title: 'Bạn có thể thi lại: Reading 1',
+                body: 'Bạn có thể thi lại lần 2/3.',
+                createdAt: '2026-11-11T03:00:00.000Z',
+                readAt: null,
+              },
+            ],
           }),
         }
       }
@@ -71,6 +96,18 @@ describe('App routing + auth guard', () => {
     stubFetch({ authed: true })
     renderAt('/')
     await waitFor(() => expect(screen.getByText(/Đã kết nối/)).toBeInTheDocument())
+  })
+
+  it('shows unread reminders in the header bell, marks one read and lets an admin run reminders', async () => {
+    stubFetch({ authed: true })
+    renderAt('/')
+    fireEvent.click(await screen.findByRole('button', { name: 'Thông báo (1 chưa đọc)' }))
+    fireEvent.click(screen.getByRole('button', { name: /Reading 1/ }))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(`/api/notifications/${NOTIFICATION_ID}/read`, expect.objectContaining({ method: 'POST' })),
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Gửi nhắc nhở ngay/ }))
+    expect(await screen.findByText('Tạo mới 2 · đã gửi 1 · lỗi 1')).toBeInTheDocument()
   })
 })
 
