@@ -135,8 +135,9 @@ export const ExamAttemptStatus = z.enum(['in_progress', 'submitted'])
 export type ExamAttemptStatus = z.infer<typeof ExamAttemptStatus>
 
 /**
- * Ket qua cham. `pending_manual`: de Speaking/Writing chua cham tu dong (TODO(slice-9)).
+ * Ket qua cham. `pending_manual`: de Speaking/Writing cho giao vien cham tay (slice-9a).
  * Chi tra diem tong — khong lo dung/sai tung cau vi lan thi lai rut tu cung ngan hang.
+ * `feedback`: nhan xet cua giao vien khi cham tay.
  */
 export const ExamResult = z.object({
   status: z.enum(['graded', 'pending_manual']),
@@ -146,6 +147,7 @@ export const ExamResult = z.object({
   passPercent: z.number().int(),
   passed: z.boolean().nullable(),
   gradedAt: z.string().nullable(),
+  feedback: z.string().nullable().default(null),
 })
 export type ExamResult = z.infer<typeof ExamResult>
 
@@ -206,6 +208,44 @@ export const SubmitExamRequest = z.object({
   answers: z.record(z.string(), z.string().max(10000)),
 }).strict()
 export type SubmitExamRequest = z.infer<typeof SubmitExamRequest>
+
+/** slice-9a: a submitted Speaking/Writing attempt waiting for (or holding) a manual grade. */
+export const ManualGradingItem = z.object({
+  attemptId: z.string().uuid(),
+  examId: z.string().uuid(),
+  examTitle: z.string(),
+  levelCode: LevelCode,
+  skill: QuestionSkill,
+  studentId: z.string().uuid(),
+  studentPhone: z.string(),
+  attemptNumber: z.number().int(),
+  submittedAt: z.string(),
+  maxScore: z.number().int(),
+})
+export type ManualGradingItem = z.infer<typeof ManualGradingItem>
+
+export const ManualGradingQueue = z.object({ attempts: z.array(ManualGradingItem) })
+export type ManualGradingQueue = z.infer<typeof ManualGradingQueue>
+
+export const ManualGradingQuestion = ExamQuestionView.extend({ answer: z.string().nullable() })
+export type ManualGradingQuestion = z.infer<typeof ManualGradingQuestion>
+
+export const ManualGradingAttempt = ManualGradingItem.extend({
+  passPercent: z.number().int(),
+  questions: z.array(ManualGradingQuestion),
+  result: ExamResult.nullable(),
+})
+export type ManualGradingAttempt = z.infer<typeof ManualGradingAttempt>
+
+export const ManualGradingAttemptResponse = z.object({ attempt: ManualGradingAttempt })
+export type ManualGradingAttemptResponse = z.infer<typeof ManualGradingAttemptResponse>
+
+/** Points per question (every question of the paper, 0..points) + optional feedback for the student. */
+export const GradeAttemptRequest = z.object({
+  scores: z.record(z.string(), z.number().int('Diem phai la so nguyen').min(0, 'Diem khong duoc am')),
+  feedback: z.string().trim().max(2000, 'Nhan xet toi da 2000 ky tu').default(''),
+}).strict()
+export type GradeAttemptRequest = z.infer<typeof GradeAttemptRequest>
 
 /** Full checkpoint, accepted only before the server deadline and at the expected revision. */
 export const SaveExamAnswersRequest = z.object({

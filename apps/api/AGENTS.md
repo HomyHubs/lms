@@ -23,6 +23,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-10
+
+**Đã xong**
+
+- slice-9a (Chấm tay Speaking/Writing): feature `exams` thêm `GET /grading/attempts`, `GET /grading/attempts/:attemptId`, `POST /grading/attempts/:attemptId/grade` (Admin/GV). Điểm từng câu 0..điểm tối đa, ngưỡng đạt đóng băng của đề, ghi một lần (người chấm đầu tiên thắng), `ExamResult.feedback` cho học viên. Xem ADR 0009.
+
 ### 2026-11-08
 
 **Đã xong**

@@ -5,8 +5,11 @@ import {
   type ExamAttemptView,
   type ExamQuestionView,
   type ExamResult,
+  type GradeAttemptRequest,
   type GradingPolicy,
   type LevelCode,
+  type ManualGradingAttempt,
+  type ManualGradingItem,
   type QuestionSkill,
   type QuestionType,
   type RetakeStatus,
@@ -21,7 +24,7 @@ import {
  * - Bao mat: view tra ve cho hoc vien KHONG kem dap an dung/giai thich.
  * Slice-5 (ADR 0003): cham tu dong tu snapshot dong bang khi luot da chot; pass/fail theo nguong
  * cua de (sao tu chinh sach cap do); truot -> thi lai voi de moi (gioi han so lan + thoi gian cho);
- * moi luot duoc giu lai lam lich su audit. Speaking/Writing -> cho cham tay (TODO(slice-9)).
+ * moi luot duoc giu lai lam lich su audit. Speaking/Writing -> giao vien cham tay (slice-9a, ADR 0009).
  */
 
 /** De doc tu DB (kem level_code qua join levels). */
@@ -101,6 +104,17 @@ export interface AttemptRow {
   passed?: boolean | null
   graded_at?: Date | string | null
   grading_detail?: string | null
+  graded_by?: string | null
+  grader_feedback?: string | null
+}
+
+/** Attempt joined with its exam and student for the manual grading screens (slice-9a). */
+export interface GradingRow extends AttemptRow {
+  exam_title: string
+  level_code: string
+  skill: string
+  pass_percent: number
+  student_phone: string
 }
 
 /** Ket qua cham duoc ghi 1 lan (DB trigger chan sua sau khi graded_at co gia tri). */
@@ -110,6 +124,9 @@ export interface GradeFields {
   passed: boolean
   gradedAt: string
   detailJson: string
+  /** Manual grades only (slice-9a). */
+  gradedBy?: string
+  feedback?: string | null
 }
 
 export interface CreateExamFields {
@@ -160,6 +177,9 @@ export interface ExamsStore {
   ) => Promise<AttemptRow>
   /** Ghi diem chi khi luot da nop va chua cham; tra ve dong hien tai (idempotent khi dua). */
   saveGrade: (attemptId: string, grade: GradeFields) => Promise<AttemptRow>
+  /** Ungraded attempts of `skills` exams that are submitted or past their deadline, oldest first. */
+  listUngradedAttempts: (skills: readonly string[], nowIso: string) => Promise<GradingRow[]>
+  findGradingRow: (attemptId: string) => Promise<GradingRow | undefined>
   findGradingPolicy: (levelId: string) => Promise<GradingPolicyRow | undefined>
   listGradingPolicies: () => Promise<GradingPolicyRow[]>
   upsertGradingPolicy: (levelId: string, fields: GradingPolicyFields) => Promise<GradingPolicyRow>
@@ -288,7 +308,7 @@ function snapshot(attempt: AttemptRow): QuestionLite[] {
   return rows
 }
 
-/** Ky nang chua cham tu dong duoc — cho giao vien cham tay. TODO(slice-9): cham Speaking/Writing. */
+/** Ky nang khong cham tu dong — giao vien cham tay qua `gradeManually` (slice-9a). */
 const MANUAL_SKILLS: ReadonlySet<string> = new Set(['speaking', 'writing'])
 
 export function isManualSkill(skill: string): boolean {
@@ -367,7 +387,7 @@ async function ensureGraded(store: ExamsStore, exam: ExamRow, attempt: AttemptRo
   })
 }
 
-function toResult(exam: ExamRow, attempt: AttemptRow): ExamResult | null {
+function toResult(exam: Pick<ExamRow, 'pass_percent' | 'skill'>, attempt: AttemptRow): ExamResult | null {
   if (attempt.submitted_at === null) return null
   if (attempt.graded_at) {
     const score = attempt.score ?? 0
@@ -380,6 +400,7 @@ function toResult(exam: ExamRow, attempt: AttemptRow): ExamResult | null {
       passPercent: exam.pass_percent,
       passed: attempt.passed ?? false,
       gradedAt: toIso(attempt.graded_at),
+      feedback: attempt.grader_feedback ?? null,
     }
   }
   if (!isManualSkill(exam.skill)) return null
@@ -391,6 +412,7 @@ function toResult(exam: ExamRow, attempt: AttemptRow): ExamResult | null {
     passPercent: exam.pass_percent,
     passed: null,
     gradedAt: null,
+    feedback: null,
   }
 }
 
@@ -728,4 +750,105 @@ export async function updateGradingPolicy(
   if (!level) return { ok: false, reason: 'level_not_found' }
   const row = await store.upsertGradingPolicy(level.id, input)
   return { ok: true, policy: toPolicy(row) }
+}
+
+// --- slice-9a: manual grading of Speaking/Writing (ADR 0009) ---
+
+function toGradingItem(row: GradingRow): ManualGradingItem {
+  return {
+    attemptId: row.id,
+    examId: row.exam_id,
+    examTitle: row.exam_title,
+    levelCode: row.level_code as LevelCode,
+    skill: row.skill as QuestionSkill,
+    studentId: row.student_id,
+    studentPhone: row.student_phone,
+    attemptNumber: row.attempt_number ?? 1,
+    submittedAt: toIso(row.submitted_at ?? row.deadline_at),
+    maxScore: snapshot(row).reduce((sum, q) => sum + q.points, 0),
+  }
+}
+
+function toGradingAttempt(row: GradingRow): ManualGradingAttempt {
+  const answers = parseAnswers(row.answers)
+  return {
+    ...toGradingItem(row),
+    passPercent: row.pass_percent,
+    questions: snapshot(row).map((q) => ({ ...toQuestionView(q), answer: answers[q.id] ?? null })),
+    result: toResult(row, row),
+  }
+}
+
+/** Grading queue for Admin/Teacher: expired unsubmitted attempts are listed too (finalized on open). */
+export async function listManualGradingQueue(store: ExamsStore, now: Date): Promise<ManualGradingItem[]> {
+  const rows = await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString())
+  return rows.map(toGradingItem)
+}
+
+type GradableOutcome = { ok: true; row: GradingRow } | { ok: false; reason: 'not_found' | 'not_manual' | 'in_progress' }
+
+/** Finalizes an expired attempt from its saved checkpoint, like the student-side deadline path. */
+async function loadGradable(store: ExamsStore, attemptId: string, now: Date): Promise<GradableOutcome> {
+  const row = await store.findGradingRow(attemptId)
+  if (!row) return { ok: false, reason: 'not_found' }
+  if (!isManualSkill(row.skill)) return { ok: false, reason: 'not_manual' }
+  if (row.submitted_at !== null) return { ok: true, row }
+  if (now.getTime() < toDate(row.deadline_at).getTime()) return { ok: false, reason: 'in_progress' }
+  const finalized = await store.saveSubmission(row.id, row.answers ?? '{}', now.toISOString())
+  return { ok: true, row: { ...row, ...finalized } }
+}
+
+export type ManualGradingOutcome =
+  | { ok: true; attempt: ManualGradingAttempt }
+  | { ok: false; reason: 'not_found' | 'not_manual' | 'in_progress' }
+
+export async function getManualGradingAttempt(store: ExamsStore, attemptId: string, now: Date): Promise<ManualGradingOutcome> {
+  const loaded = await loadGradable(store, attemptId, now)
+  return loaded.ok ? { ok: true, attempt: toGradingAttempt(loaded.row) } : loaded
+}
+
+export type GradeManuallyOutcome =
+  | { ok: true; attempt: ManualGradingAttempt }
+  | { ok: false; reason: 'not_found' | 'not_manual' | 'in_progress' | 'already_graded' | 'invalid_scores' }
+
+/**
+ * Records a teacher's grade: every paper question needs a whole score in 0..points, no extra ids.
+ * Pass/fail uses the exam's frozen threshold; the grade is written once (first grader wins).
+ */
+export async function gradeManually(
+  store: ExamsStore,
+  attemptId: string,
+  input: GradeAttemptRequest,
+  graderId: string,
+  now: Date,
+): Promise<GradeManuallyOutcome> {
+  const loaded = await loadGradable(store, attemptId, now)
+  if (!loaded.ok) return loaded
+  const row = loaded.row
+  if (row.graded_at) return { ok: false, reason: 'already_graded' }
+  const questions = snapshot(row)
+  const paperIds = new Set(questions.map((q) => q.id))
+  if (Object.keys(input.scores).some((id) => !paperIds.has(id))) return { ok: false, reason: 'invalid_scores' }
+  const answers = parseAnswers(row.answers)
+  const detail: GradedQuestion[] = []
+  for (const q of questions) {
+    const awarded = input.scores[q.id]
+    if (awarded === undefined || awarded > q.points) return { ok: false, reason: 'invalid_scores' }
+    detail.push({ questionId: q.id, answer: answers[q.id] ?? null, correct: awarded === q.points, points: q.points, awarded })
+  }
+  const score = detail.reduce((sum, d) => sum + d.awarded, 0)
+  const maxScore = detail.reduce((sum, d) => sum + d.points, 0)
+  const gradedAt = now.toISOString()
+  const saved = await store.saveGrade(row.id, {
+    score,
+    maxScore,
+    passed: score * 100 >= row.pass_percent * maxScore,
+    gradedAt,
+    detailJson: JSON.stringify(detail),
+    gradedBy: graderId,
+    feedback: input.feedback === '' ? null : input.feedback,
+  })
+  const won = saved.graded_by === graderId && saved.graded_at != null && toIso(saved.graded_at) === gradedAt
+  if (!won) return { ok: false, reason: 'already_graded' }
+  return { ok: true, attempt: toGradingAttempt({ ...row, ...saved }) }
 }

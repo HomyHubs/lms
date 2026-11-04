@@ -1,8 +1,10 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { z } from 'zod'
 import { SESSION_COOKIE, hashSessionToken } from '../auth/index.js'
 
 import {
   CreateExamRequest,
+  GradeAttemptRequest,
   SubmitExamRequest,
   SaveExamAnswersRequest,
   UpdateGradingPolicyRequest,
@@ -11,12 +13,17 @@ import {
   type ExamList,
   type ExamResponse,
   type GradingPolicyList,
+  type ManualGradingAttemptResponse,
+  type ManualGradingQueue,
 } from '@lms/shared'
 import { getSessionUser, type Rbac } from '../access/index.js'
 import type { ExamsStore } from './service.js'
 import {
   createExam,
   getAttempt,
+  getManualGradingAttempt,
+  gradeManually,
+  listManualGradingQueue,
   listAttemptHistory,
   listExams,
   listGradingPolicies,
@@ -31,6 +38,21 @@ function attemptSession(request: FastifyRequest): string {
   const token = request.cookies[SESSION_COOKIE]
   if (!token) throw new Error('Authenticated session required')
   return hashSessionToken(token)
+}
+
+const AttemptIdParam = z.object({ attemptId: z.string().uuid() })
+
+const GRADING_ERRORS = {
+  not_found: { status: 404, error: 'Khong tim thay bai lam' },
+  not_manual: { status: 409, error: 'De nay duoc cham tu dong' },
+  in_progress: { status: 409, error: 'Hoc vien chua nop bai' },
+  already_graded: { status: 409, error: 'Bai lam da duoc cham' },
+  invalid_scores: { status: 400, error: 'Moi cau phai co diem nguyen tu 0 den diem toi da' },
+} as const
+
+function gradingFailure(reply: FastifyReply, reason: keyof typeof GRADING_ERRORS) {
+  const { status, error } = GRADING_ERRORS[reason]
+  return reply.code(status).send({ error, code: reason })
 }
 
 interface ExamsRoutesDeps {
@@ -92,6 +114,30 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
     }
     const body: ExamAttemptHistory = { attempts: outcome.attempts }
     return body
+  })
+
+  // slice-9a: manual grading of Speaking/Writing attempts (Admin/Teacher).
+  app.get('/grading/attempts', { preHandler: requireManager }, async () => {
+    const body: ManualGradingQueue = { attempts: await listManualGradingQueue(examsStore, new Date()) }
+    return body
+  })
+
+  app.get('/grading/attempts/:attemptId', { preHandler: requireManager }, async (request, reply) => {
+    const params = AttemptIdParam.safeParse(request.params)
+    if (!params.success) return gradingFailure(reply, 'not_found')
+    const outcome = await getManualGradingAttempt(examsStore, params.data.attemptId, new Date())
+    if (!outcome.ok) return gradingFailure(reply, outcome.reason)
+    return { attempt: outcome.attempt } satisfies ManualGradingAttemptResponse
+  })
+
+  app.post('/grading/attempts/:attemptId/grade', { preHandler: requireManager }, async (request, reply) => {
+    const params = AttemptIdParam.safeParse(request.params)
+    if (!params.success) return gradingFailure(reply, 'not_found')
+    const parsed = GradeAttemptRequest.safeParse(request.body)
+    if (!parsed.success) return gradingFailure(reply, 'invalid_scores')
+    const outcome = await gradeManually(examsStore, params.data.attemptId, parsed.data, getSessionUser(request).id, new Date())
+    if (!outcome.ok) return gradingFailure(reply, outcome.reason)
+    return { attempt: outcome.attempt } satisfies ManualGradingAttemptResponse
   })
 
   app.get('/exams', { preHandler: requireLogin }, async (request) => {

@@ -24,7 +24,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-6 | Điểm danh | Dọc | Done | — | feature/slice-6-diem-danh | 10 | slice-1 | `slices/slice-6-diem-danh.md` |
 | slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Done | — | feature/slice-7-xep-loai-dashboard | 13 | slice-5, slice-6 | `slices/slice-7-xep-loai-dashboard.md` |
 | slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Done | — | feature/slice-8-ngay-cong-gio-day | 14 | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
-| slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Hoãn | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
+| slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Đã thay thế (slice-9a, slice-9b) | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
 | slice-10 | Giao diện chung: AppShell, dashboard theo vai trò, restyle | Dọc | Done | — | feature/ui-shell | 15 | slice-8 | `slices/slice-10-giao-dien-chung.md` |
 
 ## Công việc bổ sung theo mục 22
@@ -32,6 +32,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | slice-2.1 | Reset security (thay đổi slice-2) | Dọc | Done | — | bugfix/slice-2.1-reset-security | 8 | slice-1/2 merged PR3/4 (bảng lịch sử stale) | `slices/slice-2.1-reset-security.md` |
+| slice-9a | Chấm tay Speaking/Writing (thay đổi slice-9) | Dọc | Done | — | feature/slice-9a-cham-tay | 16 | slice-5, slice-10 | `slices/slice-9a-cham-tay.md` |
 
 ## Trạng thái hợp lệ
 

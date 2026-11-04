@@ -45,6 +45,7 @@ function AttemptOutcome(props: {
           <strong>{passed ? 'ĐẠT' : 'CHƯA ĐẠT'}</strong>
         </p>
       )}
+      {result?.feedback && <p className="whitespace-pre-wrap">Nhận xét của giáo viên: {result.feedback}</p>}
       {result?.status === 'pending_manual' && <p>Đã nộp bài. Bài Speaking/Writing chờ giáo viên chấm.</p>}
       {!result && <p>Đã nộp bài. Đang chờ kết quả chấm.</p>}
       {retake?.reason === 'limit_reached' && <p>Bạn đã dùng hết {retake.maxAttempts} lần thi cho đề này.</p>}
