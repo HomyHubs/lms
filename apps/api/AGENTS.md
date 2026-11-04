@@ -23,6 +23,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-08
+
+**Đã xong**
+
+- slice-8 (Ngày công & giờ dạy) — feature `workhours` (`workHoursRoutes(app, { rbac, workHoursStore, branchScope, now? })`): `POST /timesheet/check-in` (201; 409 khi đã có ca mở), `POST /timesheet/check-out` (409 khi không có ca mở), `GET /me/timesheet?month` (staff + teacher), `GET /reports/work-hours?month&branchId` (admin, trong phạm vi cơ sở; ngoài phạm vi → 404). Buổi "đã dạy" = không huỷ + có điểm danh, GV dạy = người ghi điểm danh; ngày công theo ngày Asia/Ho_Chi_Minh; ADR 0007. Feature `attendance`: buổi có `durationMinutes`, `makeupForSessionId` (chỉ bù cho buổi chưa dạy cùng lớp, sai → 400), `POST /sessions/:id/cancel` (GV phụ trách; đã điểm danh → 409), PUT điểm danh buổi đã huỷ → 409.
+
 ### 2026-11-07
 
 **Đã xong**

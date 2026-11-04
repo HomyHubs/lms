@@ -17,6 +17,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-08
+
+**Đã xong**
+
+- slice-8: migration `20261108000000_work_hours.sql` — `class_sessions` thêm `duration_minutes` (mặc định 90, 15..480), `planned_teacher_id` (backfill = `created_by`), `makeup_for_session_id`, `cancelled_at`; bảng `staff_shifts` (check-out > check-in, unique một ca mở/người). Additive, đảo ngược được; up → down → up đã chạy trên Postgres thật.
+
 ### 2026-11-07
 
 **Đã xong**

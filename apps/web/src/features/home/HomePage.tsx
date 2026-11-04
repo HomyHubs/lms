@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   ClipboardList,
+  Clock,
   LogOut,
   ListChecks,
   MapPin,
@@ -76,6 +77,14 @@ export function HomePage(): React.ReactElement {
               className="flex items-center gap-1 text-sm text-slate-600 underline"
             >
               <CalendarCheck className="h-4 w-4" /> Điểm danh
+            </Link>
+          )}
+          {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'staff') && (
+            <Link
+              to="/work-hours"
+              className="flex items-center gap-1 text-sm text-slate-600 underline"
+            >
+              <Clock className="h-4 w-4" /> Ngày công &amp; giờ dạy
             </Link>
           )}
           {user?.role === 'admin' && (

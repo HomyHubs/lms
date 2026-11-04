@@ -18,6 +18,7 @@ import {
   aggregateRates,
   assignTeacher,
   buildRoster,
+  canMakeUpFor,
   markAttendance,
   summarize,
   toHistoryDto,
@@ -41,6 +42,7 @@ type ClassAccess =
 const CLASS_NOT_FOUND = { error: 'Khong tim thay lop' }
 const SESSION_NOT_FOUND = { error: 'Khong tim thay buoi hoc' }
 const ONLY_CLASS_TEACHER = { error: 'Chi giao vien phu trach lop moi duoc diem danh' }
+const SESSION_CANCELLED = { error: 'Buoi hoc da bi huy' }
 
 /**
  * Attendance routes (slice-6). Real backend RBAC (not stubbed):
@@ -198,12 +200,19 @@ export async function attendanceRoutes(
       reply.code(403)
       return ONLY_CLASS_TEACHER
     }
+    const { makeupForSessionId } = parsed.data
+    if (makeupForSessionId && !(await canMakeUpFor(store, id, makeupForSessionId))) {
+      reply.code(400)
+      return { error: 'Buoi duoc day bu phai thuoc lop nay va chua duoc day' }
+    }
     const created = await store.createSession({
       classId: id,
       sessionDate: parsed.data.sessionDate,
       startsAt: parsed.data.startsAt ?? '00:00',
       topic: parsed.data.topic ? parsed.data.topic : null,
       createdBy: getSessionUser(request).id,
+      durationMinutes: parsed.data.durationMinutes ?? 90,
+      makeupForSessionId: makeupForSessionId ?? null,
     })
     if (!created) {
       reply.code(409)
@@ -211,6 +220,29 @@ export async function attendanceRoutes(
     }
     reply.code(201)
     const body: ClassSessionResponse = { session: toSessionDto(created) }
+    return body
+  })
+
+  // slice-8: a cancelled session is a missed session (not paid); only before attendance exists.
+  app.post('/sessions/:id/cancel', { preHandler: requireStaff }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const session = await store.findSession(id)
+    const access = session ? await classAccess(request, session.class_id) : { ok: false as const }
+    if (!session || !access.ok) {
+      reply.code(404)
+      return SESSION_NOT_FOUND
+    }
+    if (!access.canWrite) {
+      reply.code(403)
+      return ONLY_CLASS_TEACHER
+    }
+    if (!(await store.cancelSession(id))) {
+      reply.code(409)
+      return { error: 'Chi huy duoc buoi hoc chua diem danh va chua bi huy' }
+    }
+    const body: ClassSessionResponse = {
+      session: toSessionDto((await store.findSession(id)) as SessionRow),
+    }
     return body
   })
 
@@ -241,6 +273,10 @@ export async function attendanceRoutes(
     if (!access.canWrite) {
       reply.code(403)
       return ONLY_CLASS_TEACHER
+    }
+    if (session.cancelled_at !== null) {
+      reply.code(409)
+      return SESSION_CANCELLED
     }
     const outcome = await markAttendance(store, session, getSessionUser(request).id, parsed.data.records)
     if (!outcome.ok) {

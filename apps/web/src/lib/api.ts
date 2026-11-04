@@ -74,6 +74,11 @@ import {
   StudentReport,
   type StudentReportQuery,
   type UpdateClassificationPolicyRequest,
+  MyTimesheet,
+  StaffShiftResponse,
+  WorkHoursReport,
+  type StaffShift,
+  type WorkHoursReportQuery,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -669,6 +674,33 @@ export async function getStudentReport(query: StudentReportQuery): Promise<Stude
   const res = await fetch(`/api/reports/students?${params.toString()}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc bao cao hoc vien')
   return StudentReport.parse(await res.json())
+}
+
+/** slice-8: check-in/out, own timesheet, cancel session, admin monthly work-hours report. */
+export async function checkShift(action: 'check-in' | 'check-out'): Promise<StaffShift> {
+  const res = await fetch(`/api/timesheet/${action}`, { method: 'POST', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, action === 'check-in' ? 'Check-in that bai' : 'Check-out that bai')
+  return StaffShiftResponse.parse(await res.json()).shift
+}
+
+export async function getMyTimesheet(month: string): Promise<MyTimesheet> {
+  const res = await fetch(`/api/me/timesheet?month=${month}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc bang cong')
+  return MyTimesheet.parse(await res.json())
+}
+
+export async function getWorkHoursReport(query: WorkHoursReportQuery): Promise<WorkHoursReport> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
+  const res = await fetch(`/api/reports/work-hours?${params.toString()}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc bao cao cong')
+  return WorkHoursReport.parse(await res.json())
+}
+
+export async function cancelClassSession(sessionId: string): Promise<ClassSession> {
+  const res = await fetch(`/api/sessions/${sessionId}/cancel`, { method: 'POST', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Huy buoi hoc that bai')
+  return ClassSessionResponse.parse(await res.json()).session
 }
 
 /** slice-4.5: AI prompt generation + reverse import. The backend never calls an AI provider. */

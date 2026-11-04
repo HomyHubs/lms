@@ -51,13 +51,22 @@ export const ClassSession = z.object({
   startsAt: SessionTime,
   topic: z.string().nullable(),
   createdAt: z.string(),
+  // slice-8: planned length, make-up link and cancellation (teaching hours, ADR 0007).
+  durationMinutes: z.number().int(),
+  makeupForSessionId: z.string().uuid().nullable(),
+  cancelledAt: z.string().nullable(),
 })
 export type ClassSession = z.infer<typeof ClassSession>
+
+export const SessionDurationMinutes = z.number().int().min(15).max(480)
 
 export const CreateClassSessionRequest = z.object({
   sessionDate: SessionDate,
   startsAt: SessionTime.optional(),
   topic: z.string().trim().max(200).optional(),
+  durationMinutes: SessionDurationMinutes.optional(),
+  /** A make-up session replaces a missed session of the same class. */
+  makeupForSessionId: z.string().uuid().optional(),
 })
 export type CreateClassSessionRequest = z.infer<typeof CreateClassSessionRequest>
 

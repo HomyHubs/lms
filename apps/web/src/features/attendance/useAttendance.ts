@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CreateClassSessionRequest, MarkAttendanceRequest } from '@lms/shared'
 import {
   assignClassTeacher,
+  cancelClassSession,
   createClassSession,
   getAttendanceRates,
   getMyAttendance,
@@ -71,6 +72,15 @@ export function useCreateSession(classId: string | null) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateClassSessionRequest) => createClassSession(classId as string, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['attendance', 'sessions', classId] }),
+  })
+}
+
+/** slice-8: cancel an untaught session so it can be made up later. */
+export function useCancelSession(classId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (sessionId: string) => cancelClassSession(sessionId),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['attendance', 'sessions', classId] }),
   })
 }

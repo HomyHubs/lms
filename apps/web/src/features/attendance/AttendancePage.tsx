@@ -5,6 +5,7 @@ import {
   AttendanceStatus,
   CreateClassSessionRequest,
   type AttendanceSummary,
+  type ClassSession,
   type StudentAttendance,
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { useSession } from '@/features/auth/useAuth'
 import {
   useAdminClasses,
   useAssignTeacher,
+  useCancelSession,
   useClassRates,
   useClassSessions,
   useClassTeachers,
@@ -185,16 +187,32 @@ function SessionRoster({ sessionId, editable }: { sessionId: string; editable: b
   )
 }
 
+function sessionLabel(s: ClassSession): string {
+  const flags = `${s.cancelledAt ? ' (đã huỷ)' : ''}${s.makeupForSessionId ? ' (bù)' : ''}`
+  return `${s.sessionDate} ${s.startsAt}${s.topic ? ` · ${s.topic}` : ''}${flags}`
+}
+
 function SessionsSection({ classId, canCreate }: { classId: string; canCreate: boolean }): React.ReactElement {
   const sessions = useClassSessions(classId)
   const create = useCreateSession(classId)
+  const cancel = useCancelSession(classId)
   const [selected, setSelected] = useState<string | null>(null)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [topic, setTopic] = useState('')
+  const [duration, setDuration] = useState('90')
+  const [makeupFor, setMakeupFor] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => setSelected(null), [classId])
+
+  const cancelled = sessions.data?.filter((s) => s.cancelledAt !== null) ?? []
+  const selectedSession = sessions.data?.find((s) => s.id === selected)
+
+  function handleCancel(sessionId: string): void {
+    setError(null)
+    cancel.mutate(sessionId, { onError: (err) => setError((err as Error).message) })
+  }
 
   function handleCreate(e: FormEvent): void {
     e.preventDefault()
@@ -203,6 +221,8 @@ function SessionsSection({ classId, canCreate }: { classId: string; canCreate: b
       sessionDate: date,
       ...(time ? { startsAt: time } : {}),
       ...(topic.trim() ? { topic } : {}),
+      ...(duration ? { durationMinutes: Number(duration) } : {}),
+      ...(makeupFor ? { makeupForSessionId: makeupFor } : {}),
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Dữ liệu không hợp lệ')
@@ -212,6 +232,7 @@ function SessionsSection({ classId, canCreate }: { classId: string; canCreate: b
       onSuccess: (s) => {
         setSelected(s.id)
         setTopic('')
+        setMakeupFor('')
       },
       onError: (err) => setError((err as Error).message),
     })
@@ -231,6 +252,26 @@ function SessionsSection({ classId, canCreate }: { classId: string; canCreate: b
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
           />
+          <input
+            aria-label="Thời lượng (phút)"
+            type="number"
+            min={15}
+            max={480}
+            step={15}
+            className={INPUT}
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+          />
+          {cancelled.length > 0 && (
+            <select aria-label="Dạy bù cho buổi" className={INPUT} value={makeupFor} onChange={(e) => setMakeupFor(e.target.value)}>
+              <option value="">— Buổi thường —</option>
+              {cancelled.map((s) => (
+                <option key={s.id} value={s.id}>
+                  Bù cho {s.sessionDate} {s.startsAt}
+                </option>
+              ))}
+            </select>
+          )}
           <Button type="submit" size="sm" disabled={create.isPending}>
             Tạo buổi học
           </Button>
@@ -247,13 +288,22 @@ function SessionsSection({ classId, canCreate }: { classId: string; canCreate: b
         {sessions.data?.map((s) => (
           <li key={s.id}>
             <Button size="sm" variant={selected === s.id ? 'default' : 'outline'} onClick={() => setSelected(s.id)}>
-              {s.sessionDate} {s.startsAt}
-              {s.topic ? ` · ${s.topic}` : ''}
+              {sessionLabel(s)}
             </Button>
           </li>
         ))}
       </ul>
-      {selected && <SessionRoster sessionId={selected} editable={canCreate} />}
+      {canCreate && selectedSession && selectedSession.cancelledAt === null && (
+        <div>
+          <Button size="sm" variant="outline" onClick={() => handleCancel(selectedSession.id)} disabled={cancel.isPending}>
+            Huỷ buổi (chưa dạy)
+          </Button>
+        </div>
+      )}
+      {selectedSession && selectedSession.cancelledAt === null && (
+        <SessionRoster sessionId={selectedSession.id} editable={canCreate} />
+      )}
+      {selectedSession?.cancelledAt && <p className="text-sm text-slate-500">Buổi này đã huỷ — tạo buổi dạy bù ở trên.</p>}
     </section>
   )
 }

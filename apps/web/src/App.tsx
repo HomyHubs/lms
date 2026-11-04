@@ -12,6 +12,7 @@ import { QuestionsPage } from '@/features/questions/QuestionsPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { AssignmentsPage } from '@/features/userbranches/AssignmentsPage'
 import { UsersPage } from '@/features/users/UsersPage'
+import { WorkHoursPage } from '@/features/workhours/WorkHoursPage'
 
 /** Router goc: /login va /forgot-password cong khai, / duoc bao ve boi phien dang nhap. */
 export function App(): React.ReactElement {
@@ -96,6 +97,14 @@ export function App(): React.ReactElement {
         element={
           <RequireAuth role="admin">
             <ReportsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/work-hours"
+        element={
+          <RequireAuth role={['admin', 'teacher', 'staff']}>
+            <WorkHoursPage />
           </RequireAuth>
         }
       />
