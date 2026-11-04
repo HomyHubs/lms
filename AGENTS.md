@@ -632,6 +632,9 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-1 | User, Branch & phân quyền | Dọc | Done | 3 | 2026-09-20 |
 | slice-2 | OTP đa kênh | Dọc | Done (còn nợ) | 4 | 2026-09-21 |
 | slice-3 | Ngân hàng câu hỏi | Dọc | Done | 5 | 2026-09-21 |
+| slice-3.1 | Question completion (strict CSV/XLSX import) | Dọc | Done | 7 | 2026-11-04 |
+| slice-2.1 | Reset security (fail-closed destination) | Dọc | Done | 8 | 2026-11-04 |
+| slice-4 | Tạo đề & Thi online (+ slice-4.1 integrity) | Dọc | Done | 6 | 2026-11-04 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

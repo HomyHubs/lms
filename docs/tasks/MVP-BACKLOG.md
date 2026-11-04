@@ -18,7 +18,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-1 | Quản lý người dùng, cơ sở (Branch) & phân quyền | Dọc | Done | — | feature/slice-1-user-branch-phan-quyen | 3 | slice-0 | `slices/slice-1-user-branch-phan-quyen.md` |
 | slice-2 | OTP đa kênh (WhatsApp/Telegram) cho đổi/khôi phục mật khẩu | Dọc | Done (còn nợ) | — | feature/slice-2-otp-da-kenh | 4 | slice-1 | `slices/slice-2-otp-da-kenh.md` |
 | slice-3 | Ngân hàng câu hỏi theo cấp độ (Starter/Mover/Flyer) + import | Dọc | Done | — | feature/slice-3-ngan-hang-cau-hoi | 5 | slice-1 | `slices/slice-3-ngan-hang-cau-hoi.md` |
-| slice-4 | Tạo đề & Thi online | Dọc | Review | An Vo | feature/slice-4-tao-de-thi-online | 6 | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
+| slice-4 | Tạo đề & Thi online | Dọc | Done | — | feature/slice-4-tao-de-thi-online | 6 | slice-3 | `slices/slice-4-tao-de-thi-online.md` |
 | slice-4.5 | Sinh prompt AI & import ngược câu hỏi | Dọc | Chưa bắt đầu | — | — | — | slice-3 | `slices/slice-4.5-sinh-prompt-ai-import.md` |
 | slice-5 | Chấm điểm tự động & Thi lại | Dọc | Chưa bắt đầu | — | — | — | slice-4 | `slices/slice-5-cham-diem-thi-lai.md` |
 | slice-6 | Điểm danh | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-6-diem-danh.md` |
@@ -31,7 +31,6 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | slice-2.1 | Reset security (thay đổi slice-2) | Dọc | Done | — | bugfix/slice-2.1-reset-security | 8 | slice-1/2 merged PR3/4 (bảng lịch sử stale) | `slices/slice-2.1-reset-security.md` |
-| slice-3.1 | Question completion: edit filters, strict CSV/XLSX import (thay đổi slice-3) | Dọc | Done | — | bugfix/slice-3.1-question-completion | 7 | slice-3 | `slices/slice-3.1-question-completion.md` |
 
 ## Trạng thái hợp lệ
 
@@ -47,4 +46,4 @@ Chưa bắt đầu, Đang làm, Review, Done, Done (còn nợ), Hoãn, Đã hủ
 
 | ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| slice-3.1 | Question UI/import completion (thay đổi slice-3) | Dọc | Review | Coding agent | bugfix/slice-3.1-question-completion | 7 | slice-1/3 merged PR3/5 (bảng lịch sử stale) | `slices/slice-3.1-question-completion.md` |
+| slice-3.1 | Question UI/import completion (thay đổi slice-3) | Dọc | Done | — | bugfix/slice-3.1-question-completion | 7 | slice-1/3 merged PR3/5 (bảng lịch sử stale) | `slices/slice-3.1-question-completion.md` |
