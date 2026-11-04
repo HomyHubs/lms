@@ -5,6 +5,7 @@ import type { AuthStore, UserRecord } from '../auth/index.js'
 import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
 import { examsRoutes } from './routes.js'
+import { examSetsRoutes, type ExamSetsStore } from '../examsets/index.js'
 import type {
   AttemptRow,
   CreateAttemptFields,
@@ -109,6 +110,12 @@ function makeFakeExamsStore(
   return {
     async findLevelByCode(code) {
       return LEVELS.find((l) => l.code === code)
+    },
+    async findExamSetRefs() {
+      return []
+    },
+    async listExamSetQuestions() {
+      return []
     },
     async createExam(input: CreateExamFields) {
       const level = LEVELS.find((l) => l.id === input.levelId)
@@ -271,6 +278,24 @@ describe('exams routes — RBAC guard', () => {
   afterEach(async () => {
     if (app) await app.close()
     app = undefined
+  })
+
+  it('bo de co dinh: hoc vien 403, admin doc duoc danh sach', async () => {
+    const store = { findLevelByCode: async () => undefined, listSets: async () => [] } as unknown as ExamSetsStore
+    const build = async (user: UserRecord) => {
+      const instance = Fastify({ logger: false })
+      await instance.register(cookie)
+      await examSetsRoutes(instance, { rbac: makeRbac(makeFakeAuthStore(user)), examSetsStore: store })
+      return instance
+    }
+    app = await build(STUDENT)
+    expect((await app.inject({ method: 'GET', url: '/exam-sets', headers: { cookie: COOKIE } })).statusCode).toBe(403)
+    expect((await app.inject({ method: 'POST', url: '/exam-sets/00000000-0000-4000-8000-000000000000/publish',
+      headers: { cookie: COOKIE } })).statusCode).toBe(403)
+    await app.close()
+    app = await build(ADMIN)
+    const res = await app.inject({ method: 'GET', url: '/exam-sets', headers: { cookie: COOKIE } })
+    expect(res.json()).toEqual({ examSets: [] })
   })
 
   it('GET /exams tra 401 khi chua dang nhap', async () => {

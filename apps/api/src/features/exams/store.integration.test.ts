@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { sql } from 'kysely'
 import { createDb, type AppDb } from '../../platform/db.js'
 import { makeExamsStore } from './store.js'
-import { startAttempt, submitAttempt, getAttempt, saveAttemptAnswers, gradeManually, listManualGradingQueue } from './service.js'
+import { createExam, startAttempt, submitAttempt, getAttempt, saveAttemptAnswers, gradeManually, listManualGradingQueue } from './service.js'
+import { AddExamSetQuestionRequest } from '@lms/shared'
+import { addExamSetQuestion, archiveExamSet, createExamSet, makeExamSetsStore, publishExamSet } from '../examsets/index.js'
 
 const url = process.env.TEST_DATABASE_URL
 const describeWithPostgres = url ? describe : describe.skip
@@ -130,6 +132,45 @@ describeWithPostgres('exams store on real Postgres', () => {
     await expect(db.insertInto('exam_attempts').values({ exam_id: exam.id, student_id: STUDENT_ID, attempt_number: 2,
       question_ids: '[]', question_snapshot: '[]', deadline_at: new Date(now.getTime() + 60_000).toISOString() }).execute())
       .rejects.toThrow('exam_attempts_exam_student_attempt_key')
+  })
+
+  it('published exam set is frozen in the DB and a fixed exam serves its order', async () => {
+    const sets = makeExamSetsStore(db)
+    const created = await createExamSet(sets, { title: 'Fixed set', level: 'starter', skill: 'reading' }, MANAGER_ID)
+    if (!created.ok) throw new Error(created.reason)
+    const setId = created.examSet.id
+    for (const questionText of ['Fixed 1', 'Fixed 2']) {
+      const body = AddExamSetQuestionRequest.parse({
+        questionType: 'multiple_choice', difficulty: 'easy', questionText, options: ['cat', 'dog'], correctAnswer: 'dog', points: 1,
+      })
+      expect((await addExamSetQuestion(sets, setId, body)).ok).toBe(true)
+    }
+    const published = await publishExamSet(sets, setId, new Date())
+    if (!published.ok) throw new Error(published.reason)
+    const itemIds = published.examSet.items.map((x) => x.id)
+
+    await expect(db.deleteFrom('exam_set_items').where('exam_set_id', '=', setId).execute()).rejects.toThrow()
+    await expect(db.updateTable('questions').set({ question_text: 'x' }).where('id', '=', itemIds[0]!).execute()).rejects.toThrow()
+    await expect(db.deleteFrom('questions').where('id', '=', itemIds[0]!).execute()).rejects.toThrow()
+
+    const store = makeExamsStore(db)
+    const level = (await store.findLevelByCode('starter'))!
+    expect(await store.listQuestionIdsFor(level.id, 'reading')).not.toContain(itemIds[0])
+    const now = new Date()
+    const exam = await createExam(store, {
+      title: 'Fixed exam', level: 'starter', skill: 'reading', mode: 'fixed_set', examSetIds: [setId],
+      shuffleQuestions: false, shuffleOptions: false, retakeStrategy: 'same_set_shuffled', durationMinutes: 10,
+      opensAt: new Date(now.getTime() - 60_000).toISOString(), closesAt: new Date(now.getTime() + 60_000).toISOString(),
+    }, MANAGER_ID)
+    if (!exam.ok) throw new Error(exam.reason)
+    expect(exam.exam).toMatchObject({ mode: 'fixed_set', examSetIds: [setId], questionCount: 2 })
+    expect((await store.findExamById(exam.exam.id))?.exam_set_ids).toEqual([setId])
+    const started = await startAttempt(store, exam.exam.id, STUDENT_ID, now, () => 0)
+    expect(started.ok && started.attempt.questions.map((x) => x.id)).toEqual(itemIds)
+    expect((await store.listAttempts(exam.exam.id, STUDENT_ID))[0]?.exam_set_id).toBe(setId)
+
+    const archived = await archiveExamSet(sets, setId)
+    expect(archived.ok && archived.examSet.status).toBe('archived')
   })
 
   async function freshAttempt(deadlineMs = 60_000, skill: 'reading' | 'writing' = 'reading') {

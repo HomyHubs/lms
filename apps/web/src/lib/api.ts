@@ -86,6 +86,14 @@ import {
   type GradeAttemptRequest,
   type ManualGradingAttempt,
   type ManualGradingItem,
+  ExamSetList,
+  ExamSetResponse,
+  type AddExamSetQuestionRequest,
+  type CreateExamSetRequest,
+  type ExamSet,
+  type ExamSetDetail,
+  type ExamSetListQuery,
+  type UpdateExamSetRequest,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -519,6 +527,63 @@ export async function createExamBlueprint(input: CreateExamRequest): Promise<Exa
   })
   if (!res.ok) return throwApiError(res, 'Khong tao duoc de thi')
   return ExamResponse.parse(await res.json()).exam
+}
+
+/** slice-11a: exam-set errors carry per-question `issues` that the editor shows inline. */
+async function sendExamSet(url: string, method: string, body: unknown, fallback: string): Promise<ExamSetDetail> {
+  const res = await fetch(url, {
+    method, credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!res.ok) {
+    let message = fallback
+    try {
+      const data = (await res.json()) as { error?: unknown; issues?: { position: number | null; message: string }[] }
+      if (typeof data.error === 'string') message = data.error
+      if (Array.isArray(data.issues) && data.issues.length > 0) {
+        message += ': ' + data.issues.map((i) => (i.position === null ? i.message : `#${i.position} ${i.message}`)).join('; ')
+      }
+    } catch {
+      // Invalid JSON keeps the fallback.
+    }
+    throw new ApiError(res.status, message)
+  }
+  return ExamSetResponse.parse(await res.json()).examSet
+}
+
+export async function listExamSets(query: Partial<ExamSetListQuery> = {}): Promise<ExamSet[]> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
+  const qs = params.toString()
+  const res = await fetch(`/api/exam-sets${qs ? `?${qs}` : ''}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc danh sach bo de')
+  return ExamSetList.parse(await res.json()).examSets
+}
+
+export async function getExamSet(id: string): Promise<ExamSetDetail> {
+  const res = await fetch(`/api/exam-sets/${id}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc bo de')
+  return ExamSetResponse.parse(await res.json()).examSet
+}
+
+export const createExamSet = (input: CreateExamSetRequest) =>
+  sendExamSet('/api/exam-sets', 'POST', input, 'Khong tao duoc bo de')
+export const updateExamSet = (id: string, input: UpdateExamSetRequest) =>
+  sendExamSet(`/api/exam-sets/${id}`, 'PATCH', input, 'Khong cap nhat duoc bo de')
+export const replaceExamSetItems = (id: string, questionIds: string[]) =>
+  sendExamSet(`/api/exam-sets/${id}/items`, 'PUT', { questionIds }, 'Khong luu duoc danh sach cau hoi')
+export const addExamSetQuestion = (id: string, input: AddExamSetQuestionRequest) =>
+  sendExamSet(`/api/exam-sets/${id}/questions`, 'POST', input, 'Khong them duoc cau hoi')
+export const publishExamSet = (id: string) =>
+  sendExamSet(`/api/exam-sets/${id}/publish`, 'POST', undefined, 'Khong phat hanh duoc bo de')
+export const archiveExamSet = (id: string) =>
+  sendExamSet(`/api/exam-sets/${id}/archive`, 'POST', undefined, 'Khong luu tru duoc bo de')
+export const duplicateExamSet = (id: string) =>
+  sendExamSet(`/api/exam-sets/${id}/duplicate`, 'POST', undefined, 'Khong nhan ban duoc bo de')
+
+export async function deleteExamSet(id: string): Promise<void> {
+  const res = await fetch(`/api/exam-sets/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong xoa duoc bo de')
 }
 
 /** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */

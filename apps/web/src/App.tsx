@@ -9,6 +9,7 @@ import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { CentersPage } from '@/features/centers/CentersPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
+import { ExamSetsPage } from '@/features/examsets/ExamSetsPage'
 import { GradingPage } from '@/features/grading/GradingPage'
 import { HomePage } from '@/features/home/HomePage'
 import { QuestionsPage } from '@/features/questions/QuestionsPage'
@@ -22,6 +23,7 @@ const PAGES: Record<NavPath, React.ReactElement> = {
   '/exams': <ExamsPage />,
   '/attendance': <AttendancePage />,
   '/questions': <QuestionsPage />,
+  '/exam-sets': <ExamSetsPage />,
   '/ai-questions': <AiQuestionsPage />,
   '/grading': <GradingPage />,
   '/work-hours': <WorkHoursPage />,

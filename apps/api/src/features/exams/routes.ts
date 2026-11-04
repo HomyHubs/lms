@@ -159,8 +159,14 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
     }
     const outcome = await createExam(examsStore, parsed.data, getSessionUser(request).id)
     if (!outcome.ok) {
+      const errors: Record<typeof outcome.reason, string> = {
+        level_not_found: 'Cap do khong ton tai',
+        exam_set_not_found: 'Khong tim thay bo de',
+        exam_set_not_published: 'Chi tao ky thi tu bo de da phat hanh',
+        exam_set_mismatch: 'Bo de phai cung cap do va ky nang voi ky thi',
+      }
       reply.code(400)
-      return { error: 'Cap do khong ton tai' }
+      return { error: errors[outcome.reason], code: outcome.reason }
     }
     reply.code(201)
     const body: ExamResponse = { exam: outcome.exam }

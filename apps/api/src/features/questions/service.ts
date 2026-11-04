@@ -97,7 +97,7 @@ function parseOptions(raw: string | null): string[] | null {
   }
 }
 
-function toQuestion(row: QuestionRow): Question {
+export function toQuestion(row: QuestionRow): Question {
   return {
     id: row.id,
     levelId: row.level_id,
@@ -111,7 +111,7 @@ function toQuestion(row: QuestionRow): Question {
     points: row.points,
     explanation: row.explanation,
     sourceReference: row.source_reference,
-    source: row.source === 'ai_generated' ? 'ai_generated' : 'manual',
+    source: row.source === 'ai_generated' || row.source === 'exam_set' ? row.source : 'manual',
     createdAt: toIso(row.created_at),
   }
 }
