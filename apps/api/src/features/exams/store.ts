@@ -6,6 +6,7 @@ import type {
   CreateExamFields,
   ExamRow,
   ExamsStore,
+  GradingPolicyRow,
   LevelRef,
   QuestionLite,
 } from './service.js'
@@ -21,6 +22,9 @@ const EXAM_COLUMNS = [
   'exams.duration_minutes',
   'exams.opens_at',
   'exams.closes_at',
+  'exams.pass_percent',
+  'exams.max_attempts',
+  'exams.retake_cooldown_minutes',
   'exams.created_by',
   'exams.created_at',
 ] as const
@@ -37,6 +41,20 @@ const ATTEMPT_COLUMNS = [
   'started_at',
   'deadline_at',
   'submitted_at',
+  'attempt_number',
+  'score',
+  'max_score',
+  'passed',
+  'graded_at',
+  'grading_detail',
+] as const
+
+const POLICY_COLUMNS = [
+  'exam_grading_policies.level_id',
+  'levels.code as level_code',
+  'exam_grading_policies.pass_percent',
+  'exam_grading_policies.max_attempts',
+  'exam_grading_policies.retake_cooldown_minutes',
 ] as const
 
 /** Hien thuc ExamsStore bang Kysely tren Postgres THUC (khong mock). */
@@ -60,6 +78,13 @@ export function makeExamsStore(db: AppDb): ExamsStore {
     return selectAttempts().where('id', '=', id).executeTakeFirstOrThrow()
   }
 
+  function selectPolicies() {
+    return db
+      .selectFrom('exam_grading_policies')
+      .innerJoin('levels', 'levels.id', 'exam_grading_policies.level_id')
+      .select(POLICY_COLUMNS)
+  }
+
   return {
     async findLevelByCode(code): Promise<LevelRef | undefined> {
       return db
@@ -80,6 +105,9 @@ export function makeExamsStore(db: AppDb): ExamsStore {
           duration_minutes: input.durationMinutes,
           opens_at: input.opensAt,
           closes_at: input.closesAt,
+          pass_percent: input.passPercent,
+          max_attempts: input.maxAttempts,
+          retake_cooldown_minutes: input.retakeCooldownMinutes,
           created_by: input.createdBy,
         })
         .returning('id')
@@ -118,7 +146,15 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       return selectAttempts()
         .where('exam_id', '=', examId)
         .where('student_id', '=', studentId)
+        .orderBy('attempt_number', 'desc')
+        .limit(1)
         .executeTakeFirst()
+    },
+
+    async listAttempts(examId, studentId) {
+      let query = selectAttempts().where('exam_id', '=', examId)
+      if (studentId !== undefined) query = query.where('student_id', '=', studentId)
+      return query.orderBy('student_id').orderBy('attempt_number').execute()
     },
 
     async findLatestAttemptForStudent(studentId) {
@@ -137,6 +173,7 @@ export function makeExamsStore(db: AppDb): ExamsStore {
           student_id: input.studentId,
           question_ids: JSON.stringify(input.questionIds),
           question_snapshot: JSON.stringify(input.questionSnapshot),
+          attempt_number: input.attemptNumber,
           session_key: input.sessionKey,
           started_at: input.startedAt,
           deadline_at: input.deadlineAt,
@@ -185,6 +222,44 @@ export function makeExamsStore(db: AppDb): ExamsStore {
           submitted_at: late ? row.deadline_at.toISOString() : now.toISOString(),
         }).where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
       })
+    },
+
+    async saveGrade(attemptId, grade) {
+      // First grade wins; concurrent readers re-read the stored grade (trigger forbids rewriting it).
+      const updated = await db.updateTable('exam_attempts').set({
+        score: grade.score,
+        max_score: grade.maxScore,
+        passed: grade.passed,
+        graded_at: grade.gradedAt,
+        grading_detail: grade.detailJson,
+      })
+        .where('id', '=', attemptId)
+        .where('submitted_at', 'is not', null)
+        .where('graded_at', 'is', null)
+        .returning(ATTEMPT_COLUMNS)
+        .executeTakeFirst()
+      return updated ?? requireAttemptById(attemptId)
+    },
+
+    async findGradingPolicy(levelId): Promise<GradingPolicyRow | undefined> {
+      return selectPolicies().where('exam_grading_policies.level_id', '=', levelId).executeTakeFirst()
+    },
+
+    async listGradingPolicies(): Promise<GradingPolicyRow[]> {
+      return selectPolicies().orderBy('levels.code').execute()
+    },
+
+    async upsertGradingPolicy(levelId, fields): Promise<GradingPolicyRow> {
+      const values = {
+        pass_percent: fields.passPercent,
+        max_attempts: fields.maxAttempts,
+        retake_cooldown_minutes: fields.retakeCooldownMinutes,
+      }
+      await db.insertInto('exam_grading_policies')
+        .values({ level_id: levelId, ...values })
+        .onConflict((oc) => oc.column('level_id').doUpdateSet({ ...values, updated_at: sql<string>`now()` }))
+        .execute()
+      return selectPolicies().where('exam_grading_policies.level_id', '=', levelId).executeTakeFirstOrThrow()
     },
   }
 }

@@ -68,6 +68,9 @@ describeWithPostgres('exams store on real Postgres', () => {
       durationMinutes: 10,
       opensAt: new Date(now.getTime() - 60_000).toISOString(),
       closesAt: new Date(now.getTime() + 60_000).toISOString(),
+      passPercent: 50,
+      maxAttempts: 1,
+      retakeCooldownMinutes: 0,
       createdBy: MANAGER_ID,
     })
 
@@ -99,6 +102,34 @@ describeWithPostgres('exams store on real Postgres', () => {
     )
     expect(submitted.ok).toBe(true)
     if (submitted.ok) expect(submitted.attempt.answers).toEqual({ [questionId]: 'A' })
+    if (submitted.ok) expect(submitted.attempt.result).toMatchObject({ status: 'graded', score: 1, maxScore: 1, passed: true })
+  })
+
+  it('failed attempt allows a retake with another paper; grades are immutable and attempt numbers unique', async () => {
+    const store = makeExamsStore(db)
+    const level = (await store.findLevelByCode('starter'))!
+    const now = new Date()
+    const exam = await store.createExam({ title: 'Retake exam', levelId: level.id, skill: 'reading',
+      questionCount: 1, durationMinutes: 5, passPercent: 100, maxAttempts: 2, retakeCooldownMinutes: 0,
+      opensAt: new Date(now.getTime() - 60_000).toISOString(),
+      closesAt: new Date(now.getTime() + 3_600_000).toISOString(), createdBy: MANAGER_ID })
+    const one = await startAttempt(store, exam.id, STUDENT_ID, now, () => 0)
+    if (!one.ok) throw new Error(one.reason)
+    const failed = await submitAttempt(store, exam.id, STUDENT_ID, { [one.attempt.questions[0]!.id]: 'B' }, now)
+    expect(failed.ok && failed.attempt.result).toMatchObject({ score: 0, passed: false })
+
+    const two = await startAttempt(store, exam.id, STUDENT_ID, now, () => 0)
+    if (!two.ok) throw new Error(two.reason)
+    expect(two.attempt.attemptNumber).toBe(2)
+    expect(two.attempt.questions[0]!.id).not.toBe(one.attempt.questions[0]!.id)
+    const rows = await store.listAttempts(exam.id, STUDENT_ID)
+    expect(rows.map((r) => r.attempt_number)).toEqual([1, 2])
+
+    await expect(db.updateTable('exam_attempts').set({ score: 1, passed: true }).where('id', '=', rows[0]!.id).execute())
+      .rejects.toThrow('immutable')
+    await expect(db.insertInto('exam_attempts').values({ exam_id: exam.id, student_id: STUDENT_ID, attempt_number: 2,
+      question_ids: '[]', question_snapshot: '[]', deadline_at: new Date(now.getTime() + 60_000).toISOString() }).execute())
+      .rejects.toThrow('exam_attempts_exam_student_attempt_key')
   })
 
   async function freshAttempt(deadlineMs = 60_000) {
@@ -108,11 +139,12 @@ describeWithPostgres('exams store on real Postgres', () => {
     const exam = await store.createExam({ title: 'Integrity regression', levelId: level.id,
       skill: 'reading', questionCount: 1, durationMinutes: 1,
       opensAt: new Date(now.getTime() - 120_000).toISOString(),
-      closesAt: new Date(now.getTime() + 120_000).toISOString(), createdBy: MANAGER_ID })
+      closesAt: new Date(now.getTime() + 120_000).toISOString(), createdBy: MANAGER_ID,
+      passPercent: 50, maxAttempts: 1, retakeCooldownMinutes: 0 })
     const questions = await store.findQuestionsByIds(QUESTION_IDS)
     const question = questions[0]!
     const attempt = await store.createAttempt({ examId: exam.id, studentId: STUDENT_ID,
-      questionIds: [question.id], questionSnapshot: [question], sessionKey: 'lease-A',
+      questionIds: [question.id], questionSnapshot: [question], attemptNumber: 1, sessionKey: 'lease-A',
       startedAt: new Date(now.getTime() - 60_000).toISOString(),
       deadlineAt: new Date(now.getTime() + deadlineMs).toISOString() })
     return { store, exam, attempt, question, now }

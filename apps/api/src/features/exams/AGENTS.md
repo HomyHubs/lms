@@ -25,3 +25,13 @@
 - Read docs/tasks/slices/slice-4.1-exam-integrity.md for verification and safe patch application.
 - Resolve session-loss recovery and legacy snapshot limitations with owner/product before rollout; do not invent takeover policy.
 - Slice-5 must grade the frozen snapshot, never the current question bank.
+
+### 2026-11-04 — slice-5 grading & retakes
+
+**Đã xong**
+- `gradeAttempt` grades the frozen snapshot (MC letter/option text, fill_blank `|` alternatives); Speaking/Writing -> `pending_manual`. Lazy `ensureGraded` covers deadline auto-submit; `saveGrade` is conditional and DB trigger `protect_exam_grade` keeps grades immutable.
+- Level policies (`exam_grading_policies`, GET/PUT `/api/exam-policies`), per-exam snapshot `pass_percent/max_attempts/retake_cooldown_minutes`.
+- Retake in `startAttempt`: new random paper avoiding previous paper, `attempt_number` unique, blocks already_passed/limit/cooldown/closed; zero cooldown never blocks (DB/API clock skew). History `GET /api/exams/:id/history`, manager results `GET /api/exams/:id/results`. ADR-0003.
+
+**Bước tiếp theo**
+- Merge PR #6 first, then PR slice-5; slice-9 manual grading for Speaking/Writing.

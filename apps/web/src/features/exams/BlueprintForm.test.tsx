@@ -11,6 +11,7 @@ describe('BlueprintForm', () => {
       body = JSON.parse(String(init?.body)) as Record<string, unknown>
       return new Response(JSON.stringify({ exam: { ...body, id: '11111111-1111-4111-8111-111111111111',
         levelId: '22222222-2222-4222-8222-222222222222', levelCode: 'starter',
+        passPercent: 60, maxAttempts: 3, retakeCooldownMinutes: 0,
         createdBy: '33333333-3333-4333-8333-333333333333', createdAt: '2026-11-03T00:00:00Z' } }),
       { status: 201, headers: { 'content-type': 'application/json' } })
     })

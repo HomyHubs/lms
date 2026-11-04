@@ -87,6 +87,9 @@ function openExam(overrides: Partial<ExamRow> = {}): ExamRow {
     duration_minutes: 30,
     opens_at: new Date(nowMs - 3_600_000).toISOString(),
     closes_at: new Date(nowMs + 3_600_000).toISOString(),
+    pass_percent: 50,
+    max_attempts: 3,
+    retake_cooldown_minutes: 0,
     created_by: 'teacher-1',
     created_at: new Date(nowMs).toISOString(),
     ...overrides,
@@ -119,6 +122,9 @@ function makeFakeExamsStore(
         duration_minutes: input.durationMinutes,
         opens_at: input.opensAt,
         closes_at: input.closesAt,
+        pass_percent: input.passPercent,
+        max_attempts: input.maxAttempts,
+        retake_cooldown_minutes: input.retakeCooldownMinutes,
         created_by: input.createdBy,
         created_at: new Date('2026-09-21T00:00:00.000Z'),
       }
@@ -147,7 +153,12 @@ function makeFakeExamsStore(
         }))
     },
     async findAttempt(examId, studentId) {
-      return attempts.find((a) => a.exam_id === examId && a.student_id === studentId)
+      return attempts
+        .filter((a) => a.exam_id === examId && a.student_id === studentId)
+        .sort((a, b) => (b.attempt_number ?? 1) - (a.attempt_number ?? 1))[0]
+    },
+    async listAttempts(examId, studentId) {
+      return attempts.filter((a) => a.exam_id === examId && (studentId === undefined || a.student_id === studentId))
     },
     async findLatestAttemptForStudent(studentId) {
       const mine = attempts
@@ -162,6 +173,7 @@ function makeFakeExamsStore(
         student_id: input.studentId,
         question_ids: JSON.stringify(input.questionIds),
         question_snapshot: JSON.stringify(input.questionSnapshot),
+        attempt_number: input.attemptNumber,
         session_key: input.sessionKey,
         answer_revision: 0,
         answers: null,
@@ -195,6 +207,23 @@ function makeFakeExamsStore(
       if (!late) row.answers = answersJson
       row.submitted_at = late ? row.deadline_at : submittedAtIso
       return row
+    },
+    async saveGrade(attemptId, grade) {
+      const row = attempts.find((a) => a.id === attemptId)!
+      if (row.submitted_at === null || row.graded_at) return row
+      Object.assign(row, { score: grade.score, max_score: grade.maxScore, passed: grade.passed,
+        graded_at: grade.gradedAt, grading_detail: grade.detailJson })
+      return row
+    },
+    async findGradingPolicy() {
+      return undefined
+    },
+    async listGradingPolicies() {
+      return []
+    },
+    async upsertGradingPolicy(levelId, fields) {
+      return { level_id: levelId, level_code: 'starter', pass_percent: fields.passPercent,
+        max_attempts: fields.maxAttempts, retake_cooldown_minutes: fields.retakeCooldownMinutes }
     },
   }
 }
@@ -397,6 +426,42 @@ describe('exams routes — thi online (student)', () => {
     })
     expect(again.statusCode).toBe(200)
     expect(again.json()).toEqual(submit.json())
+    expect(submit.json().attempt.result).toMatchObject({ status: 'graded', score: 0, maxScore: 2, passed: false })
+    // Ket qua chi co diem tong — khong lo dung/sai tung cau hay dap an.
+    expect(JSON.stringify(submit.json())).not.toMatch(/grading_detail|correct/i)
+
+    const history = await app.inject({ method: 'GET', url: '/exams/exam-open/history', headers: { cookie: COOKIE } })
+    expect(history.statusCode).toBe(200)
+    expect(history.json().attempts.map((a: { attemptNumber: number }) => a.attemptNumber)).toEqual([1])
+    const results = await app.inject({ method: 'GET', url: '/exams/exam-open/results', headers: { cookie: COOKIE } })
+    expect(results.statusCode).toBe(403)
+  })
+})
+
+describe('exams routes — chinh sach cham (RBAC)', () => {
+  let app: FastifyInstance | undefined
+  afterEach(async () => {
+    if (app) await app.close()
+    app = undefined
+  })
+  const policy = { passPercent: 70, maxAttempts: 2, retakeCooldownMinutes: 10 }
+
+  it('teacher xem duoc nhung khong sua; admin sua duoc va bi kiem tra du lieu', async () => {
+    app = await buildTestApp(TEACHER, seededStore())
+    expect((await app.inject({ method: 'GET', url: '/exam-policies', headers: { cookie: COOKIE } })).statusCode).toBe(200)
+    expect((await app.inject({ method: 'PUT', url: '/exam-policies/starter', headers: { cookie: COOKIE }, payload: policy }))
+      .statusCode).toBe(403)
+    await app.close()
+
+    app = await buildTestApp(ADMIN, seededStore())
+    const ok = await app.inject({ method: 'PUT', url: '/exam-policies/starter', headers: { cookie: COOKIE }, payload: policy })
+    expect(ok.statusCode).toBe(200)
+    expect(ok.json().policy).toEqual({ levelCode: 'starter', ...policy })
+    const bad = await app.inject({ method: 'PUT', url: '/exam-policies/starter', headers: { cookie: COOKIE },
+      payload: { ...policy, passPercent: 101 } })
+    expect(bad.statusCode).toBe(400)
+    const missing = await app.inject({ method: 'PUT', url: '/exam-policies/unknown', headers: { cookie: COOKIE }, payload: policy })
+    expect(missing.statusCode).toBe(404)
   })
 })
 

@@ -22,3 +22,12 @@
 **Bước tiếp theo**
 - See docs/tasks/slices/slice-4.1-exam-integrity.md for gates and handoff.
 - Perform owner/manual browser acceptance with two login sessions, refresh and deadline/offline scenarios. Browser/device takeover and recovery require product approval, not silent client workarounds.
+
+### 2026-11-04 — slice-5 (cham diem & thi lai)
+
+**Da xong**
+- `AttemptOutcome`: diem tong, nguong, DAT/CHUA DAT, lan thi n/max; nut "Thi lai (lan N)" hoac moc thoi gian cho; thong bao het luot/de dong/cho cham tay. Khong lo dung/sai tung cau.
+- Test: dat -> khong co nut thi lai; truot -> thi lai lan 2 mo de moi.
+
+**Buoc tiep theo**
+- Nghiem thu tay tren trinh duyet; man hinh lich su/ket qua cho giao vien (API da co) neu product can.

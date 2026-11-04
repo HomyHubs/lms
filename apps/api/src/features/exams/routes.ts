@@ -5,17 +5,23 @@ import {
   CreateExamRequest,
   SubmitExamRequest,
   SaveExamAnswersRequest,
+  UpdateGradingPolicyRequest,
   type AttemptResponse,
+  type ExamAttemptHistory,
   type ExamList,
   type ExamResponse,
+  type GradingPolicyList,
 } from '@lms/shared'
 import { getSessionUser, type Rbac } from '../access/index.js'
 import type { ExamsStore } from './service.js'
 import {
   createExam,
   getAttempt,
+  listAttemptHistory,
   listExams,
+  listGradingPolicies,
   listOpenExams,
+  updateGradingPolicy,
   startAttempt,
   submitAttempt,
   saveAttemptAnswers,
@@ -36,12 +42,57 @@ interface ExamsRoutesDeps {
  * Route Tao de & Thi online (slice-4).
  * - Tao/liet ke de: Admin + Teacher tao (RBAC that). Danh sach: quan tri xem tat ca; hoc vien chi thay de dang mo (N002).
  * - Lam/nop bai: chi Student. De tra ve KHONG kem dap an dung (bao mat de thi).
+ * Slice-5: ket qua cham + thi lai di kem AttemptResponse; lich su luot (hoc vien: cua minh;
+ * Admin/Teacher: ca de); chinh sach cham theo cap do (Admin/Teacher xem, Admin sua).
  */
 export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): Promise<void> {
   const { rbac, examsStore } = deps
   const requireManager = rbac.requireRole('admin', 'teacher')
   const requireLogin = rbac.requireRole()
   const requireStudent = rbac.requireRole('student')
+  const requireAdmin = rbac.requireRole('admin')
+
+  app.get('/exam-policies', { preHandler: requireManager }, async () => {
+    const body: GradingPolicyList = { policies: await listGradingPolicies(examsStore) }
+    return body
+  })
+
+  app.put('/exam-policies/:level', { preHandler: requireAdmin }, async (request, reply) => {
+    const { level } = request.params as { level: string }
+    const parsed = UpdateGradingPolicyRequest.safeParse(request.body)
+    if (!parsed.success) {
+      reply.code(400)
+      return { error: parsed.error.issues[0]?.message ?? 'Chinh sach cham khong hop le' }
+    }
+    const outcome = await updateGradingPolicy(examsStore, level, parsed.data)
+    if (!outcome.ok) {
+      reply.code(404)
+      return { error: 'Cap do khong ton tai' }
+    }
+    return { policy: outcome.policy }
+  })
+
+  app.get('/exams/:id/history', { preHandler: requireStudent }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const outcome = await listAttemptHistory(examsStore, id, getSessionUser(request).id)
+    if (!outcome.ok) {
+      reply.code(404)
+      return { error: 'Khong tim thay de thi' }
+    }
+    const body: ExamAttemptHistory = { attempts: outcome.attempts }
+    return body
+  })
+
+  app.get('/exams/:id/results', { preHandler: requireManager }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const outcome = await listAttemptHistory(examsStore, id, undefined)
+    if (!outcome.ok) {
+      reply.code(404)
+      return { error: 'Khong tim thay de thi' }
+    }
+    const body: ExamAttemptHistory = { attempts: outcome.attempts }
+    return body
+  })
 
   app.get('/exams', { preHandler: requireLogin }, async (request) => {
     // N002: hoc vien chi thay de dang mo (trong cua so lich); quan tri xem toan bo de quan ly.
@@ -79,6 +130,9 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
         not_open: { code: 409, error: 'De thi chua mo' },
         closed: { code: 409, error: 'De thi da dong' },
         already_submitted: { code: 409, error: 'Ban da nop bai, khong the lam lai' },
+        already_passed: { code: 409, error: 'Ban da dat bai thi nay, khong can thi lai' },
+        retake_limit_reached: { code: 409, error: 'Ban da het so lan thi cho phep' },
+        retake_cooldown: { code: 409, error: 'Chua den thoi gian duoc thi lai' },
         not_enough_questions: { code: 409, error: 'Ngan hang khong du cau hoi de sinh de' },
         paper_unavailable: { code: 409, error: 'Khong co de khac khong trung lap' },
         session_conflict: { code: 409, error: 'Luot thi dang thuoc phien dang nhap khac' },
