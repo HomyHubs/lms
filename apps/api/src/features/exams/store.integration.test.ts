@@ -19,7 +19,10 @@ describeWithPostgres('exams store on real Postgres', () => {
 
   beforeAll(async () => {
     db = createDb(url!)
-    if (!url || new URL(url).pathname !== '/lms_slice4_test') throw new Error('Use only disposable lms_slice4_test database')
+    // Only the known disposable databases: local slice-4 container and the CI service container (ci.yml).
+    if (!url || !['/lms_slice4_test', '/lms_test'].includes(new URL(url).pathname)) {
+      throw new Error('Use only a disposable test database (lms_slice4_test or CI lms_test)')
+    }
     await db
       .insertInto('users')
       .values([
