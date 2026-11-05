@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { ListChecks, Trash2, Upload } from 'lucide-react'
+import { ImagePlus, ListChecks, Trash2, Upload } from 'lucide-react'
 import {
   CreateQuestionRequest,
   LEVEL_CODES,
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { ApiError, parseQuestionsCsv } from '@/lib/api'
 import { checkImportFile, parseQuestionsXlsx } from '@/lib/question-import'
+import { QuestionImages } from '@/features/media/QuestionImages'
 import type { Question } from '@lms/shared'
 import { useUpdateQuestion } from './useQuestions'
 import {
@@ -42,6 +43,7 @@ export function QuestionsPage(): React.ReactElement {
   const [formError, setFormError] = useState<string | null>(null)
   const updateQuestion = useUpdateQuestion()
   const [editingId, setEditingId] = useState<string | null>(null)
+  const editingQuestion = questions.data?.find((q) => q.id === editingId)
   const [explanation, setExplanation] = useState('')
   const [sourceReference, setSourceReference] = useState('')
   const [filters, setFilters] = useState({
@@ -308,6 +310,16 @@ export function QuestionsPage(): React.ReactElement {
             </Button>
           )}
         </form>
+        {editingId ? (
+          <div>
+            <h3 className="flex items-center gap-1 text-sm font-medium"><ImagePlus className="h-4 w-4" />Hình ảnh</h3>
+            <QuestionImages questionId={editingId} label="Hình câu đang sửa" options={editingQuestion?.options ?? null} editable />
+          </div>
+        ) : (
+          <p className="flex items-center gap-1 text-xs text-slate-500">
+            <ImagePlus className="h-4 w-4" />Lưu câu hỏi xong, bấm “Sửa” ở câu đó để chèn hình.
+          </p>
+        )}
       </section>
 
       <section className="c-card">
