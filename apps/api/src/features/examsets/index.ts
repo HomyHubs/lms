@@ -1,5 +1,6 @@
 export { examSetsRoutes } from './routes.js'
 export { makeExamSetsStore } from './store.js'
+export { commitImport, previewImport } from './import-service.js'
 export {
   listExamSets,
   getExamSet,

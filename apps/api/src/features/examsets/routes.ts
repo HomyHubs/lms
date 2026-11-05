@@ -2,7 +2,10 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import {
   AddExamSetQuestionRequest,
+  CommitExamSetImportRequest,
   CreateExamSetRequest,
+  EXAM_IMPORT_MAX_BYTES,
+  ExamSetImportPreviewQuery,
   ExamSetListQuery,
   ReplaceExamSetItemsRequest,
   UpdateExamSetRequest,
@@ -24,6 +27,7 @@ import {
   updateExamSet,
   type ExamSetsStore,
 } from './service.js'
+import { commitImport, previewImport } from './import-service.js'
 
 const IdParam = z.object({ id: z.string().uuid() })
 
@@ -69,6 +73,34 @@ interface ExamSetsRoutesDeps {
 export async function examSetsRoutes(app: FastifyInstance, deps: ExamSetsRoutesDeps): Promise<void> {
   const { rbac, examSetsStore: store } = deps
   const requireManager = rbac.requireRole('admin', 'teacher')
+
+  // slice-11b: the import file is sent as the raw request body (no multipart dependency).
+  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer', bodyLimit: EXAM_IMPORT_MAX_BYTES },
+    (_request, body, done) => done(null, body))
+
+  app.post('/exam-sets/import/preview', { preHandler: requireManager, bodyLimit: EXAM_IMPORT_MAX_BYTES }, async (request, reply) => {
+    const query = ExamSetImportPreviewQuery.safeParse(request.query)
+    if (!query.success) return reply.code(400).send({ error: query.error.issues[0]?.message ?? 'Thong tin import khong hop le' })
+    if (!Buffer.isBuffer(request.body)) {
+      return reply.code(415).send({ error: 'Gui file voi Content-Type application/octet-stream' })
+    }
+    const outcome = previewImport(request.body, query.data)
+    if (!outcome.ok) return reply.code(400).send({ error: outcome.message, code: 'invalid_file' })
+    return outcome.preview
+  })
+
+  app.post('/exam-sets/import/commit', { preHandler: requireManager, bodyLimit: 5 * 1024 * 1024 }, async (request, reply) => {
+    const parsed = CommitExamSetImportRequest.safeParse(request.body)
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Du lieu import khong hop le' })
+    const outcome = await commitImport(store, parsed.data, getSessionUser(request).id)
+    if (outcome.ok) return reply.code(201).send({ examSet: outcome.examSet } satisfies ExamSetResponse)
+    if (outcome.reason === 'level_not_found') return fail(reply, { reason: 'level_not_found' })
+    return reply.code(400).send({
+      error: 'Du lieu import khong hop le',
+      code: 'invalid_import',
+      errors: outcome.errors.map((e) => ({ row: e.block ?? 0, field: e.field, message: e.message })),
+    })
+  })
 
   app.get('/exam-sets', { preHandler: requireManager }, async (request, reply) => {
     const query = ExamSetListQuery.safeParse(request.query)
