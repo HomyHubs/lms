@@ -22,6 +22,9 @@ import type { Tone } from '@/components/ui/tone'
 import { BlueprintForm } from '@/features/exams/BlueprintForm'
 import { useExams } from '@/features/exams/useExams'
 import { useQuestions } from '@/features/questions/useQuestions'
+import { QuestionImages } from '@/features/media/QuestionImages'
+import { ImportExamSet } from './ImportExamSet'
+import { SetMetaFields } from './LevelSkillFields'
 import { useExamSet, useExamSetCommand, useExamSets } from './useExamSets'
 
 const STATUS: Record<ExamSetStatus, { label: string; tone: Tone }> = {
@@ -43,14 +46,7 @@ function CreateSetForm({ onCreated }: { onCreated: (id: string) => void }): Reac
   }
   return (
     <form aria-label="Tạo bộ đề" onSubmit={submit} className="flex flex-wrap items-end gap-2 text-sm">
-      <label className="grid gap-1">Tên bộ đề<input name="title" required maxLength={200} className="c-input" /></label>
-      <label className="grid gap-1">Cấp độ<select name="level" className="c-input">
-        <option value="starter">Starter</option><option value="mover">Mover</option><option value="flyer">Flyer</option>
-      </select></label>
-      <label className="grid gap-1">Kỹ năng<select name="skill" className="c-input">
-        <option value="reading">Reading</option><option value="listening">Listening</option>
-        <option value="writing">Writing</option><option value="speaking">Speaking</option>
-      </select></label>
+      <SetMetaFields />
       <Button type="submit" disabled={create.isPending}>Tạo bộ đề</Button>
       {(message || create.error) && <p role="alert" className="text-danger-600">{message || errorText(create.error)}</p>}
     </form>
@@ -94,8 +90,9 @@ function ComposeQuestion({ set }: { set: ExamSetDetail }): React.ReactElement {
       <label className="grid gap-1">Điểm<input name="points" type="number" min={1} max={100} defaultValue={1} className="c-input w-24" /></label>
       <div className="flex gap-2">
         <Button type="submit" disabled={add.isPending}>Thêm vào bộ đề</Button>
-        {/* TODO(slice-12): question images. */}
-        <Button type="button" variant="outline" disabled title="Sẽ có ở slice-12"><ImagePlus className="mr-1 h-4 w-4" />Chèn hình</Button>
+        <p className="flex items-center gap-1 text-xs text-slate-500">
+          <ImagePlus className="h-4 w-4" />Thêm câu xong, bấm “Hình ảnh” ở câu đó để chèn hình.
+        </p>
       </div>
       {(message || add.error) && <p role="alert" className="text-danger-600">{message || errorText(add.error)}</p>}
     </form>
@@ -122,6 +119,7 @@ function BankPicker({ set, onAdd }: { set: ExamSetDetail; onAdd: (q: Question) =
 
 function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => void }): React.ReactElement {
   const detail = useExamSet(id)
+  const [imagesFor, setImagesFor] = useState<string | null>(null)
   const reorder = useExamSetCommand((ids: string[]) => replaceExamSetItems(id, ids))
   const publish = useExamSetCommand(() => publishExamSet(id))
   const archive = useExamSetCommand(() => archiveExamSet(id))
@@ -161,6 +159,9 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
           <li key={q.id} className="rounded-md border border-slate-100 p-3 text-sm">
             <div className="flex items-start gap-2">
               <p className="flex-1 font-medium">Câu {index + 1}. {q.questionText}</p>
+              <Button size="sm" variant={imagesFor === q.id ? 'default' : 'ghost'} aria-expanded={imagesFor === q.id}
+                aria-label={`Hình ảnh câu ${index + 1}`} onClick={() => setImagesFor(imagesFor === q.id ? null : q.id)}>
+                <ImagePlus className="mr-1 h-4 w-4" />Hình ảnh</Button>
               {draft && (
                 <>
                   <Button size="sm" variant="ghost" aria-label={`Lên câu ${index + 1}`} disabled={index === 0}
@@ -178,6 +179,9 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
               </ul>
             )}
             <p className="mt-1 text-xs text-slate-500">Đáp án: {q.correctAnswer} · {q.points} điểm</p>
+            {imagesFor === q.id && (
+              <QuestionImages questionId={q.id} label={`Hình câu ${index + 1}`} options={q.options ?? null} editable={draft} />
+            )}
           </li>
         ))}
       </ol>
@@ -210,6 +214,7 @@ export function ExamSetsPage(): React.ReactElement {
       <Card className="space-y-4">
         <CardTitle>Bộ đề</CardTitle>
         <CreateSetForm onCreated={setSelected} />
+        <ImportExamSet onImported={setSelected} />
         <label className="block text-sm">Lọc trạng thái<select aria-label="Lọc trạng thái" value={status} className="c-input ml-2"
           onChange={(e) => setStatus(e.target.value as ExamSetStatus | '')}>
           <option value="">Tất cả</option>

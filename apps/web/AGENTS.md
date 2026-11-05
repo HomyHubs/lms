@@ -31,11 +31,22 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 - Chưa làm: điều hướng câu/đánh dấu câu, lưu nháp offline. Chưa thử tay trên mobile.
 
+**Đã xong (slice-12)**
+
+- slice-12 (Hình ảnh câu hỏi): feature `media` — `QuestionImages` (tải khi bấm “Hình ảnh” ở từng câu trong trình soạn bộ đề; chọn file / kéo-thả / dán, gắn đề bài hoặc lựa chọn, gỡ; chỉ xem khi bộ đề đã phát hành) và `ExamImage` (lazy, bấm phóng to, Esc đóng). Màn thi hiển thị `stemImages`/`optionImages`. Nút “Chèn hình” disabled của slice-11a đã bỏ. Test `QuestionImages.test.tsx`.
+
+### 2026-11-13
+
+**Đã xong**
+
+- slice-13 (Lịch sử thi & báo cáo thi): route `/exam-history` "Lịch sử thi" (Học viên) và `/exam-reports` "Báo cáo thi" (Admin/GV), mục trong `NAV_ITEMS`. `StudentHistory` (lọc ngày/kết quả, "Tải thêm" theo cursor, giờ hiển thị `Asia/Ho_Chi_Minh`) dùng chung cho trang học viên và xem lịch sử 1 học viên từ báo cáo. Báo cáo: bảng theo đề (bấm để lọc đề), chi tiết lượt thi, Xuất Excel 2 sheet (`examReportToSheets`). `lib/api.ts` thêm helper `queryString` (dùng chung cho các báo cáo). Hook `useExamHistory`; test `ExamHistoryPage.test.tsx`.
+
 ### 2026-11-12
 
 **Đã xong**
 
 - slice-11a (Bộ đề cố định): route `/exam-sets` "Bộ đề & đề thi" (Admin/GV, mục trong `NAV_ITEMS`). Danh sách + lọc trạng thái, tạo bộ đề, trình soạn (thêm từ ngân hàng cùng cấp độ/kỹ năng, soạn câu trắc nghiệm/đúng-sai, Lên/Xuống/Bỏ, xem trước kèm đáp án, Phát hành/Lưu trữ/Nhân bản/Xoá; nút "Chèn hình" disabled — slice-12). Trang chứa luôn `BlueprintForm` (thêm "Cách ra đề": ngẫu nhiên / bộ đề cố định + trộn câu/đáp án + cách thi lại) và bảng đề thi. Hook `useExamSets`; test `ExamSetsPage.test.tsx`, `BlueprintForm.test.tsx`.
+- slice-11b (Import bộ đề): `ImportExamSet.tsx` trong trang Bộ đề — nút "Import từ Word/Excel", form tên/cấp độ/kỹ năng/file, "Xem trước" (gửi byte thô), bảng xem trước OK/Cảnh báo + đánh dấu đáp án đúng, danh sách lỗi theo Câu/Dòng, "Xác nhận import" khoá khi có lỗi → mở trình soạn bộ đề vừa tạo. File mẫu `public/templates/mau-bo-de.{docx,xlsx,csv}`. API client `previewExamSetImport`/`commitExamSetImport`. Tách `SetMetaFields` (tên/cấp độ/kỹ năng) dùng chung cho form tạo và import.
 
 ### 2026-11-11
 

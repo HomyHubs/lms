@@ -17,6 +17,18 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-14
+
+**Đã xong**
+
+- slice-12: `20261114000000_question_media.sql` tạo `media_assets` (sha256 unique, không lưu binary), `question_media` (câu huỷ thì xoá theo, media restrict, 1 ảnh/lựa chọn), `exam_attempt_media` (ảnh của lượt thi, media restrict). Trigger `protect_question_media` chặn đổi ảnh câu bị bộ đề không còn nháp giữ (`restrict_violation`). Đã chạy up → down → up trên DB test PG18.
+
+### 2026-11-13
+
+**Đã xong**
+
+- slice-13: `20261113000000_exam_history.sql` — FK `exam_attempts.exam_id` → `on delete restrict` (giữ lịch sử thi), cột `submit_reason` (`manual`\|`deadline_auto`, dữ liệu cũ `null`), index `(student_id, started_at desc, id desc)`. up → down → up PASS trên PG18 test. ADR 0012.
+
 ### 2026-11-12
 
 **Đã xong**

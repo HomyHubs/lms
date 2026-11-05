@@ -88,12 +88,22 @@ import {
   type ManualGradingItem,
   ExamSetList,
   ExamSetResponse,
+  ExamSetImportPreview,
+  type CommitExamSetImportRequest,
   type AddExamSetQuestionRequest,
   type CreateExamSetRequest,
   type ExamSet,
   type ExamSetDetail,
+  MediaResponse,
+  QuestionMediaList,
+  type MediaAsset,
+  type QuestionMediaItem,
   type ExamSetListQuery,
   type UpdateExamSetRequest,
+  ExamHistoryPage,
+  ExamAttemptReport,
+  type ExamHistoryQuery,
+  type ExamAttemptReportQuery,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -511,6 +521,30 @@ export function parseQuestionsCsv(text: string): Record<string, string>[] {
 }
 
 
+/** slice-12: raw bytes; the server decides the type from magic bytes and strips EXIF. */
+export async function uploadMedia(file: Blob): Promise<MediaAsset> {
+  const res = await fetch('/api/media', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/octet-stream' }, body: file,
+  })
+  if (!res.ok) return throwApiError(res, 'Khong tai duoc anh len')
+  return MediaResponse.parse(await res.json()).media
+}
+
+export async function getQuestionMedia(questionId: string): Promise<QuestionMediaList['media']> {
+  const res = await fetch(`/api/questions/${questionId}/media`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc anh cua cau hoi')
+  return QuestionMediaList.parse(await res.json()).media
+}
+
+export async function setQuestionMedia(questionId: string, media: QuestionMediaItem[]): Promise<QuestionMediaList['media']> {
+  const res = await fetch(`/api/questions/${questionId}/media`, {
+    method: 'PUT', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ media }),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong luu duoc anh cua cau hoi')
+  return QuestionMediaList.parse(await res.json()).media
+}
+
 export async function saveExamAnswers(examId: string, input: SaveExamAnswersRequest): Promise<ExamAttemptView> {
   const res = await fetch(`/api/exams/${examId}/answers`, {
     method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
@@ -584,6 +618,37 @@ export const duplicateExamSet = (id: string) =>
 export async function deleteExamSet(id: string): Promise<void> {
   const res = await fetch(`/api/exam-sets/${id}`, { method: 'DELETE', credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong xoa duoc bo de')
+}
+
+/**
+ * slice-11b: import Word/Excel/CSV. Step 1 sends the raw file bytes
+ * (application/octet-stream) and gets a preview; nothing is saved yet.
+ */
+export async function previewExamSetImport(
+  file: Blob,
+  meta: { title: string; level: string; skill: string; fileName: string },
+): Promise<ExamSetImportPreview> {
+  const params = new URLSearchParams(meta)
+  const res = await fetch(`/api/exam-sets/import/preview?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/octet-stream' },
+    body: file,
+  })
+  if (!res.ok) return throwApiError(res, 'Khong doc duoc file import')
+  return ExamSetImportPreview.parse(await res.json())
+}
+
+/** slice-11b step 2: confirm the previewed items -> draft exam set (all-or-nothing). */
+export async function commitExamSetImport(input: CommitExamSetImportRequest): Promise<ExamSetDetail> {
+  const res = await fetch('/api/exam-sets/import/commit', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Import bo de that bai')
+  return ExamSetResponse.parse(await res.json()).examSet
 }
 
 /** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */
@@ -762,12 +827,30 @@ export async function updateClassificationPolicy(
   return ClassificationPolicy.parse(await res.json())
 }
 
-export async function getStudentReport(query: StudentReportQuery): Promise<StudentReport> {
+function queryString(query: Record<string, string | undefined>): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
-  const res = await fetch(`/api/reports/students?${params.toString()}`, { credentials: 'include' })
+  return params.toString()
+}
+
+export async function getStudentReport(query: StudentReportQuery): Promise<StudentReport> {
+  const res = await fetch(`/api/reports/students?${queryString(query)}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc bao cao hoc vien')
   return StudentReport.parse(await res.json())
+}
+
+/** slice-13: exam history (own or a student's) and the exam attempt report. */
+export async function getExamHistory(query: ExamHistoryQuery, studentId?: string): Promise<ExamHistoryPage> {
+  const path = studentId ? `/api/students/${studentId}/exam-attempts` : '/api/me/exam-attempts'
+  const res = await fetch(`${path}?${queryString(query)}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc lich su thi')
+  return ExamHistoryPage.parse(await res.json())
+}
+
+export async function getExamAttemptReport(query: ExamAttemptReportQuery): Promise<ExamAttemptReport> {
+  const res = await fetch(`/api/reports/exam-attempts?${queryString(query)}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc bao cao thi')
+  return ExamAttemptReport.parse(await res.json())
 }
 
 /** slice-8: check-in/out, own timesheet, cancel session, admin monthly work-hours report. */
@@ -784,9 +867,7 @@ export async function getMyTimesheet(month: string): Promise<MyTimesheet> {
 }
 
 export async function getWorkHoursReport(query: WorkHoursReportQuery): Promise<WorkHoursReport> {
-  const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
-  const res = await fetch(`/api/reports/work-hours?${params.toString()}`, { credentials: 'include' })
+  const res = await fetch(`/api/reports/work-hours?${queryString(query)}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc bao cao cong')
   return WorkHoursReport.parse(await res.json())
 }

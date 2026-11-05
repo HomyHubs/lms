@@ -10,6 +10,7 @@ import type {
   GradingRow,
   LevelRef,
   QuestionLite,
+  QuestionMediaRef,
 } from './service.js'
 
 /** Cot de doc kem level_code (join levels) — dung chung cho list/find/re-select sau ghi. */
@@ -102,6 +103,26 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         'users.phone_number as student_phone'])
   }
 
+  /** slice-12: attaches image links so they are frozen into the attempt snapshot. */
+  async function withMedia(rows: QuestionLite[]): Promise<QuestionLite[]> {
+    if (rows.length === 0) return rows
+    const links = await db.selectFrom('question_media')
+      .select(['question_id', 'media_id', 'slot', 'option_index'])
+      .where('question_id', 'in', rows.map((r) => r.id))
+      .orderBy('question_id').orderBy('position')
+      .execute()
+    const byQuestion = new Map<string, QuestionMediaRef[]>()
+    for (const link of links) {
+      const list = byQuestion.get(link.question_id) ?? []
+      list.push({ mediaId: link.media_id, slot: link.slot === 'option' ? 'option' : 'stem', optionIndex: link.option_index })
+      byQuestion.set(link.question_id, list)
+    }
+    return rows.map((r) => {
+      const media = byQuestion.get(r.id)
+      return media ? { ...r, media } : r
+    })
+  }
+
   function selectPolicies() {
     return db
       .selectFrom('exam_grading_policies')
@@ -187,7 +208,7 @@ export function makeExamsStore(db: AppDb): ExamsStore {
     },
 
     async listExamSetQuestions(examSetId): Promise<QuestionLite[]> {
-      return db
+      const rows = await db
         .selectFrom('exam_set_items')
         .innerJoin('questions', 'questions.id', 'exam_set_items.question_id')
         .select(['questions.id', 'questions.question_text', 'questions.question_type', 'questions.skill',
@@ -195,15 +216,17 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         .where('exam_set_items.exam_set_id', '=', examSetId)
         .orderBy('exam_set_items.position')
         .execute()
+      return withMedia(rows)
     },
 
     async findQuestionsByIds(ids): Promise<QuestionLite[]> {
       if (ids.length === 0) return []
-      return db
+      const rows = await db
         .selectFrom('questions')
         .select(['id', 'question_text', 'question_type', 'skill', 'points', 'options', 'correct_answer', 'explanation'])
         .where('id', 'in', ids)
         .execute()
+      return withMedia(rows)
     },
 
     async findAttempt(examId, studentId) {
@@ -230,7 +253,9 @@ export function makeExamsStore(db: AppDb): ExamsStore {
     },
 
     async createAttempt(input: CreateAttemptFields) {
-      const inserted = await db
+      const mediaIds = [...new Set(input.questionSnapshot.flatMap((q) => (q.media ?? []).map((m) => m.mediaId)))]
+      const inserted = await db.transaction().execute(async (trx) => {
+        const attempt = await trx
         .insertInto('exam_attempts')
         .values({
           exam_id: input.examId,
@@ -245,6 +270,13 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         })
         .returning('id')
         .executeTakeFirstOrThrow()
+        if (mediaIds.length > 0) {
+          await trx.insertInto('exam_attempt_media')
+            .values(mediaIds.map((mediaId) => ({ attempt_id: attempt.id, media_id: mediaId })))
+            .execute()
+        }
+        return attempt
+      })
       return requireAttemptById(inserted.id)
     },
 
@@ -264,7 +296,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         const now = new Date(Math.max(Date.parse(nowIso), clock.rows[0]!.now.getTime()))
         if (row.submitted_at !== null) return row
         if (now.getTime() >= row.deadline_at.getTime()) {
-          return trx.updateTable('exam_attempts').set({ submitted_at: row.deadline_at.toISOString() })
+          return trx.updateTable('exam_attempts')
+            .set({ submitted_at: row.deadline_at.toISOString(), submit_reason: 'deadline_auto' })
             .where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
         }
         if (row.answer_revision !== revision) return undefined
@@ -285,6 +318,7 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         return trx.updateTable('exam_attempts').set({
           answers: late ? row.answers : answersJson,
           submitted_at: late ? row.deadline_at.toISOString() : now.toISOString(),
+          submit_reason: late ? 'deadline_auto' : 'manual',
         }).where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
       })
     },

@@ -23,11 +23,24 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-14
+
+**Đã xong**
+
+- slice-12 (Hình ảnh câu hỏi): feature mới `media` — `POST /media` (Admin/GV, body raw `application/octet-stream` ≤ 2MB, kiểm magic bytes PNG/JPEG/WebP/GIF, ≤ 4000×4000, gỡ metadata PNG/JPEG, khử trùng sha256), `GET /media/:id` (manager mọi ảnh; học viên chỉ ảnh trong lượt thi của mình, còn lại 404; `private` cache + `nosniff`), `GET/PUT /questions/:id/media` (thay cả danh sách; trigger `23001` → 409). `MediaStorage` driver local (`MEDIA_DIR`). `exams`: câu hỏi kèm `stemImages`/`optionImages`, xáo đáp án thì ảnh đi theo, `createAttempt` ghi `exam_attempt_media` trong transaction. Xem ADR 0013.
+
+### 2026-11-13
+
+**Đã xong**
+
+- slice-13: feature `examhistory` — `GET /me/exam-attempts` (học viên), `GET /students/:id/exam-attempts` (Admin/GV, 403 nếu học viên không thuộc cơ sở của người gọi), `GET /reports/exam-attempts` (Admin/GV, phạm vi cơ sở như slice-7). Lọc ngày theo `Asia/Ho_Chi_Minh`, cursor `<started_at>~<id>`, 50 dòng/trang, báo cáo tối đa 5000 dòng. `exams/store.ts` ghi `submit_reason` (`manual`/`deadline_auto`). Test: `reports/routes.test.ts`, `reports/store.integration.test.ts`, `exams/store.integration.test.ts`. ADR 0012.
+
 ### 2026-11-12
 
 **Đã xong**
 
 - slice-11a (Bộ đề cố định): feature mới `examsets` (Admin/GV) — `GET/POST /exam-sets`, `GET/PATCH/DELETE /exam-sets/:id` (chỉ nháp), `PUT /:id/items`, `POST /:id/questions` (soạn câu trắc nghiệm/đúng-sai, `source = exam_set`), `/:id/publish` (kiểm từng câu), `/:id/archive`, `/:id/duplicate`; lỗi trigger `23001` → 409. `exams`: `mode = random | fixed_set`, `createExam` nhận 1..10 bộ đã phát hành, `startAttempt` nhánh fixed (`arrangeFixedPaper`: xáo câu/đáp án, thi lại không trùng thứ tự; `alternate_sets` lấy bộ kế tiếp). Câu `exam_set` không vào đề random; sửa/xoá câu bị bộ đề giữ → 409 `held_by_exam_set`. Xem ADR 0011.
+- slice-11b (Import bộ đề Word/Excel): `POST /exam-sets/import/preview` (body = byte thô `application/octet-stream`, query title/level/skill/fileName; nhận dạng bằng magic bytes; KHÔNG ghi DB; 400 `invalid_file`, 415 sai content-type) và `POST /exam-sets/import/commit` (validate lại bằng `QuestionImportRow`, tạo bộ đề draft + câu `source = exam_set` trong 1 transaction; 400 `invalid_import` kèm `errors[]`). Parser tự viết không thêm dependency: `import-zip.ts` (ZIP qua `node:zlib`, chặn mật khẩu/zip bomb/DOCTYPE), `import-docx.ts`, `import-sheet.ts` (sheet đầu, từ chối công thức), `import-item.ts`, `import-service.ts`. Fixture `test/fixtures/*.docx|xlsx` sinh bằng `scripts/make-import-fixtures.mjs`. Định dạng: `docs/feat/exam-import-format.md`.
 
 ### 2026-11-11
 

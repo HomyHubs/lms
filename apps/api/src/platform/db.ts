@@ -210,6 +210,8 @@ export interface ExamAttemptsTable {
   grader_feedback: ColumnType<string | null, string | null | undefined, string | null>
   // slice-11a: set that served the attempt (null for random papers).
   exam_set_id: ColumnType<string | null, string | null | undefined, string | null>
+  // slice-13: 'manual' | 'deadline_auto'; null for attempts finalized before the column existed.
+  submit_reason: ColumnType<string | null, string | null | undefined, string | null>
 }
 
 /** Table `class_teachers` — slice-6: teachers assigned to a class (attendance RBAC). */
@@ -313,6 +315,32 @@ export interface NotificationsTable {
   created_at: Timestamp
 }
 
+// slice-12: content-addressed question images (ADR 0013).
+export interface MediaAssetsTable {
+  id: Generated<string>
+  sha256: string
+  mime: string
+  bytes: number
+  width: number
+  height: number
+  storage_key: string
+  created_by: string
+  created_at: Timestamp
+}
+
+export interface QuestionMediaTable {
+  question_id: string
+  position: number
+  media_id: string
+  slot: string
+  option_index: ColumnType<number | null, number | null | undefined, number | null>
+}
+
+export interface ExamAttemptMediaTable {
+  attempt_id: string
+  media_id: string
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -339,6 +367,9 @@ export interface Database {
   student_grading_policies: StudentGradingPoliciesTable
   staff_shifts: StaffShiftsTable
   notifications: NotificationsTable
+  media_assets: MediaAssetsTable
+  question_media: QuestionMediaTable
+  exam_attempt_media: ExamAttemptMediaTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

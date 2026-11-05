@@ -27,9 +27,9 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động | Dọc | Đã thay thế (slice-9a, slice-9b) | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
 | slice-10 | Giao diện chung: AppShell, dashboard theo vai trò, restyle | Dọc | Done | — | feature/ui-shell | 15 | slice-8 | `slices/slice-10-giao-dien-chung.md` |
 | slice-11a | Bộ đề thi cố định (tạo trên hệ thống) & thi theo bộ đề | Dọc | Done | — | feature/slice-11a-bo-de-co-dinh | 19 | slice-4, slice-5 | `slices/slice-11a-bo-de-co-dinh.md` |
-| slice-11b | Import bộ đề từ Word (.docx) / Excel (.xlsx, .csv) | Dọc | Chưa bắt đầu | — | — | — | slice-11a | `slices/slice-11b-import-de-word-excel.md` |
-| slice-12 | Hình ảnh trong câu hỏi / bộ đề | Dọc | Chưa bắt đầu | — | — | — | slice-11a (Task 4: + slice-11b) | `slices/slice-12-hinh-anh-cau-hoi.md` |
-| slice-13 | Lịch sử thi học viên & báo cáo kết quả/thi lại | Dọc | Chưa bắt đầu | — | — | — | slice-5, slice-7 | `slices/slice-13-lich-su-thi-bao-cao.md` |
+| slice-11b | Import bộ đề từ Word (.docx) / Excel (.xlsx, .csv) | Dọc | Done | — | feature/slice-11b-import-de-word-excel | 21 | slice-11a | `slices/slice-11b-import-de-word-excel.md` |
+| slice-12 | Hình ảnh trong câu hỏi / bộ đề | Dọc | Done | — | feature/slice-12-hinh-anh-cau-hoi | 22 | slice-11a (Task 4: + slice-11b) | `slices/slice-12-hinh-anh-cau-hoi.md` |
+| slice-13 | Lịch sử thi học viên & báo cáo kết quả/thi lại | Dọc | Done | — | feature/slice-13-lich-su-thi-bao-cao | 20 | slice-5, slice-7 | `slices/slice-13-lich-su-thi-bao-cao.md` |
 
 ## Công việc bổ sung theo mục 22
 
@@ -38,7 +38,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-2.1 | Reset security (thay đổi slice-2) | Dọc | Done | — | bugfix/slice-2.1-reset-security | 8 | slice-1/2 merged PR3/4 (bảng lịch sử stale) | `slices/slice-2.1-reset-security.md` |
 | slice-9a | Chấm tay Speaking/Writing (thay đổi slice-9) | Dọc | Done | — | feature/slice-9a-cham-tay | 16 | slice-5, slice-10 | `slices/slice-9a-cham-tay.md` |
 | slice-9b | Thông báo trong app + nhắc nhở tự động (thay đổi slice-9) | Dọc | Done | — | feature/slice-9b-thong-bao | 18 | slice-2, slice-5, slice-7, slice-10 | `slices/slice-9b-thong-bao.md` |
-| slice-4.2 | Hoàn thiện luồng làm bài thi online (thay đổi slice-4) | Dọc | Review | An Vo | bugfix/slice-4.2-exam-online-completion | #23 | slice-4, slice-4.1, slice-5 | `slices/slice-4.2-exam-online-completion.md` |
+| slice-4.2 | Hoàn thiện luồng làm bài thi online (thay đổi slice-4) | Dọc | Done | — | bugfix/slice-4.2-exam-online-completion | 23 | slice-4, slice-4.1, slice-5 | `slices/slice-4.2-exam-online-completion.md` |
 
 ## Trạng thái hợp lệ
 

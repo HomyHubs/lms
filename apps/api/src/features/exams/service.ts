@@ -16,6 +16,7 @@ import {
   type RetakeStatus,
   type RetakeStrategy,
   type UpdateGradingPolicyRequest,
+  mediaUrl,
 } from '@lms/shared'
 
 /**
@@ -101,6 +102,14 @@ export interface QuestionLite {
   options: string | null
   correct_answer?: string
   explanation?: string | null
+  /** slice-12: image links frozen into the snapshot; absent when the question has none. */
+  media?: QuestionMediaRef[]
+}
+
+export interface QuestionMediaRef {
+  mediaId: string
+  slot: 'stem' | 'option'
+  optionIndex: number | null
 }
 
 /** Luot lam bai doc tu DB. */
@@ -292,7 +301,15 @@ function toQuestionView(q: QuestionLite): ExamQuestionView {
     skill: q.skill as QuestionSkill,
     points: q.points,
     options: parseOptions(q.options),
+    ...imageViews(q.media),
   }
+}
+
+function imageViews(media: QuestionMediaRef[] | undefined): Pick<ExamQuestionView, 'stemImages' | 'optionImages'> {
+  if (!media || media.length === 0) return {}
+  const optionImages: Record<string, string> = {}
+  for (const m of media) if (m.slot === 'option' && m.optionIndex !== null) optionImages[String(m.optionIndex)] = mediaUrl(m.mediaId)
+  return { stemImages: media.filter((m) => m.slot === 'stem').map((m) => mediaUrl(m.mediaId)), optionImages }
 }
 
 function sameSet(a: string[], b: string[]): boolean {
@@ -338,7 +355,9 @@ function withShuffledOptions(q: QuestionLite, rng: () => number): QuestionLite {
   const answer = normalizeAnswer(q.correct_answer ?? '')
   const letterIndex = answer.length === 1 ? LETTERS.indexOf(answer) : -1
   const correct = letterIndex >= 0 && letterIndex < options.length ? options[letterIndex]! : q.correct_answer
-  return { ...q, options: JSON.stringify(shuffled(options, rng)), correct_answer: correct }
+  const order = shuffled(options.map((_, index) => index), rng)
+  const media = q.media?.map((m) => (m.optionIndex === null ? m : { ...m, optionIndex: order.indexOf(m.optionIndex) }))
+  return { ...q, options: JSON.stringify(order.map((index) => options[index]!)), correct_answer: correct, ...(media ? { media } : {}) }
 }
 
 export interface PaperArrangement {

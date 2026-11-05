@@ -1,11 +1,12 @@
 import cookie from '@fastify/cookie'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { StudentReport } from '@lms/shared'
+import type { ExamHistoryPage, StudentReport } from '@lms/shared'
 import type { AuthStore, UserRecord } from '../auth/index.js'
 import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
+import { examHistoryRoutes, type ExamHistoryStore, type HistoryAttemptRow } from '../examhistory/index.js'
 import { reportsRoutes } from './routes.js'
 import type { EnrollmentRow, GradedAttemptRow, PolicyRow, ReportsStore } from './service.js'
 
@@ -174,5 +175,73 @@ describe('reports routes', () => {
     const body = (await admin('GET', '/reports/students')).json<StudentReport>()
     // 0.5 * 80 + 0.5 * 100 = 90 -> excellent under the new bands
     expect(body.ranking[0]).toMatchObject({ finalScore: 90, classification: 'excellent' })
+  })
+})
+
+describe('exam history routes', () => {
+  const apps: FastifyInstance[] = []
+  afterEach(async () => {
+    await Promise.all(apps.splice(0).map((a) => a.close()))
+  })
+
+  const row: HistoryAttemptRow = {
+    id: '90000000-0000-0000-0000-000000000001',
+    exam_id: '90000000-0000-0000-0000-000000000002',
+    exam_title: 'Starter reading',
+    level_code: 'starter',
+    skill: 'reading',
+    mode: 'random',
+    exam_set_title: null,
+    attempt_number: 1,
+    started_at: new Date('2026-11-15T09:45:00Z'),
+    submitted_at: new Date('2026-11-15T10:00:00Z'),
+    deadline_at: new Date('2026-11-15T10:15:00Z'),
+    submit_reason: 'manual',
+    score: 8,
+    max_score: 10,
+    passed: true,
+    graded_at: new Date('2026-11-15T10:00:00Z'),
+    student_id: STUDENT_1,
+    student_phone: '0900000001',
+  }
+  const store: ExamHistoryStore = {
+    async listStudentAttempts(studentId) {
+      return studentId === STUDENT_1 ? [row] : []
+    },
+    async isStudentInBranches(studentId, branchIds) {
+      return studentId === STUDENT_1 && branchIds.includes(BRANCH_1)
+    },
+    async listScopedAttempts() {
+      return [row]
+    },
+  }
+
+  async function client(sessionUser: UserRecord) {
+    const app = Fastify({ logger: false })
+    await app.register(cookie)
+    await examHistoryRoutes(app, { rbac: makeRbac(makeFakeAuthStore(sessionUser)), examHistoryStore: store, branchScope })
+    await app.ready()
+    apps.push(app)
+    return (url: string) => app.inject({ method: 'GET', url, headers: COOKIE })
+  }
+
+  it('shows a student only to managers of the branch the student is enrolled in', async () => {
+    const admin = await client(ADMIN_B1)
+    const res = await admin(`/students/${STUDENT_1}/exam-attempts`)
+    expect(res.statusCode).toBe(200)
+    expect(res.json<ExamHistoryPage>().attempts[0]).toMatchObject({
+      attemptNumber: 1,
+      durationSeconds: 900,
+      percent: 80,
+      submitReason: 'manual',
+      status: 'graded',
+    })
+    expect((await admin(`/students/${STUDENT_2}/exam-attempts`)).statusCode).toBe(403)
+    expect((await (await client(TEACHER))(`/students/${STUDENT_1}/exam-attempts`)).statusCode).toBe(403)
+
+    const student = await client(user(STUDENT_1, 'student'))
+    expect((await student('/me/exam-attempts')).json<ExamHistoryPage>().attempts).toHaveLength(1)
+    expect((await student('/me/exam-attempts?cursor=bad')).statusCode).toBe(400)
+    expect((await student(`/students/${STUDENT_1}/exam-attempts`)).statusCode).toBe(403)
   })
 })
