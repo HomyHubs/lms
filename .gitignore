@@ -10,6 +10,9 @@ coverage/
 .DS_Store
 .vite/
 
+# Anh cau hoi luu cuc bo (MEDIA_DIR, slice-12)
+data/media/
+
 # Python (script phu tro cuc bo, khong thuoc monorepo)
 __pycache__/
 *.pyc

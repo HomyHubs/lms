@@ -3,6 +3,7 @@ import { ClipboardList, Clock3, Send } from 'lucide-react'
 import type { ExamAttemptView } from '@lms/shared'
 import { saveExamAnswers } from '@/lib/api'
 import { useSession } from '@/features/auth/useAuth'
+import { ExamImage } from '@/features/media/ExamImage'
 import { BlueprintForm } from './BlueprintForm'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
@@ -174,9 +175,16 @@ export function ExamsPage(): React.ReactElement {
             <h2 className="mb-3 font-medium text-slate-900">
               Câu {index + 1}. {question.questionText}
             </h2>
+            {question.stemImages && question.stemImages.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {question.stemImages.map((src) => (
+                  <ExamImage key={src} src={src} alt={`Hình câu ${index + 1}`} />
+                ))}
+              </div>
+            )}
             {question.options ? (
               <div className="space-y-2">
-                {question.options.map((option) => (
+                {question.options.map((option, i) => (
                   <label key={option} className="flex items-center gap-2 text-sm">
                     <input
                       type="radio"
@@ -187,6 +195,10 @@ export function ExamsPage(): React.ReactElement {
                       onChange={() => changeAnswer(question.id, option)}
                     />
                     {option}
+                    {question.optionImages?.[String(i)] && (
+                      <ExamImage src={question.optionImages[String(i)]!}
+                        alt={`Hình câu ${index + 1} — lựa chọn ${String.fromCharCode(97 + i)}`} />
+                    )}
                   </label>
                 ))}
               </div>

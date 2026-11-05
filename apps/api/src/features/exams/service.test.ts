@@ -799,6 +799,20 @@ describe('bo de co dinh (ADR 0011)', () => {
     expect(order.map((x) => x.id)).toEqual(['s2', 's3', 's1'])
   })
 
+  it('xao dap an thi anh lua chon di theo noi dung lua chon', () => {
+    const item = { ...mc('s1'), media: [
+      { mediaId: 'img-stem', slot: 'stem' as const, optionIndex: null },
+      { mediaId: 'img-owl', slot: 'option' as const, optionIndex: 2 },
+    ] }
+    let k = 1
+    const [shuffled] = arrangeFixedPaper([item], { shuffleQuestions: false, shuffleOptions: true }, null, () => (k -= 0.1))
+    expect(JSON.parse(shuffled!.options!)).toEqual(['owl', 'dog', 'cat'])
+    expect(shuffled!.media).toEqual([
+      { mediaId: 'img-stem', slot: 'stem', optionIndex: null },
+      { mediaId: 'img-owl', slot: 'option', optionIndex: 0 },
+    ])
+  })
+
   it('alternate_sets: lan 2 lay bo ke tiep; het bo -> paper_unavailable', async () => {
     const store = fresh()
     const created = await createExam(
