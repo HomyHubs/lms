@@ -87,7 +87,7 @@ describe('ExamSetsPage', () => {
     const { previews, uploads, commits } = fakeBackend()
     const item = { order: 1, questionType: 'multiple_choice' as const, difficulty: 'medium' as const,
       questionText: 'Pick the animal', options: ['cat', 'car'], correctAnswer: 'a', points: 1, explanation: null,
-      warnings: [], imageRefs: [] }
+      warnings: [], imageRefs: ['rId5'], mediaIds: ['00000000-0000-4000-8000-000000000001'] }
     const base = { title: 'Bo import', level: 'starter' as const, skill: 'reading' as const, format: 'docx' as const, warnings: [] }
     previews.push(
       { ...base, items: [item], errors: [{ block: 2, row: null, field: 'correct_answer', message: 'thiếu dòng Đáp án' }] },
@@ -108,12 +108,14 @@ describe('ExamSetsPage', () => {
 
     fireEvent.click(form.getByRole('button', { name: 'Xem trước' }))
     expect(await screen.findByText('a. cat ✓')).toBeTruthy()
+    expect(screen.getByAltText('Hình câu 1 (1)')).toHaveAttribute('src', '/api/media/00000000-0000-4000-8000-000000000001')
     const confirm = screen.getByRole('button', { name: 'Xác nhận import' })
     expect(confirm).toBeEnabled()
     fireEvent.click(confirm)
     await waitFor(() => expect(commits).toHaveLength(1))
     expect(commits[0]).toMatchObject({ title: 'Bo import', level: 'starter', skill: 'reading',
-      items: [{ questionText: 'Pick the animal', options: ['cat', 'car'], correctAnswer: 'a' }] })
+      items: [{ questionText: 'Pick the animal', options: ['cat', 'car'], correctAnswer: 'a',
+        mediaIds: ['00000000-0000-4000-8000-000000000001'] }] })
     expect(await screen.findByRole('list', { name: 'Câu hỏi trong bộ đề' })).toBeTruthy()
     expect(screen.queryByRole('form', { name: 'Import bộ đề từ file' })).toBeNull()
   })

@@ -1,11 +1,13 @@
 import { z } from 'zod'
 import { LevelCode } from './catalog.js'
 import { EXAM_SET_MAX_ITEMS } from './exam-sets.js'
+import { QUESTION_MEDIA_MAX } from './media.js'
 import { QuestionDifficulty, QuestionSkill, QuestionType } from './questions.js'
 
 /**
- * Contract Import bo de tu Word/Excel — slice-11b. Hai buoc: preview (doc file, KHONG ghi DB) roi commit
- * (validate lai, tao bo de draft trong 1 transaction). Dinh dang file: docs/feat/exam-import-format.md.
+ * Contract Import bo de tu Word/Excel — slice-11b. Hai buoc: preview (doc file, chi luu hinh nhung thanh
+ * media asset — slice-12.2) roi commit (validate lai, tao bo de draft + gan hinh trong 1 transaction).
+ * Dinh dang file: docs/feat/exam-import-format.md.
  */
 
 export const EXAM_IMPORT_FORMATS = ['docx', 'xlsx', 'csv'] as const
@@ -36,8 +38,10 @@ export const ExamSetImportItem = z.object({
   points: z.number().int(),
   explanation: z.string().nullable(),
   warnings: z.array(z.string()),
-  /** Embedded images found in the block (docx relationship ids); attached in slice-12. */
+  /** Embedded images found in the block (docx relationship ids). */
   imageRefs: z.array(z.string()),
+  /** Uploaded embedded images (media ids) that commit attaches to the question stem. */
+  mediaIds: z.array(z.string()),
 })
 export type ExamSetImportItem = z.infer<typeof ExamSetImportItem>
 
@@ -69,6 +73,8 @@ export const CommitExamSetImportItem = z.object({
   correctAnswer: z.string(),
   points: z.number().int().optional(),
   explanation: z.string().nullable().optional(),
+  mediaIds: z.array(z.string().uuid('Hinh anh khong hop le'))
+    .max(QUESTION_MEDIA_MAX, `Toi da ${QUESTION_MEDIA_MAX} anh moi cau`).optional(),
 })
 export type CommitExamSetImportItem = z.infer<typeof CommitExamSetImportItem>
 

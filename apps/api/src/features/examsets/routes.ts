@@ -27,7 +27,7 @@ import {
   updateExamSet,
   type ExamSetsStore,
 } from './service.js'
-import { commitImport, previewImport } from './import-service.js'
+import { attachImportImages, commitImport, previewImport, type ImportMedia } from './import-service.js'
 
 const IdParam = z.object({ id: z.string().uuid() })
 
@@ -36,6 +36,7 @@ const ERRORS = {
   not_draft: { status: 409, error: 'Bo de da phat hanh, khong the sua' },
   not_published: { status: 409, error: 'Chi luu tru bo de da phat hanh' },
   level_not_found: { status: 400, error: 'Cap do khong ton tai' },
+  media_not_found: { status: 400, error: 'Hinh anh dinh kem khong ton tai' },
   too_many_items: { status: 409, error: 'Bo de da du so cau toi da' },
   invalid_items: { status: 400, error: 'Danh sach cau hoi khong hop le' },
   invalid_set: { status: 400, error: 'Bo de chua du dieu kien phat hanh' },
@@ -64,6 +65,8 @@ async function guardImmutable<T>(reply: FastifyReply, run: () => Promise<T>): Pr
 interface ExamSetsRoutesDeps {
   rbac: Rbac
   examSetsStore: ExamSetsStore
+  /** Where Word-embedded images are stored at preview (slice-12.2). */
+  media: ImportMedia
 }
 
 /**
@@ -86,7 +89,7 @@ export async function examSetsRoutes(app: FastifyInstance, deps: ExamSetsRoutesD
     }
     const outcome = previewImport(request.body, query.data)
     if (!outcome.ok) return reply.code(400).send({ error: outcome.message, code: 'invalid_file' })
-    return outcome.preview
+    return attachImportImages(outcome.preview, outcome.images, deps.media, getSessionUser(request).id)
   })
 
   app.post('/exam-sets/import/commit', { preHandler: requireManager, bodyLimit: 5 * 1024 * 1024 }, async (request, reply) => {
@@ -94,7 +97,7 @@ export async function examSetsRoutes(app: FastifyInstance, deps: ExamSetsRoutesD
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Du lieu import khong hop le' })
     const outcome = await commitImport(store, parsed.data, getSessionUser(request).id)
     if (outcome.ok) return reply.code(201).send({ examSet: outcome.examSet } satisfies ExamSetResponse)
-    if (outcome.reason === 'level_not_found') return fail(reply, { reason: 'level_not_found' })
+    if (outcome.reason !== 'invalid_import') return fail(reply, { reason: outcome.reason })
     return reply.code(400).send({
       error: 'Du lieu import khong hop le',
       code: 'invalid_import',

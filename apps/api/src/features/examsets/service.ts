@@ -48,6 +48,9 @@ export interface CreateExamSetFields {
   createdBy: string
 }
 
+/** An imported question plus the media ids shown under its stem (slice-12.2). */
+export type ImportQuestionFields = CreateQuestionFields & { stemMediaIds: string[] }
+
 export interface ExamSetsStore {
   findLevelByCode: (code: string) => Promise<LevelRef | undefined>
   listSets: (filter: ExamSetFilter) => Promise<ExamSetRow[]>
@@ -62,8 +65,8 @@ export interface ExamSetsStore {
   replaceItems: (id: string, questionIds: string[]) => Promise<void>
   /** Inserts a bank question (source exam_set) and appends it, in one transaction. */
   appendNewQuestion: (id: string, fields: CreateQuestionFields) => Promise<void>
-  /** slice-11b: new draft set + its questions (source exam_set) in the given order, in one transaction. */
-  importSet: (input: CreateExamSetFields, questions: CreateQuestionFields[]) => Promise<ExamSetRow>
+  /** slice-11b: new draft set + its questions (source exam_set) and stem images in the given order, in one transaction. */
+  importSet: (input: CreateExamSetFields, questions: ImportQuestionFields[]) => Promise<ExamSetRow>
   publish: (id: string, publishedAtIso: string) => Promise<ExamSetRow>
   archive: (id: string) => Promise<ExamSetRow>
   /** Copies metadata + items into a new draft. */

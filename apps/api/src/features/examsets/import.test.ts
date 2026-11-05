@@ -5,10 +5,11 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { ExamSetImportPreview, ExamSetImportPreviewQuery } from '@lms/shared'
 import { makeRbac } from '../access/index.js'
 import { SESSION_COOKIE, type AuthStore, type UserRecord } from '../auth/index.js'
-import type { CreateQuestionFields, QuestionRow } from '../questions/index.js'
+import { makeMemoryMediaStorage, type MediaAssetRow, type MediaStore } from '../media/index.js'
+import type { QuestionRow } from '../questions/index.js'
 import { previewImport } from './import-service.js'
 import { examSetsRoutes } from './routes.js'
-import type { ExamSetRow, ExamSetsStore } from './service.js'
+import type { ExamSetRow, ExamSetsStore, ImportQuestionFields } from './service.js'
 
 const fixture = (name: string) => readFileSync(new URL(`../../../test/fixtures/${name}`, import.meta.url))
 const query = (fileName: string): ExamSetImportPreviewQuery => ({ title: 'Bo de', level: 'starter', skill: 'reading', fileName })
@@ -57,12 +58,11 @@ describe('exam-set import — Word (.docx)', () => {
     const p = preview('with-image-table.docx')
     expect(p.errors).toEqual([])
     expect(p.items).toHaveLength(3)
-    expect(p.items[0]).toMatchObject({ imageRefs: ['rId5'], warnings: ['Có 1 hình sẽ được gắn sau'] })
+    expect(p.items[0]).toMatchObject({ imageRefs: ['rId5'], mediaIds: [], warnings: [] })
     expect(p.items[1]?.questionText).toBe('Compute x+1')
     expect(p.items[1]?.warnings).toEqual(['Công thức toán được giữ dạng chữ thô'])
     expect(p.items[2]).toMatchObject({ questionText: 'Which one is a fruit?', correctAnswer: 'apple' })
     expect(p.items[2]?.warnings).toEqual(['Nội dung trong bảng được đọc như văn bản'])
-    expect(p.warnings).toContain('Có 1 hình sẽ được gắn sau')
   })
 })
 
@@ -147,7 +147,7 @@ function authStore(user: UserRecord): AuthStore {
 
 /** In-memory store: records what the import writes. */
 function importStore() {
-  const imported: CreateQuestionFields[][] = []
+  const imported: ImportQuestionFields[][] = []
   let set: ExamSetRow | undefined
   const store = {
     async findLevelByCode(code: string) { return code === 'starter' ? { id: 'lvl-starter', code } : undefined },
@@ -160,7 +160,7 @@ function importStore() {
         source: q.source, created_at: '2026-11-14T00:00:00.000Z',
       }))
     },
-    async importSet(input: { title: string; levelId: string; skill: string; createdBy: string }, questions: CreateQuestionFields[]) {
+    async importSet(input: { title: string; levelId: string; skill: string; createdBy: string }, questions: ImportQuestionFields[]) {
       imported.push(questions)
       set = {
         id: '00000000-0000-4000-8000-0000000000a1', title: input.title, level_id: input.levelId, level_code: 'starter',
@@ -173,6 +173,25 @@ function importStore() {
   return { store: store as unknown as ExamSetsStore, imported }
 }
 
+/** In-memory media assets, deduplicated by content hash like the real store. */
+function mediaStore(): MediaStore {
+  const rows: MediaAssetRow[] = []
+  return {
+    async findAssetBySha(sha) { return rows.find((r) => r.sha256 === sha) },
+    async insertAsset({ created_by: _by, ...fields }) {
+      const row = { id: `00000000-0000-4000-8000-${String(rows.length + 1).padStart(12, '0')}`, ...fields }
+      rows.push(row)
+      return row
+    },
+    async findAssetById(id) { return rows.find((r) => r.id === id) },
+    async countAssets(ids) { return rows.filter((r) => ids.includes(r.id)).length },
+    async isInStudentAttempt() { return false },
+    async findQuestionOptions() { return undefined },
+    async listQuestionMedia() { return [] },
+    async replaceQuestionMedia() {},
+  }
+}
+
 describe('exam-set import routes', () => {
   let app: FastifyInstance | undefined
   afterEach(async () => {
@@ -183,7 +202,10 @@ describe('exam-set import routes', () => {
   async function build(user: UserRecord, store: ExamSetsStore): Promise<FastifyInstance> {
     const instance = Fastify({ logger: false })
     await instance.register(cookie)
-    await examSetsRoutes(instance, { rbac: makeRbac(authStore(user)), examSetsStore: store })
+    await examSetsRoutes(instance, {
+      rbac: makeRbac(authStore(user)), examSetsStore: store,
+      media: { store: mediaStore(), storage: makeMemoryMediaStorage() },
+    })
     return instance
   }
   const previewUrl = '/exam-sets/import/preview?title=De%20mau&level=starter&skill=reading&fileName=de.docx'
@@ -209,6 +231,23 @@ describe('exam-set import routes', () => {
     expect(imported[0]?.map((q) => q.questionText)).toEqual(body.items.map((i) => i.questionText))
     expect(imported[0]?.every((q) => q.source === 'exam_set' && q.levelId === 'lvl-starter')).toBe(true)
     expect(commit.json<{ examSet: { status: string; items: unknown[] } }>().examSet).toMatchObject({ status: 'draft' })
+  })
+
+  it('preview stores Word-embedded images and commit links them to the question stem', async () => {
+    const { store, imported } = importStore()
+    app = await build(TEACHER, store)
+    const res = await app.inject(upload(fixture('with-image-table.docx')))
+    expect(res.statusCode).toBe(200)
+    const body = res.json<ExamSetImportPreview>()
+    expect(body.items[0]?.mediaIds).toHaveLength(1)
+    expect(body.items[1]?.mediaIds).toEqual([])
+
+    const commit = await app.inject({
+      method: 'POST', url: '/exam-sets/import/commit', headers: { cookie: COOKIE },
+      payload: { title: 'De mau', level: 'starter', skill: 'reading', items: body.items },
+    })
+    expect(commit.statusCode).toBe(201)
+    expect(imported[0]?.map((q) => q.stemMediaIds)).toEqual([body.items[0]?.mediaIds, [], []])
   })
 
   it('commit re-validates every item and writes nothing when one is invalid', async () => {
