@@ -1,9 +1,9 @@
 # Slice/Task slice-11b — Import bộ đề từ Word (.docx) và Excel (.xlsx/.csv)
 
 - Cơ chế: Dọc
-- Owner hiện tại: ...
+- Owner hiện tại: An Vo
 - Nhánh: `feature/slice-11b-import-de-word-excel`
-- PR: ...
+- PR: #21
 - Trạng thái: xem `../MVP-BACKLOG.md`
 - Phụ thuộc: slice-11a
 - Sửa mục gốc: để trống
@@ -67,6 +67,10 @@ Validate thực, all-or-nothing, không ghi DB ở bước preview, RBAC manager
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-05 | Thêm | Tạo slice | Yêu cầu import đề từ Word/Excel | — |
+| 2026-11-12 | Sửa | Upload gửi byte thô `application/octet-stream` + query (title/level/skill/fileName) thay vì multipart; KHÔNG thêm `@fastify/multipart` | 1 file/1 request không cần multipart; tránh thêm dependency. slice-12 tự quyết định cách upload ảnh | — |
+| 2026-11-12 | Sửa | Parser docx/xlsx tự viết (đọc ZIP bằng `node:zlib`, XML bằng regex có chặn DOCTYPE/ENTITY) thay vì `mammoth`/`exceljs` | Không thêm dependency; chỉ cần text đoạn + rId ảnh + ô sheet đầu | — |
+| 2026-11-12 | Sửa | Excel: chỉ bắt buộc `question_type`/`question_text`/`correct_answer`, các cột khác của `IMPORT_COLUMNS` tuỳ chọn | level/skill lấy từ form theo mô tả slice; file giáo viên thường thiếu cột phụ | — |
+| 2026-11-12 | Ghi chú | Đúng/Sai trong Word vẫn giữ `options` Đúng/Sai để hiển thị; đáp án lưu `true`/`false` theo `QuestionImportRow` | Khớp grading slice-4 | — |
 
 ## Cách nghiệm thu
 
@@ -77,4 +81,6 @@ Validate thực, all-or-nothing, không ghi DB ở bước preview, RBAC manager
 
 ## Bàn giao phiên gần nhất
 
-Điền theo mẫu `../../ai-workflow/templates/session-handoff.md` khi dừng giữa chừng.
+- 2026-11-12 (An Vo): xong Task 1–4. Contract `packages/shared/src/exam-set-import.ts`; API `apps/api/src/features/examsets/import-*.ts` + routes `/exam-sets/import/{preview,commit}`; UI `apps/web/src/features/examsets/ImportExamSet.tsx`; tài liệu `docs/feat/exam-import-format.md`; fixture + file mẫu sinh bằng `apps/api/scripts/make-import-fixtures.mjs`.
+- Còn lại cho slice-12 Task 4: gắn ảnh từ `imageRefs` (`TODO(slice-12)` trong `import-docx.ts`).
+- Nghiệm thu thủ công trên UI với `mau-bo-de.docx` / `mau-bo-de.xlsx` chưa làm (chỉ có test tự động + integration PG18).

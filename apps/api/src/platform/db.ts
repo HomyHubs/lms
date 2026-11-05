@@ -210,6 +210,8 @@ export interface ExamAttemptsTable {
   grader_feedback: ColumnType<string | null, string | null | undefined, string | null>
   // slice-11a: set that served the attempt (null for random papers).
   exam_set_id: ColumnType<string | null, string | null | undefined, string | null>
+  // slice-13: 'manual' | 'deadline_auto'; null for attempts finalized before the column existed.
+  submit_reason: ColumnType<string | null, string | null | undefined, string | null>
 }
 
 /** Table `class_teachers` — slice-6: teachers assigned to a class (attendance RBAC). */

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ExamSetDetail, Question } from '@lms/shared'
+import type { ExamSetDetail, ExamSetImportPreview, Question } from '@lms/shared'
 import { ExamSetsPage } from './ExamSetsPage'
 
 const SET_ID = '50000000-0000-4000-8000-000000000001'
@@ -24,10 +24,21 @@ function fakeBackend() {
     description: null, status: 'draft', itemCount: 1, createdBy: USER, createdAt: T, updatedAt: T, publishedAt: null,
     items: [Q1] }
   const puts: string[][] = []
+  const previews: ExamSetImportPreview[] = []
+  const uploads: { url: string; type: string | null }[] = []
+  const commits: unknown[] = []
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
     if (url === '/api/exams') return json({ exams: [] })
     if (url === '/api/questions') return json({ questions: [Q1, Q2] })
+    if (url.startsWith('/api/exam-sets/import/preview?')) {
+      uploads.push({ url, type: new Headers(init?.headers).get('content-type') })
+      return json(previews.shift())
+    }
+    if (url === '/api/exam-sets/import/commit') {
+      commits.push(JSON.parse(String(init?.body)))
+      return json({ examSet: set }, 201)
+    }
     if (url.startsWith('/api/exam-sets?') || url === '/api/exam-sets') return json({ examSets: [{ ...set, items: undefined }] })
     if (url === `/api/exam-sets/${SET_ID}/items` && init?.method === 'PUT') {
       const ids = (JSON.parse(String(init.body)) as { questionIds: string[] }).questionIds
@@ -44,7 +55,7 @@ function fakeBackend() {
     return json({ error: `unexpected ${url}` }, 500)
   })
   vi.stubGlobal('fetch', fetchMock)
-  return { puts }
+  return { puts, previews, uploads, commits }
 }
 
 function renderPage() {
@@ -70,5 +81,40 @@ describe('ExamSetsPage', () => {
     expect(await screen.findByText(/không thể sửa/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Lên câu 2' })).toBeNull()
     expect(screen.queryByRole('form', { name: 'Soạn câu hỏi' })).toBeNull()
+  })
+
+  it('imports a file: preview with errors blocks confirm, a clean preview commits and opens the editor', async () => {
+    const { previews, uploads, commits } = fakeBackend()
+    const item = { order: 1, questionType: 'multiple_choice' as const, difficulty: 'medium' as const,
+      questionText: 'Pick the animal', options: ['cat', 'car'], correctAnswer: 'a', points: 1, explanation: null,
+      warnings: [], imageRefs: [] }
+    const base = { title: 'Bo import', level: 'starter' as const, skill: 'reading' as const, format: 'docx' as const, warnings: [] }
+    previews.push(
+      { ...base, items: [item], errors: [{ block: 2, row: null, field: 'correct_answer', message: 'thiếu dòng Đáp án' }] },
+      { ...base, items: [item], errors: [] },
+    )
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Import từ Word/Excel' }))
+    const form = within(screen.getByRole('form', { name: 'Import bộ đề từ file' }))
+    fireEvent.change(form.getByLabelText('Tên bộ đề'), { target: { value: 'Bo import' } })
+    const file = new File(['PK'], 'de.docx')
+    fireEvent.change(form.getByLabelText(/File đề/), { target: { files: [file] } })
+
+    fireEvent.click(form.getByRole('button', { name: 'Xem trước' }))
+    expect(await screen.findByText('Câu 2 · correct_answer: thiếu dòng Đáp án')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Xác nhận import' })).toBeDisabled()
+    expect(uploads[0]).toMatchObject({ type: 'application/octet-stream' })
+    expect(uploads[0]!.url).toContain('fileName=de.docx')
+
+    fireEvent.click(form.getByRole('button', { name: 'Xem trước' }))
+    expect(await screen.findByText('a. cat ✓')).toBeTruthy()
+    const confirm = screen.getByRole('button', { name: 'Xác nhận import' })
+    expect(confirm).toBeEnabled()
+    fireEvent.click(confirm)
+    await waitFor(() => expect(commits).toHaveLength(1))
+    expect(commits[0]).toMatchObject({ title: 'Bo import', level: 'starter', skill: 'reading',
+      items: [{ questionText: 'Pick the animal', options: ['cat', 'car'], correctAnswer: 'a' }] })
+    expect(await screen.findByRole('list', { name: 'Câu hỏi trong bộ đề' })).toBeTruthy()
+    expect(screen.queryByRole('form', { name: 'Import bộ đề từ file' })).toBeNull()
   })
 })
