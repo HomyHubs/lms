@@ -18,6 +18,7 @@ import { useExamSetCommand } from './useExamSets'
 const errorText = (error: unknown): string => (error instanceof Error ? error.message : 'Có lỗi xảy ra')
 
 const TEMPLATES = [
+  { href: '/templates/mau-trac-nghiem.xlsx', label: 'Mẫu Excel trắc nghiệm (.xlsx)' },
   { href: '/templates/mau-bo-de.docx', label: 'Mẫu Word (.docx)' },
   { href: '/templates/mau-bo-de.xlsx', label: 'Mẫu Excel (.xlsx)' },
   { href: '/templates/mau-bo-de.csv', label: 'Mẫu CSV' },
@@ -48,10 +49,10 @@ function PreviewTable({ items }: { items: ExamSetImportItem[] }): React.ReactEle
             <tr key={item.order}>
               <td>{item.order}</td>
               <td>
-                <p>{item.questionText}</p>
                 {item.mediaIds.map((id, i) => (
                   <ExamImage key={id} src={mediaUrl(id)} alt={`Hình câu ${item.order} (${i + 1})`} className="max-h-24" />
                 ))}
+                <p>{item.questionText}</p>
                 {item.options && (
                   <ul className="pl-4 text-slate-600">
                     {item.options.map((o, i) => (
@@ -158,6 +159,8 @@ export function ImportExamSet({ onImported }: { onImported: (id: string) => void
         {TEMPLATES.map((t, i) => (
           <span key={t.href}>{i > 0 && ' · '}<a className="underline" href={t.href} download>{t.label}</a></span>
         ))}
+        . Cột “Hình” của mẫu trắc nghiệm nhận link Google Drive (chia sẻ “Bất kỳ ai có đường liên kết”); hình được tải
+        về và hiện phía trên câu hỏi.
       </p>
       {message && <p role="alert" className="text-danger-600">{message}</p>}
       {preview && (

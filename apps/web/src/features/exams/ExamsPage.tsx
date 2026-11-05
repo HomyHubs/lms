@@ -321,6 +321,13 @@ export function ExamsPage(): React.ReactElement {
         {checkpointMessage && <p role="status">{checkpointMessage}</p>}
         {attempt.questions.map((question, index) => (
           <section key={question.id} id={`q-${question.id}`} tabIndex={-1} className="c-card scroll-mt-4">
+            {question.stemImages && question.stemImages.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {question.stemImages.map((src) => (
+                  <ExamImage key={src} src={src} alt={`Hình câu ${index + 1}`} />
+                ))}
+              </div>
+            )}
             <div className="mb-3 flex items-start justify-between gap-3">
               <h2 className="font-medium text-slate-900">
                 Câu {index + 1}. {question.questionText}
@@ -332,13 +339,6 @@ export function ExamsPage(): React.ReactElement {
                 </Button>
               )}
             </div>
-            {question.stemImages && question.stemImages.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {question.stemImages.map((src) => (
-                  <ExamImage key={src} src={src} alt={`Hình câu ${index + 1}`} />
-                ))}
-              </div>
-            )}
             {question.options ? (
               <div className="space-y-2">
                 {question.options.map((option, i) => (

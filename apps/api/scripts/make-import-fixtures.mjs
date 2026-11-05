@@ -138,6 +138,18 @@ function sheetSample(count = 20) {
   return rows
 }
 
+// slice-11c: teacher-friendly multiple-choice template; "Hinh" takes Google Drive links (left blank here).
+const FRIENDLY_HEADER = ['STT', 'Hình (link Google Drive)', 'Câu hỏi', 'A', 'B', 'C', 'D', 'Đáp án', 'Điểm', 'Giải thích']
+function friendlySample(count = 10) {
+  const rows = [FRIENDLY_HEADER]
+  for (let n = 1; n <= count; n += 1) {
+    if (n % 5 === 0) rows.push([n, '', `A ${WORDS[n % 10]} is an animal.`, 'Đúng', 'Sai', '', '', 'A', 1, ''])
+    else rows.push([n, '', `Choose the word for picture ${n}.`, ...[0, 1, 2, 3].map((i) => WORDS[(n + i) % 10]), 'B',
+      n % 7 === 0 ? 2 : 1, n % 4 === 0 ? 'Look at the picture.' : ''])
+  }
+  return rows
+}
+
 const csv = (rows) => '\uFEFF' + rows.map((r) => r.map((v) => {
   const s = String(v ?? '')
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
@@ -163,4 +175,5 @@ write(fixtures, 'formula.xlsx', xlsx(sheetSample(2), { formulaAt: 'I2' }))
 write(templates, 'mau-bo-de.docx', docx(sampleQuestions(20)))
 write(templates, 'mau-bo-de.xlsx', xlsx(sheetSample(20)))
 write(templates, 'mau-bo-de.csv', csv(sheetSample(20)))
+write(templates, 'mau-trac-nghiem.xlsx', xlsx(friendlySample(10)))
 console.log('fixtures + templates written')
