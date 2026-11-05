@@ -146,12 +146,16 @@ export function makeExamSetsStore(db: AppDb): ExamSetsStore {
           created_by: input.createdBy,
         }).returning('id').executeTakeFirstOrThrow()
         // One insert per question keeps position = confirmed preview order (<= 200 rows).
-        for (const [index, fields] of questions.entries()) {
+        for (const [index, { stemMediaIds, ...fields }] of questions.entries()) {
           const question = await trx.insertInto('questions').values(questionInsertValues(fields))
             .returning('id').executeTakeFirstOrThrow()
           await trx.insertInto('exam_set_items')
             .values({ exam_set_id: set.id, position: index + 1, question_id: question.id })
             .execute()
+          if (stemMediaIds.length === 0) continue
+          await trx.insertInto('question_media').values(stemMediaIds.map((mediaId, i) => ({
+            question_id: question.id, position: i + 1, media_id: mediaId, slot: 'stem', option_index: null,
+          }))).execute()
         }
         return set.id
       })

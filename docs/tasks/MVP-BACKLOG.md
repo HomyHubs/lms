@@ -42,6 +42,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-4.3 | Điều hướng câu, đánh dấu xem lại, lưu nháp trên máy (thay đổi slice-4) | Dọc | Done | — | feature/slice-4.3-exam-navigation | 24 | slice-4.2 | `slices/slice-4.3-exam-navigation-offline.md` |
 | slice-12.1 | Hình ảnh ở form câu hỏi ngân hàng (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.1-question-bank-images | 25 | slice-12 | `slices/slice-12.1-question-bank-images.md` |
 | slice-12.3 | Hình câu hỏi ở màn chấm tay (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.3-grading-images | 26 | slice-12, slice-9a | `slices/slice-12.3-grading-images.md` |
+| slice-12.2 | Ảnh nhúng Word tự gắn khi import (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.2-docx-images | 27 | slice-12, slice-11b | `slices/slice-12.2-docx-images.md` |
 
 ## Trạng thái hợp lệ
 

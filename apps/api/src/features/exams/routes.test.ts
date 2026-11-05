@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
 import { examsRoutes } from './routes.js'
 import { examSetsRoutes, type ExamSetsStore } from '../examsets/index.js'
+import { makeMemoryMediaStorage, type MediaStore } from '../media/index.js'
 import type {
   AttemptRow,
   CreateAttemptFields,
@@ -285,7 +286,10 @@ describe('exams routes — RBAC guard', () => {
     const build = async (user: UserRecord) => {
       const instance = Fastify({ logger: false })
       await instance.register(cookie)
-      await examSetsRoutes(instance, { rbac: makeRbac(makeFakeAuthStore(user)), examSetsStore: store })
+      await examSetsRoutes(instance, {
+        rbac: makeRbac(makeFakeAuthStore(user)), examSetsStore: store,
+        media: { store: {} as MediaStore, storage: makeMemoryMediaStorage() },
+      })
       return instance
     }
     app = await build(STUDENT)

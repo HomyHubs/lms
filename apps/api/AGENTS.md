@@ -27,6 +27,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 
+- slice-12.2 (Ảnh nhúng Word khi import): preview `.docx` lưu hình `word/media/*` (qua rels) bằng `uploadMedia` → `mediaIds` mỗi câu (hình không hợp lệ bỏ qua + cảnh báo); preview vẫn không tạo câu/bộ đề nhưng có ghi `media_assets`. Commit nhận `mediaIds`, `importSet` ghi `question_media` slot `stem` cùng transaction; id lạ → 400 `media_not_found`. `examSetsRoutes` nhận thêm `media: { store, storage }` (dùng chung với `mediaRoutes` trong `app.ts`).
 - slice-12 (Hình ảnh câu hỏi): feature mới `media` — `POST /media` (Admin/GV, body raw `application/octet-stream` ≤ 2MB, kiểm magic bytes PNG/JPEG/WebP/GIF, ≤ 4000×4000, gỡ metadata PNG/JPEG, khử trùng sha256), `GET /media/:id` (manager mọi ảnh; học viên chỉ ảnh trong lượt thi của mình, còn lại 404; `private` cache + `nosniff`), `GET/PUT /questions/:id/media` (thay cả danh sách; trigger `23001` → 409). `MediaStorage` driver local (`MEDIA_DIR`). `exams`: câu hỏi kèm `stemImages`/`optionImages`, xáo đáp án thì ảnh đi theo, `createAttempt` ghi `exam_attempt_media` trong transaction. Xem ADR 0013.
 
 ### 2026-11-13

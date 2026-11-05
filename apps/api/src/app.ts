@@ -128,10 +128,17 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
 
   // slice-4: Tao de & Thi online. Admin/Teacher tao de; Student lam/nop bai (de an dap an).
   await examsRoutes(app, { rbac, examsStore: makeExamsStore(db) })
-  // slice-11a: fixed exam sets (draft -> published -> archived), Admin/Teacher only.
-  await examSetsRoutes(app, { rbac, examSetsStore: makeExamSetsStore(db) })
   // slice-12: question images (ADR 0013); students only read images frozen into their own attempts.
-  await mediaRoutes(app, { rbac, mediaStore: makeMediaStore(db), mediaStorage: makeLocalMediaStorage(config.MEDIA_DIR) })
+  const mediaStore = makeMediaStore(db)
+  const mediaStorage = makeLocalMediaStorage(config.MEDIA_DIR)
+  // slice-11a: fixed exam sets (draft -> published -> archived), Admin/Teacher only.
+  // slice-12.2: Word import stores embedded images through the same media storage.
+  await examSetsRoutes(app, {
+    rbac,
+    examSetsStore: makeExamSetsStore(db),
+    media: { store: mediaStore, storage: mediaStorage },
+  })
+  await mediaRoutes(app, { rbac, mediaStore, mediaStorage })
   // slice-13: exam history (student + branch-scoped managers) and exam attempt report.
   await examHistoryRoutes(app, {
     rbac,

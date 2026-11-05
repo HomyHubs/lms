@@ -76,6 +76,24 @@ export function readDocxLines(entries: Map<string, Buffer>): DocLine[] {
   return lines
 }
 
+const IMAGE_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
+
+/** Embedded image bytes by relationship id; external (linked) images are skipped. */
+export function readDocxImages(entries: Map<string, Buffer>): Map<string, Buffer> {
+  const images = new Map<string, Buffer>()
+  const rels = xmlPart(entries, 'word/_rels/document.xml.rels')
+  if (!rels) return images
+  for (const m of rels.matchAll(/<Relationship\s([^>]*?)\/?>/g)) {
+    const attrs = ` ${m[1]!}`
+    const id = attr(attrs, 'Id')
+    const target = attr(attrs, 'Target')
+    if (!id || !target || attr(attrs, 'Type') !== IMAGE_REL || attr(attrs, 'TargetMode') === 'External') continue
+    const bytes = entries.get(target.startsWith('/') ? target.slice(1) : `word/${target}`)
+    if (bytes) images.set(id, bytes)
+  }
+  return images
+}
+
 const QUESTION = /^(?:câu|cau|question)\s*(\d+)\s*[:.)]\s*(.*)$/iu
 const OPTION = /^([a-z])\s*[.)]\s*(.+)$/iu
 const ANSWER = /^(?:đáp án|dap an|answer)\s*:\s*(.*)$/iu
@@ -138,7 +156,6 @@ function toItem(block: Block, level: LevelCode, skill: QuestionSkill, errors: Ex
   const checked = checkImportItem(draft, level, skill)
   if (!checked.ok) return fail(checked.field, `${label}: ${checked.message}`)
   const warnings: string[] = []
-  if (block.imageRefs.length > 0) warnings.push(`Có ${block.imageRefs.length} hình sẽ được gắn sau`)
   if (block.math) warnings.push('Công thức toán được giữ dạng chữ thô')
   if (block.table) warnings.push('Nội dung trong bảng được đọc như văn bản')
   return {
@@ -152,6 +169,7 @@ function toItem(block: Block, level: LevelCode, skill: QuestionSkill, errors: Ex
     explanation: checked.row.explanation ?? null,
     warnings,
     imageRefs: block.imageRefs,
+    mediaIds: [],
   }
 }
 
@@ -212,8 +230,5 @@ export function parseDocx(lines: DocLine[], level: LevelCode, skill: QuestionSki
     .map((item, index) => ({ ...item, order: index + 1 }))
   const warnings: string[] = []
   if (preamble > 0) warnings.push(`Bỏ qua ${preamble} dòng trước câu đầu tiên`)
-  const images = blocks.reduce((sum, b) => sum + b.imageRefs.length, 0)
-  // TODO(slice-12): attach embedded images (imageRefs) to the created questions.
-  if (images > 0) warnings.push(`Có ${images} hình sẽ được gắn sau`)
   return { items, errors, warnings }
 }

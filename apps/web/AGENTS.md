@@ -29,6 +29,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - slice-4.3 (điều hướng & lưu nháp): thanh "Danh sách câu" (nút nhảy tới câu, aria-label ghi đã trả lời/xem lại); nút "Xem lại sau" mỗi câu + đếm; hộp xác nhận nộp nêu câu trống + câu đánh dấu; `exam-draft.ts` lưu bản nháp localStorage theo `examId:startedAt`, khôi phục khi revision ≥ server, xoá khi đã nộp; gửi lại khi có sự kiện `online`. 4 test mới (web 62/62).
 - slice-12.1 (ảnh ở form câu hỏi ngân hàng): `QuestionsPage` hiện khối “Hình ảnh” (`QuestionImages`, gắn đề hoặc lựa chọn) khi đang sửa câu; thêm mới thì gợi ý lưu rồi bấm “Sửa”. 1 test mới (web 63/63).
 - slice-12.3 (ảnh ở màn chấm tay): `GradingPage` hiện `stemImages` bằng `ExamImage`; mở rộng test `GradingPage.test.tsx`.
+- slice-12.2 (ảnh nhúng Word khi import): bảng xem trước `ImportExamSet` hiện hình theo `mediaIds` (`ExamImage` + `mediaUrl`), “Xác nhận import” gửi kèm `mediaIds`; mở rộng `ExamSetsPage.test.tsx`.
 
 **Bước tiếp theo**
 

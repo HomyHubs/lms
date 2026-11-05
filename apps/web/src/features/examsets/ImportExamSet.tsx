@@ -3,6 +3,7 @@ import { FileUp } from 'lucide-react'
 import {
   EXAM_IMPORT_MAX_BYTES,
   ExamSetImportPreviewQuery,
+  mediaUrl,
   type ExamSetImportIssue,
   type ExamSetImportItem,
   type ExamSetImportPreview,
@@ -10,6 +11,7 @@ import {
 import { commitExamSetImport, previewExamSetImport } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/card'
+import { ExamImage } from '@/features/media/ExamImage'
 import { SetMetaFields } from './LevelSkillFields'
 import { useExamSetCommand } from './useExamSets'
 
@@ -47,6 +49,9 @@ function PreviewTable({ items }: { items: ExamSetImportItem[] }): React.ReactEle
               <td>{item.order}</td>
               <td>
                 <p>{item.questionText}</p>
+                {item.mediaIds.map((id, i) => (
+                  <ExamImage key={id} src={mediaUrl(id)} alt={`Hình câu ${item.order} (${i + 1})`} className="max-h-24" />
+                ))}
                 {item.options && (
                   <ul className="pl-4 text-slate-600">
                     {item.options.map((o, i) => (
@@ -122,6 +127,7 @@ export function ImportExamSet({ onImported }: { onImported: (id: string) => void
         correctAnswer: item.correctAnswer,
         points: item.points,
         explanation: item.explanation,
+        mediaIds: item.mediaIds,
       })),
     }, {
       onSuccess: (set) => { setPreview(null); setOpen(false); if (set) onImported(set.id) },

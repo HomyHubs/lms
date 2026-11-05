@@ -1,6 +1,6 @@
 # Định dạng file import bộ đề (slice-11b)
 
-> updated 2026-11-12 · af06a32
+> updated 2026-11-14 · 60f8c0f
 
 Giáo viên/Admin tải một file lên trang **Bộ đề & đề thi → Import từ Word/Excel**, xem trước, rồi xác nhận để tạo một bộ đề `draft` (slice-11a). File mẫu tải về: `/templates/mau-bo-de.docx`, `/templates/mau-bo-de.xlsx`, `/templates/mau-bo-de.csv` (`apps/web/public/templates/`, sinh bằng `apps/api/scripts/make-import-fixtures.mjs`).
 
@@ -41,7 +41,7 @@ Giải thích: (tuỳ chọn)
 - **Bắt buộc có dòng `Đáp án`** — in đậm/gạch chân không được dùng để đoán đáp án. Thiếu → lỗi `Câu N: thiếu dòng Đáp án`; chữ cái đáp án ngoài các lựa chọn → lỗi.
 - Đúng/Sai: hai lựa chọn `Đúng`/`Sai` (hoặc `True`/`False`) → `true_false`.
 - Văn bản trước câu đầu tiên bị bỏ qua (cảnh báo). Bảng được đọc như văn bản (cảnh báo). Công thức toán (OMML) giữ dạng chữ thô (cảnh báo).
-- Hình nhúng: ghi nhận vào `imageRefs` và cảnh báo "Có N hình sẽ được gắn sau" — gắn ảnh là slice-12 (`TODO(slice-12)` trong `import-docx.ts`).
+- Hình nhúng (slice-12.2): ghi nhận `imageRefs`; bước xem trước lưu từng hình thành media asset (PNG/JPEG/WebP/GIF, ≤ 2 MB, ≤ 4000 px, bỏ metadata) và trả `mediaIds`; xác nhận import gắn chúng vào đề bài câu tương ứng. Hình không hỗ trợ (EMF/WMF, quá lớn, link ngoài) bị bỏ qua kèm cảnh báo; tối đa `QUESTION_MEDIA_MAX` hình mỗi câu. Excel/CSV không có hình.
 - Unicode được chuẩn hoá NFC, khoảng trắng thừa bị gộp.
 
 ## Excel (.xlsx) / CSV

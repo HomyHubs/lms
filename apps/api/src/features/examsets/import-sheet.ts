@@ -204,6 +204,7 @@ export function parseSheet(rows: SheetRow[], level: LevelCode, skill: QuestionSk
         explanation: checked.row.explanation ?? null,
         warnings: [],
         imageRefs: [],
+        mediaIds: [],
       },
     })
   })
