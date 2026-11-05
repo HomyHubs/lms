@@ -4,7 +4,7 @@ import { createDb, type AppDb } from '../../platform/db.js'
 import { makeExamsStore } from './store.js'
 import { createExam, startAttempt, submitAttempt, getAttempt, saveAttemptAnswers, gradeManually, listManualGradingQueue } from './service.js'
 import { AddExamSetQuestionRequest } from '@lms/shared'
-import { addExamSetQuestion, archiveExamSet, createExamSet, makeExamSetsStore, publishExamSet } from '../examsets/index.js'
+import { addExamSetQuestion, archiveExamSet, commitImport, createExamSet, makeExamSetsStore, publishExamSet } from '../examsets/index.js'
 
 const url = process.env.TEST_DATABASE_URL
 const describeWithPostgres = url ? describe : describe.skip
@@ -171,6 +171,27 @@ describeWithPostgres('exams store on real Postgres', () => {
 
     const archived = await archiveExamSet(sets, setId)
     expect(archived.ok && archived.examSet.status).toBe('archived')
+  })
+
+  it('imported exam set is one draft in preview order; an invalid item writes nothing', async () => {
+    const sets = makeExamSetsStore(db)
+    const countSets = async () => Number((await db.selectFrom('exam_sets').select((eb) => eb.fn.countAll().as('n')).executeTakeFirstOrThrow()).n)
+    const before = await countSets()
+    const item = (questionText: string, correctAnswer: string) =>
+      ({ questionType: 'multiple_choice' as const, difficulty: 'easy' as const, questionText, options: ['cat', 'dog'], correctAnswer })
+    const rejected = await commitImport(sets, { title: 'Import bad', level: 'starter', skill: 'reading',
+      items: [item('Imp 1', 'cat'), item('Imp 2', 'bird')] }, MANAGER_ID)
+    expect(rejected.ok).toBe(false)
+    expect(await countSets()).toBe(before)
+
+    const imported = await commitImport(sets, { title: 'Import ok', level: 'starter', skill: 'reading',
+      items: [item('Imp B', 'dog'), item('Imp A', 'cat'), item('Imp C', 'b')] }, MANAGER_ID)
+    if (!imported.ok) throw new Error(imported.reason)
+    expect(imported.examSet).toMatchObject({ status: 'draft', itemCount: 3 })
+    expect(imported.examSet.items.map((q) => [q.questionText, q.source])).toEqual([
+      ['Imp B', 'exam_set'], ['Imp A', 'exam_set'], ['Imp C', 'exam_set'],
+    ])
+    expect((await publishExamSet(sets, imported.examSet.id, new Date())).ok).toBe(true)
   })
 
   async function submitReason(attemptId: string) {

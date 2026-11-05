@@ -34,6 +34,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Đã xong**
 
 - slice-11a (Bộ đề cố định): feature mới `examsets` (Admin/GV) — `GET/POST /exam-sets`, `GET/PATCH/DELETE /exam-sets/:id` (chỉ nháp), `PUT /:id/items`, `POST /:id/questions` (soạn câu trắc nghiệm/đúng-sai, `source = exam_set`), `/:id/publish` (kiểm từng câu), `/:id/archive`, `/:id/duplicate`; lỗi trigger `23001` → 409. `exams`: `mode = random | fixed_set`, `createExam` nhận 1..10 bộ đã phát hành, `startAttempt` nhánh fixed (`arrangeFixedPaper`: xáo câu/đáp án, thi lại không trùng thứ tự; `alternate_sets` lấy bộ kế tiếp). Câu `exam_set` không vào đề random; sửa/xoá câu bị bộ đề giữ → 409 `held_by_exam_set`. Xem ADR 0011.
+- slice-11b (Import bộ đề Word/Excel): `POST /exam-sets/import/preview` (body = byte thô `application/octet-stream`, query title/level/skill/fileName; nhận dạng bằng magic bytes; KHÔNG ghi DB; 400 `invalid_file`, 415 sai content-type) và `POST /exam-sets/import/commit` (validate lại bằng `QuestionImportRow`, tạo bộ đề draft + câu `source = exam_set` trong 1 transaction; 400 `invalid_import` kèm `errors[]`). Parser tự viết không thêm dependency: `import-zip.ts` (ZIP qua `node:zlib`, chặn mật khẩu/zip bomb/DOCTYPE), `import-docx.ts`, `import-sheet.ts` (sheet đầu, từ chối công thức), `import-item.ts`, `import-service.ts`. Fixture `test/fixtures/*.docx|xlsx` sinh bằng `scripts/make-import-fixtures.mjs`. Định dạng: `docs/feat/exam-import-format.md`.
 
 ### 2026-11-11
 

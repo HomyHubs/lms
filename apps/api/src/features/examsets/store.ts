@@ -136,6 +136,28 @@ export function makeExamSetsStore(db: AppDb): ExamSetsStore {
       })
     },
 
+    async importSet(input, questions) {
+      const setId = await db.transaction().execute(async (trx) => {
+        const set = await trx.insertInto('exam_sets').values({
+          title: input.title,
+          level_id: input.levelId,
+          skill: input.skill,
+          description: input.description,
+          created_by: input.createdBy,
+        }).returning('id').executeTakeFirstOrThrow()
+        // One insert per question keeps position = confirmed preview order (<= 200 rows).
+        for (const [index, fields] of questions.entries()) {
+          const question = await trx.insertInto('questions').values(questionInsertValues(fields))
+            .returning('id').executeTakeFirstOrThrow()
+          await trx.insertInto('exam_set_items')
+            .values({ exam_set_id: set.id, position: index + 1, question_id: question.id })
+            .execute()
+        }
+        return set.id
+      })
+      return requireSet(setId)
+    },
+
     async publish(id, publishedAtIso) {
       await db.updateTable('exam_sets')
         .set({ status: 'published', published_at: publishedAtIso, updated_at: publishedAtIso })
