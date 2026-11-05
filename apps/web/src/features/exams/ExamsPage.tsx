@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ClipboardList, Clock3, Send } from 'lucide-react'
+import { ClipboardList, Clock3, Flag, Send } from 'lucide-react'
 import type { ExamAttemptView } from '@lms/shared'
 import { ApiError, getExamAttempt, saveExamAnswers } from '@/lib/api'
 import { useSession } from '@/features/auth/useAuth'
 import { ExamImage } from '@/features/media/ExamImage'
 import { BlueprintForm } from './BlueprintForm'
+import { clearDraft, readDraft, sameAnswers, writeDraft } from './exam-draft'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { useExams, useStartExamAttempt, useSubmitExamAttempt } from './useExams'
@@ -90,14 +91,78 @@ export function ExamsPage(): React.ReactElement {
   const [remaining, setRemaining] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const autoSubmitting = useRef(false)
+  const [flagged, setFlagged] = useState<string[]>([])
+  const draftOwner = useRef<{ examId: string; startedAt: string } | null>(null)
+  const latest = useRef<{ answers: Record<string, string>; flagged: string[] }>({ answers: {}, flagged: [] })
+  // Save that failed on the network; resent when the browser is back online.
+  const failedSave = useRef<{ examId: string; answers: Record<string, string> } | null>(null)
+
+  const storeDraft = useCallback(() => {
+    const owner = draftOwner.current
+    if (owner) writeDraft(owner.examId, owner.startedAt, { ...latest.current, revision: revision.current })
+  }, [])
+
+  const flushSaves = useCallback(async (): Promise<void> => {
+    if (saving.current) return
+    saving.current = true
+    try {
+      while (pendingSave.current) {
+        const { examId, answers: snapshot } = pendingSave.current
+        pendingSave.current = null
+        try {
+          const saved = await saveExamAnswers(examId, { answers: snapshot, revision: revision.current })
+          revision.current = saved.revision
+          failedSave.current = null
+          storeDraft()
+          if (saved.status === 'submitted') setAttempt(saved)
+          if (!pendingSave.current) setCheckpointMessage('Đã lưu đáp án')
+        } catch (error) {
+          if (error instanceof ApiError) {
+            setCheckpointMessage(`Chưa lưu: ${error.message}. Chỉ đáp án lưu trước hạn được tính.`)
+          } else {
+            failedSave.current = { examId, answers: snapshot }
+            setCheckpointMessage(
+              'Mất kết nối — đáp án được giữ tạm trên máy này và tự gửi lại khi có mạng. Chỉ đáp án lưu trước hạn được tính.',
+            )
+          }
+        }
+      }
+    } finally {
+      saving.current = false
+    }
+  }, [storeDraft])
 
   useEffect(() => {
     if (!attempt) return
-    setAnswers(attempt.answers)
     revision.current = attempt.revision
     autoSubmitting.current = attempt.status === 'submitted'
+    failedSave.current = null
     setConfirming(false)
-  }, [attempt])
+    if (attempt.status === 'submitted') {
+      clearDraft(attempt.examId, attempt.startedAt)
+      draftOwner.current = null
+      setAnswers(attempt.answers)
+      setFlagged([])
+      return
+    }
+    draftOwner.current = { examId: attempt.examId, startedAt: attempt.startedAt }
+    const ids = new Set(attempt.questions.map((q) => q.id))
+    const draft = readDraft(attempt.examId, attempt.startedAt)
+    const restored = { ...attempt.answers }
+    // A draft older than the server copy (saved from another device) must not overwrite it.
+    if (draft && draft.revision >= attempt.revision) {
+      for (const [id, answer] of Object.entries(draft.answers)) if (ids.has(id)) restored[id] = answer
+    }
+    const flags = (draft?.flagged ?? []).filter((id) => ids.has(id))
+    latest.current = { answers: restored, flagged: flags }
+    setAnswers(restored)
+    setFlagged(flags)
+    if (!sameAnswers(restored, attempt.answers)) {
+      setCheckpointMessage('Đã khôi phục đáp án lưu trên máy này, đang gửi lên…')
+      pendingSave.current = { examId: attempt.examId, answers: restored }
+      void flushSaves()
+    }
+  }, [attempt, flushSaves])
 
   const inProgress = attempt !== null && attempt.status !== 'submitted'
   useEffect(() => {
@@ -106,6 +171,19 @@ export function ExamsPage(): React.ReactElement {
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [inProgress])
+
+  useEffect(() => {
+    if (!inProgress) return
+    const resend = () => {
+      if (!failedSave.current || pendingSave.current) return
+      pendingSave.current = { examId: failedSave.current.examId, answers: latest.current.answers }
+      failedSave.current = null
+      setCheckpointMessage('Đang gửi lại…')
+      void flushSaves()
+    }
+    window.addEventListener('online', resend)
+    return () => window.removeEventListener('online', resend)
+  }, [inProgress, flushSaves])
 
   const submitNow = useCallback(
     (automatic: boolean) => {
@@ -145,30 +223,24 @@ export function ExamsPage(): React.ReactElement {
     if (!attempt || attempt.status === 'submitted' || autoSubmitting.current || Date.now() >= Date.parse(attempt.deadlineAt)) return
     const next = { ...answers, [id]: value }
     setAnswers(next)
+    latest.current = { ...latest.current, answers: next }
+    storeDraft()
     setCheckpointMessage('Đang lưu…')
     pendingSave.current = { examId: attempt.examId, answers: next }
     void flushSaves()
   }
 
-  async function flushSaves(): Promise<void> {
-    if (saving.current) return
-    saving.current = true
-    try {
-      while (pendingSave.current) {
-        const { examId, answers: snapshot } = pendingSave.current
-        pendingSave.current = null
-        try {
-          const saved = await saveExamAnswers(examId, { answers: snapshot, revision: revision.current })
-          revision.current = saved.revision
-          if (saved.status === 'submitted') setAttempt(saved)
-          if (!pendingSave.current) setCheckpointMessage('Đã lưu đáp án')
-        } catch (error) {
-          setCheckpointMessage(`Chưa lưu: ${(error as Error).message}. Chỉ đáp án lưu trước hạn được tính.`)
-        }
-      }
-    } finally {
-      saving.current = false
-    }
+  function toggleFlag(id: string): void {
+    const next = flagged.includes(id) ? flagged.filter((flag) => flag !== id) : [...flagged, id]
+    setFlagged(next)
+    latest.current = { ...latest.current, flagged: next }
+    storeDraft()
+  }
+
+  function goToQuestion(id: string): void {
+    const target = document.getElementById(`q-${id}`)
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    target?.focus({ preventScroll: true })
   }
 
   /** Shows the latest attempt (result or resume) first; starts a new one only when none exists. */
@@ -198,6 +270,12 @@ export function ExamsPage(): React.ReactElement {
     const total = attempt.questions.length
     const answered = attempt.questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length
     const lowTime = !submitted && remaining <= LOW_TIME_SECONDS
+    const unanswered = total - answered
+    const pendingReview = flagged.length
+    const confirmText = [
+      unanswered > 0 ? `Còn ${unanswered} câu chưa trả lời` : null,
+      pendingReview > 0 ? `${pendingReview} câu đánh dấu xem lại` : null,
+    ].filter(Boolean).join(', ')
     return (
       <>
         <div className="flex items-center justify-between">
@@ -210,7 +288,29 @@ export function ExamsPage(): React.ReactElement {
             <Clock3 className="h-4 w-4" /> {submitted ? 'Đã nộp' : formatRemaining(remaining)}
           </div>
         </div>
-        {!submitted && <p className="text-sm text-slate-600">Đã trả lời {answered}/{total} câu</p>}
+        {!submitted && (
+          <div className="flex flex-wrap gap-x-4 text-sm text-slate-600">
+            <p>Đã trả lời {answered}/{total} câu</p>
+            {pendingReview > 0 && <p>Đánh dấu xem lại: {pendingReview} câu</p>}
+          </div>
+        )}
+        {!submitted && (
+          <nav aria-label="Danh sách câu" className="flex flex-wrap gap-2">
+            {attempt.questions.map((question, index) => {
+              const done = (answers[question.id] ?? '').trim() !== ''
+              const marked = flagged.includes(question.id)
+              return (
+                <button key={question.id} type="button" onClick={() => goToQuestion(question.id)}
+                  aria-label={`Câu ${index + 1}${done ? ', đã trả lời' : ''}${marked ? ', xem lại' : ''}`}
+                  className={`h-9 min-w-9 rounded-md border px-2 text-sm font-medium ${
+                    done ? 'bg-primary-600 text-white' : 'bg-white text-slate-700'} ${
+                    marked ? 'border-warning-600 ring-2 ring-warning-600' : 'border-slate-300'}`}>
+                  {index + 1}
+                </button>
+              )
+            })}
+          </nav>
+        )}
 
         {message && (
           <p role="status" className={submitted ? 'text-success-700' : 'text-slate-700'}>
@@ -220,10 +320,18 @@ export function ExamsPage(): React.ReactElement {
 
         {checkpointMessage && <p role="status">{checkpointMessage}</p>}
         {attempt.questions.map((question, index) => (
-          <section key={question.id} className="c-card">
-            <h2 className="mb-3 font-medium text-slate-900">
-              Câu {index + 1}. {question.questionText}
-            </h2>
+          <section key={question.id} id={`q-${question.id}`} tabIndex={-1} className="c-card scroll-mt-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <h2 className="font-medium text-slate-900">
+                Câu {index + 1}. {question.questionText}
+              </h2>
+              {!submitted && (
+                <Button type="button" variant="outline" size="sm" aria-label={`Đánh dấu xem lại câu ${index + 1}`}
+                  aria-pressed={flagged.includes(question.id)} onClick={() => toggleFlag(question.id)}>
+                  <Flag className="mr-1 h-4 w-4" /> {flagged.includes(question.id) ? 'Đã đánh dấu' : 'Xem lại sau'}
+                </Button>
+              )}
+            </div>
             {question.stemImages && question.stemImages.length > 0 && (
               <div className="mb-3 flex flex-wrap gap-2">
                 {question.stemImages.map((src) => (
@@ -266,13 +374,13 @@ export function ExamsPage(): React.ReactElement {
         ))}
 
         {!submitted && !confirming && (
-          <Button onClick={() => (answered < total ? setConfirming(true) : submitNow(false))} disabled={submit.isPending}>
+          <Button onClick={() => (confirmText ? setConfirming(true) : submitNow(false))} disabled={submit.isPending}>
             <Send className="mr-2 h-4 w-4" /> {submit.isPending ? 'Đang nộp…' : 'Nộp bài'}
           </Button>
         )}
         {!submitted && confirming && (
           <div role="alertdialog" aria-label="Xác nhận nộp bài" className="c-card flex flex-wrap items-center gap-3">
-            <p className="flex-1">Còn {total - answered} câu chưa trả lời. Nộp bài ngay?</p>
+            <p className="flex-1">{confirmText}. Nộp bài ngay?</p>
             <Button onClick={() => { setConfirming(false); submitNow(false) }} disabled={submit.isPending}>Vẫn nộp bài</Button>
             <Button variant="outline" onClick={() => setConfirming(false)}>Làm tiếp</Button>
           </div>

@@ -33,7 +33,7 @@ Rate limit cho endpoint OTP/login (chong brute-force) phai la thuc.
 | Marker | Vi tri | Noi dung | Du kien tra |
 | --- | --- | --- | --- |
 | TODO(slice-2) | apps/api/src/features/auth/whatsapp.ts, telegram.ts | Chua nghiem thu gui OTP that qua provider (can credentials sandbox) | Khi co credentials WhatsApp/Telegram |
-| TODO(slice-2) | db/migrations/20260920000000_otp_channel_field.sql | Chua chay dbmate migrate + test rollback tren Postgres that | Sau merge, truoc khi coi no ky thuat da tra |
+| Đã trả 2026-11-14 | db/migrations/20260920000000_otp_channel_field.sql | Đã chạy up→down→up trên Postgres 18 (DB test): down xoá cột `channel`, up khôi phục cột (default 'email', NOT NULL) — PASS | — |
 
 ## Nhat ky thay doi pham vi cua rieng Slice/Task nay
 
