@@ -648,6 +648,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-11b | Import bộ đề từ Word/Excel | Dọc | Done | 21 | 2026-11-14 |
 | slice-12 | Hình ảnh câu hỏi / bộ đề | Dọc | Done | 22 | 2026-11-14 |
 | slice-4.2 | Hoàn thiện thi online | Dọc | Done | 23 | 2026-11-14 |
+| slice-4.3 | Điều hướng câu & lưu nháp | Dọc | Done | PR_TBD | 2026-11-14 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

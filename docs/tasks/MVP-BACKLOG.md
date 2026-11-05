@@ -39,6 +39,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-9a | Chấm tay Speaking/Writing (thay đổi slice-9) | Dọc | Done | — | feature/slice-9a-cham-tay | 16 | slice-5, slice-10 | `slices/slice-9a-cham-tay.md` |
 | slice-9b | Thông báo trong app + nhắc nhở tự động (thay đổi slice-9) | Dọc | Done | — | feature/slice-9b-thong-bao | 18 | slice-2, slice-5, slice-7, slice-10 | `slices/slice-9b-thong-bao.md` |
 | slice-4.2 | Hoàn thiện luồng làm bài thi online (thay đổi slice-4) | Dọc | Done | — | bugfix/slice-4.2-exam-online-completion | 23 | slice-4, slice-4.1, slice-5 | `slices/slice-4.2-exam-online-completion.md` |
+| slice-4.3 | Điều hướng câu, đánh dấu xem lại, lưu nháp trên máy (thay đổi slice-4) | Dọc | Done | — | feature/slice-4.3-exam-navigation | PR_TBD | slice-4.2 | `slices/slice-4.3-exam-navigation-offline.md` |
 
 ## Trạng thái hợp lệ
 

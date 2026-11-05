@@ -66,6 +66,12 @@ function attempt(status: 'in_progress' | 'submitted', deadlineAt: string, extra:
 }
 
 const notStarted = () => response({ error: 'Chua bat dau lam bai' }, 404)
+
+/** In-progress attempt whose server copy already holds 'Blue' at the given revision. */
+function answeredAttempt(revision: number) {
+  const base = attempt('in_progress', new Date(Date.now() + 60_000).toISOString())
+  return { attempt: { ...base.attempt, answers: { [QUESTION_ID]: 'Blue' }, revision } }
+}
 const CURRENT = `/api/exams/${EXAM_ID}/attempt`
 
 function graded(score: number, passed: boolean) {
@@ -85,7 +91,11 @@ function renderPage() {
 }
 
 describe('ExamsPage', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+  })
 
   it('bat dau, chon dap an va nop bai', async () => {
     let submittedBody: unknown
@@ -232,5 +242,108 @@ describe('ExamsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Vẫn nộp bài' }))
     await screen.findByText(/Đã nộp bài thành công/)
     expect(submitCalls).toBe(1)
+  })
+
+  it('danh dau cau xem lai, dieu huong toi cau va hoi lai khi nop', async () => {
+    const scrolled = vi.fn()
+    Element.prototype.scrollIntoView = scrolled
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT))
+          return response(answeredAttempt(1))
+        throw new Error(`unexpected fetch: ${url}`)
+      }),
+    )
+    renderPage()
+    await screen.findByText('Starter Reading')
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
+    const flag = await screen.findByRole('button', { name: 'Đánh dấu xem lại câu 1' })
+    expect(flag).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(flag)
+    expect(flag).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Đánh dấu xem lại: 1 câu')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Câu 1, đã trả lời, xem lại' }))
+    expect(scrolled).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Nộp bài' }))
+    expect(screen.getByRole('alertdialog', { name: 'Xác nhận nộp bài' })).toHaveTextContent('1 câu đánh dấu xem lại')
+  })
+
+  it('khoi phuc dap an luu tren may khi vao lai va gui len may chu', async () => {
+    window.localStorage.setItem(`lms.examDraft:${EXAM_ID}:2026-09-27T00:00:00.000Z`,
+      JSON.stringify({ answers: { [QUESTION_ID]: 'Green' }, flagged: [QUESTION_ID], revision: 0 }))
+    let checkpointBody: unknown
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT)) return response(attempt('in_progress', new Date(Date.now() + 60_000).toISOString()))
+        if (url.endsWith('/answers')) {
+          checkpointBody = JSON.parse(String(init?.body))
+          const saved = attempt('in_progress', new Date(Date.now() + 60_000).toISOString())
+          return response({ attempt: { ...saved.attempt, answers: { [QUESTION_ID]: 'Green' }, revision: 1 } })
+        }
+        throw new Error(`unexpected fetch: ${url}`)
+      }),
+    )
+    renderPage()
+    await screen.findByText('Starter Reading')
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
+    await screen.findByText('Đã lưu đáp án')
+    expect(checkpointBody).toEqual({ answers: { [QUESTION_ID]: 'Green' }, revision: 0 })
+    expect(screen.getByLabelText('Green')).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Đánh dấu xem lại câu 1' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('bo qua ban nhap cu hon ban tren may chu', async () => {
+    window.localStorage.setItem(`lms.examDraft:${EXAM_ID}:2026-09-27T00:00:00.000Z`,
+      JSON.stringify({ answers: { [QUESTION_ID]: 'Green' }, flagged: [], revision: 0 }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT))
+          return response(answeredAttempt(2))
+        throw new Error(`unexpected fetch: ${url}`)
+      }),
+    )
+    renderPage()
+    await screen.findByText('Starter Reading')
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
+    await screen.findByRole('radio', { name: 'Blue', checked: true })
+    expect(screen.queryByText(/Đã khôi phục/)).not.toBeInTheDocument()
+  })
+
+  it('mat mang thi giu tam dap an va gui lai khi co mang', async () => {
+    let checkpointCalls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT)) return response(attempt('in_progress', new Date(Date.now() + 60_000).toISOString()))
+        if (url.endsWith('/answers')) {
+          checkpointCalls += 1
+          if (checkpointCalls === 1) throw new TypeError('Failed to fetch')
+          const saved = attempt('in_progress', new Date(Date.now() + 60_000).toISOString())
+          return response({ attempt: { ...saved.attempt, answers: { [QUESTION_ID]: 'Blue' }, revision: 1 } })
+        }
+        throw new Error(`unexpected fetch: ${url}`)
+      }),
+    )
+    renderPage()
+    await screen.findByText('Starter Reading')
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
+    fireEvent.click(await screen.findByLabelText('Blue'))
+    await screen.findByText(/Mất kết nối/)
+    const stored = JSON.parse(window.localStorage.getItem(`lms.examDraft:${EXAM_ID}:2026-09-27T00:00:00.000Z`) ?? '{}')
+    expect(stored.answers).toEqual({ [QUESTION_ID]: 'Blue' })
+    fireEvent(window, new Event('online'))
+    await screen.findByText('Đã lưu đáp án')
+    expect(checkpointCalls).toBe(2)
   })
 })

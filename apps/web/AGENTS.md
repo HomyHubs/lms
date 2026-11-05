@@ -26,10 +26,11 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Đã xong**
 
 - slice-4.2 (hoàn thiện thi online): `ExamsPage` mở lượt gần nhất qua `GET /exams/:id/attempt` trước, chỉ `POST` khi 404 (không tự sinh lượt mới khi xem lại); gộp lưu nháp (một request đang chạy, giữ bản mới nhất); cảnh báo `beforeunload` khi đang làm; đếm "Đã trả lời x/N câu"; đồng hồ `role="timer"` đổi màu khi ≤60s; hỏi xác nhận khi nộp còn câu trống; nút "Vào thi" + "Đóng lúc …". Test `ExamsPage.test.tsx` cập nhật + test xác nhận nộp.
+- slice-4.3 (điều hướng & lưu nháp): thanh "Danh sách câu" (nút nhảy tới câu, aria-label ghi đã trả lời/xem lại); nút "Xem lại sau" mỗi câu + đếm; hộp xác nhận nộp nêu câu trống + câu đánh dấu; `exam-draft.ts` lưu bản nháp localStorage theo `examId:startedAt`, khôi phục khi revision ≥ server, xoá khi đã nộp; gửi lại khi có sự kiện `online`. 4 test mới (web 62/62).
 
 **Bước tiếp theo**
 
-- Chưa làm: điều hướng câu/đánh dấu câu, lưu nháp offline. Chưa thử tay trên mobile.
+- (Đã làm ở slice-4.3) điều hướng câu/đánh dấu câu, lưu nháp offline. Chưa thử tay trên mobile.
 
 **Đã xong (slice-12)**
 
