@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { QuestionsPage } from './QuestionsPage'
@@ -10,6 +10,7 @@ function stubQuestionsFetch(): void {
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.endsWith('/media')) return Response.json({ media: [] })
       if (url.includes('/questions')) {
         return {
           ok: true,
@@ -63,5 +64,15 @@ describe('QuestionsPage', () => {
     await waitFor(() =>
       expect(screen.getByText('What color is the sky?')).toBeInTheDocument(),
     )
+  })
+
+  it('offers image upload for the question being edited', async () => {
+    stubQuestionsFetch()
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Sửa' }))
+    expect(await screen.findByLabelText('Chọn ảnh cho Hình câu đang sửa')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Lựa chọn b' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy sửa' }))
+    expect(screen.queryByLabelText('Chọn ảnh cho Hình câu đang sửa')).not.toBeInTheDocument()
   })
 })
