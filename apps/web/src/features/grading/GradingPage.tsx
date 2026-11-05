@@ -3,6 +3,7 @@ import { CheckCircle2, PenLine } from 'lucide-react'
 import type { ManualGradingAttempt, ManualGradingItem } from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { Badge, Card, CardTitle, PageHeader } from '@/components/ui/card'
+import { ExamImage } from '@/features/media/ExamImage'
 import { useGradeAttempt, useGradingAttempt, useGradingQueue } from './useGrading'
 
 const timeLabel = (iso: string): string =>
@@ -75,6 +76,13 @@ function GradeForm(props: { attempt: ManualGradingAttempt; onGraded: (attempt: M
             <p className="font-medium text-slate-800">
               Câu {index + 1}. {q.questionText}
             </p>
+            {q.stemImages && q.stemImages.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {q.stemImages.map((src) => (
+                  <ExamImage key={src} src={src} alt={`Hình câu ${index + 1}`} />
+                ))}
+              </div>
+            )}
             <p className="whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm text-slate-700">
               {q.answer ?? <span className="italic text-slate-400">(Học viên không trả lời)</span>}
             </p>
