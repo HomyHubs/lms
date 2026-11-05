@@ -43,6 +43,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-12.1 | Hình ảnh ở form câu hỏi ngân hàng (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.1-question-bank-images | 25 | slice-12 | `slices/slice-12.1-question-bank-images.md` |
 | slice-12.3 | Hình câu hỏi ở màn chấm tay (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.3-grading-images | 26 | slice-12, slice-9a | `slices/slice-12.3-grading-images.md` |
 | slice-12.2 | Ảnh nhúng Word tự gắn khi import (thay đổi slice-12) | Dọc | Done | — | feature/slice-12.2-docx-images | 27 | slice-12, slice-11b | `slices/slice-12.2-docx-images.md` |
+| slice-11c | Mẫu Excel trắc nghiệm dễ điền + hình từ link Google (thay đổi slice-11b) | Dọc | Done | — | feature/slice-11c-mc-excel | 28 | slice-11b, slice-12.2 | `slices/slice-11c-mc-excel.md` |
 
 ## Trạng thái hợp lệ
 

@@ -30,6 +30,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - slice-12.1 (ảnh ở form câu hỏi ngân hàng): `QuestionsPage` hiện khối “Hình ảnh” (`QuestionImages`, gắn đề hoặc lựa chọn) khi đang sửa câu; thêm mới thì gợi ý lưu rồi bấm “Sửa”. 1 test mới (web 63/63).
 - slice-12.3 (ảnh ở màn chấm tay): `GradingPage` hiện `stemImages` bằng `ExamImage`; mở rộng test `GradingPage.test.tsx`.
 - slice-12.2 (ảnh nhúng Word khi import): bảng xem trước `ImportExamSet` hiện hình theo `mediaIds` (`ExamImage` + `mediaUrl`), “Xác nhận import” gửi kèm `mediaIds`; mở rộng `ExamSetsPage.test.tsx`.
+- slice-11c (Mẫu Excel trắc nghiệm): `ImportExamSet` thêm link “Mẫu Excel trắc nghiệm (.xlsx)” (`public/templates/mau-trac-nghiem.xlsx`) + hướng dẫn cột Hình (link Google Drive chia sẻ công khai). Hình đề bài hiện **trước** nội dung câu hỏi ở `ImportExamSet` (xem trước), `ExamsPage` (màn thi), `GradingPage` (chấm tay).
 
 **Bước tiếp theo**
 

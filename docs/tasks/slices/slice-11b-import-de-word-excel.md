@@ -71,6 +71,7 @@ Validate thực, all-or-nothing, không ghi DB ở bước preview, RBAC manager
 | 2026-11-12 | Sửa | Parser docx/xlsx tự viết (đọc ZIP bằng `node:zlib`, XML bằng regex có chặn DOCTYPE/ENTITY) thay vì `mammoth`/`exceljs` | Không thêm dependency; chỉ cần text đoạn + rId ảnh + ô sheet đầu | — |
 | 2026-11-12 | Sửa | Excel: chỉ bắt buộc `question_type`/`question_text`/`correct_answer`, các cột khác của `IMPORT_COLUMNS` tuỳ chọn | level/skill lấy từ form theo mô tả slice; file giáo viên thường thiếu cột phụ | — |
 | 2026-11-12 | Ghi chú | Đúng/Sai trong Word vẫn giữ `options` Đúng/Sai để hiển thị; đáp án lưu `true`/`false` theo `QuestionImportRow` | Khớp grading slice-4 | — |
+| 2026-11-14 | Thêm | Excel/CSV thêm dạng trắc nghiệm dễ điền (Câu hỏi, A..F, Đáp án) + cột Hình nhận link Google Drive; dạng kỹ thuật giữ nguyên | Owner yêu cầu mẫu dễ điền — xem `slice-11c-mc-excel.md` | — |
 
 ## Cách nghiệm thu
 

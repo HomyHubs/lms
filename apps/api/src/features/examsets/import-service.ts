@@ -12,6 +12,7 @@ import {
 } from '@lms/shared'
 import { uploadMedia, type MediaStorage, type MediaStore } from '../media/index.js'
 import { parseDocx, readDocxImages, readDocxLines } from './import-docx.js'
+import { makeImageDownloader, type DownloadOutcome, type ImageDownloader } from './import-image-url.js'
 import { checkImportItem, issue } from './import-item.js'
 import { parseSheet, readCsvRows, readXlsxRows, type ParsedImport } from './import-sheet.js'
 import { ImportFileError, isOle2, isPdf, isZip, readZip } from './import-zip.js'
@@ -91,6 +92,18 @@ export function previewImport(buf: Buffer, query: ExamSetImportPreviewQuery): Pr
 export interface ImportMedia {
   store: MediaStore
   storage: MediaStorage
+  /** Fetches image links from the Excel/CSV "Hinh" column; defaults to the Google-only downloader. */
+  download?: ImageDownloader
+}
+
+const defaultDownloader = makeImageDownloader()
+const LINK_CONCURRENCY = 4
+
+const LINK_FAILED: Record<Exclude<DownloadOutcome, { ok: true }>['reason'], string> = {
+  not_google: 'Bỏ qua link hình không phải Google Drive/Google Photos (https)',
+  not_public: 'Không tải được hình: hãy chia sẻ link ở chế độ "Bất kỳ ai có đường liên kết"',
+  too_large: `Bỏ qua 1 hình lớn hơn ${MEDIA_MAX_BYTES / 1024 / 1024} MB`,
+  failed: 'Không tải được hình từ link, thử lại sau',
 }
 
 const SKIPPED_IMAGE = {
@@ -100,22 +113,42 @@ const SKIPPED_IMAGE = {
   too_many_pixels: `Bỏ qua 1 hình quá ${MEDIA_MAX_DIMENSION}×${MEDIA_MAX_DIMENSION} px`,
 } as const
 
-/** Uploads each item's embedded images (same checks as POST /media) and lists them in `mediaIds`. */
+type ImportItem = ExamSetImportPreview['items'][number]
+
+/**
+ * Uploads each item's images (same checks as POST /media) and lists them in `mediaIds`. A ref is a Word
+ * relationship id found in `images`, or an image link from a spreadsheet, downloaded here.
+ */
 export async function attachImportImages(
   preview: ExamSetImportPreview, images: Map<string, Buffer>, media: ImportMedia, userId: string,
 ): Promise<ExamSetImportPreview> {
-  const items = []
-  for (const item of preview.items) {
+  const download = media.download ?? defaultDownloader
+  const attach = async (item: ImportItem): Promise<ImportItem> => {
     const mediaIds: string[] = []
     const warnings = [...item.warnings]
     for (const ref of item.imageRefs) {
-      const outcome = await uploadMedia(media.store, media.storage, images.get(ref) ?? Buffer.alloc(0), userId)
+      let body = images.get(ref)
+      if (!body && /^https?:\/\//i.test(ref)) {
+        const fetched = await download(ref)
+        if (!fetched.ok) { warnings.push(LINK_FAILED[fetched.reason]); continue }
+        body = fetched.data
+      }
+      const outcome = await uploadMedia(media.store, media.storage, body ?? Buffer.alloc(0), userId)
       if (!outcome.ok) warnings.push(SKIPPED_IMAGE[outcome.reason])
       else if (!mediaIds.includes(outcome.media.id)) mediaIds.push(outcome.media.id)
     }
     if (mediaIds.length > QUESTION_MEDIA_MAX) warnings.push(`Chỉ gắn ${QUESTION_MEDIA_MAX} hình đầu tiên`)
-    items.push({ ...item, warnings, mediaIds: mediaIds.slice(0, QUESTION_MEDIA_MAX) })
+    return { ...item, warnings, mediaIds: mediaIds.slice(0, QUESTION_MEDIA_MAX) }
   }
+  const items: ImportItem[] = new Array(preview.items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < preview.items.length) {
+      const index = next++
+      items[index] = await attach(preview.items[index]!)
+    }
+  }
+  await Promise.all(Array.from({ length: LINK_CONCURRENCY }, worker))
   return { ...preview, items }
 }
 

@@ -7,11 +7,13 @@ import { makeRbac } from '../access/index.js'
 import { SESSION_COOKIE, type AuthStore, type UserRecord } from '../auth/index.js'
 import { makeMemoryMediaStorage, type MediaAssetRow, type MediaStore } from '../media/index.js'
 import type { QuestionRow } from '../questions/index.js'
+import { googleImageUrl, makeImageDownloader, type ImageDownloader } from './import-image-url.js'
 import { previewImport } from './import-service.js'
 import { examSetsRoutes } from './routes.js'
 import type { ExamSetRow, ExamSetsStore, ImportQuestionFields } from './service.js'
 
 const fixture = (name: string) => readFileSync(new URL(`../../../test/fixtures/${name}`, import.meta.url))
+const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 const query = (fileName: string): ExamSetImportPreviewQuery => ({ title: 'Bo de', level: 'starter', skill: 'reading', fileName })
 
 function preview(name: string, buf = fixture(name)): ExamSetImportPreview {
@@ -108,6 +110,50 @@ describe('exam-set import — Excel / CSV', () => {
     for (let i = 0; i < 201; i += 1) rows.push(`multiple_choice,Q${i},a|b,a`)
     expect(preview('big.csv', Buffer.from(rows.join('\n'))).errors[0]?.message).toBe('Toi da 200 cau trong mot bo de')
   })
+
+  it('friendly sheet: Vietnamese headers, A-D options, letter answer, Đúng/Sai and Google image links', () => {
+    const link = 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view?usp=sharing'
+    const csv = [
+      'STT,Hình (link Google),Câu hỏi,A,B,C,D,Đáp án,Điểm,Giải thích,Độ khó',
+      `2,${link},Con gì kêu meo meo?,dog,cat,fish,,b,2,Mèo kêu meo meo,dễ`,
+      '1,,Mặt trời mọc ở hướng đông.,Đúng,Sai,,,A,,,',
+      '3,http://example.com/x.png,Q3,a,b,,,a,,,',
+      '4,,Q4,a,,c,,a,,,',
+    ].join('\n')
+    const p = preview('de.csv', Buffer.from(csv, 'utf8'))
+    expect(p.items).toHaveLength(2)
+    expect(p.items[0]).toMatchObject({ questionType: 'true_false', options: ['Đúng', 'Sai'], correctAnswer: 'Đúng', imageRefs: [] })
+    expect(p.items[1]).toMatchObject({
+      questionType: 'multiple_choice', questionText: 'Con gì kêu meo meo?', options: ['dog', 'cat', 'fish'], correctAnswer: 'cat',
+      points: 2, explanation: 'Mèo kêu meo meo', difficulty: 'easy', imageRefs: [link],
+    })
+    expect(p.errors.map((e) => [e.row, e.field])).toEqual([[4, 'image'], [5, 'options']])
+  })
+})
+
+describe('exam-set import — Google image links', () => {
+  it('rewrites Drive share links and refuses other hosts or plain http', () => {
+    expect(googleImageUrl('https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view?usp=sharing')?.href)
+      .toBe('https://drive.usercontent.google.com/download?id=1AbCdEfGhIjKlMnOp&export=download')
+    expect(googleImageUrl('https://drive.google.com/open?id=1AbCdEfGhIjKlMnOp')?.hostname).toBe('drive.usercontent.google.com')
+    expect(googleImageUrl('https://lh3.googleusercontent.com/abc')).not.toBeNull()
+    expect(googleImageUrl('http://drive.google.com/file/d/1AbCdEfGhIjKlMnOp')).toBeNull()
+    expect(googleImageUrl('https://drive.google.com.evil.example/file/d/1AbCdEfGhIjKlMnOp')).toBeNull()
+  })
+
+  it('downloader follows Google redirects only and treats a sign-in page as not shared', async () => {
+    const download = makeImageDownloader(async (input) => {
+      const url = String(input)
+      if (url.includes('1redirectToEvil')) return new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/' } })
+      if (url.includes('1privateFile00')) return new Response('<html>', { headers: { 'content-type': 'text/html' } })
+      if (url.includes('1publicFile000')) return new Response(null, { status: 303, headers: { location: 'https://lh3.googleusercontent.com/img' } })
+      return new Response(PNG_1X1, { headers: { 'content-type': 'image/png' } })
+    })
+    expect(await download('https://drive.google.com/file/d/1redirectToEvil/view')).toEqual({ ok: false, reason: 'not_public' })
+    expect(await download('https://drive.google.com/file/d/1privateFile00/view')).toEqual({ ok: false, reason: 'not_public' })
+    expect(await download('https://example.com/a.png')).toEqual({ ok: false, reason: 'not_google' })
+    expect(await download('https://drive.google.com/file/d/1publicFile000/view')).toEqual({ ok: true, data: PNG_1X1 })
+  })
 })
 
 describe('exam-set import — file checks (magic bytes)', () => {
@@ -199,12 +245,12 @@ describe('exam-set import routes', () => {
     app = undefined
   })
 
-  async function build(user: UserRecord, store: ExamSetsStore): Promise<FastifyInstance> {
+  async function build(user: UserRecord, store: ExamSetsStore, download?: ImageDownloader): Promise<FastifyInstance> {
     const instance = Fastify({ logger: false })
     await instance.register(cookie)
     await examSetsRoutes(instance, {
       rbac: makeRbac(authStore(user)), examSetsStore: store,
-      media: { store: mediaStore(), storage: makeMemoryMediaStorage() },
+      media: { store: mediaStore(), storage: makeMemoryMediaStorage(), ...(download ? { download } : {}) },
     })
     return instance
   }
@@ -248,6 +294,28 @@ describe('exam-set import routes', () => {
     })
     expect(commit.statusCode).toBe(201)
     expect(imported[0]?.map((q) => q.stemMediaIds)).toEqual([body.items[0]?.mediaIds, [], []])
+  })
+
+  it('preview downloads Google image links of a friendly sheet and warns when a link is not shared', async () => {
+    const { store } = importStore()
+    const links: string[] = []
+    app = await build(TEACHER, store, async (link) => {
+      links.push(link)
+      return link.includes('private') ? { ok: false, reason: 'not_public' } : { ok: true, data: PNG_1X1 }
+    })
+    const csv = [
+      'Hình,Câu hỏi,A,B,Đáp án',
+      'https://drive.google.com/file/d/1publicFile000/view,Q1,a,b,a',
+      'https://drive.google.com/file/d/1privateFile00/view,Q2,a,b,b',
+    ].join('\n')
+    const res = await app.inject({ ...upload(Buffer.from(csv)), url: previewUrl.replace('de.docx', 'de.csv') })
+    expect(res.statusCode).toBe(200)
+    const body = res.json<ExamSetImportPreview>()
+    expect(links).toHaveLength(2)
+    expect(body.items[0]?.mediaIds).toHaveLength(1)
+    expect(body.items[1]).toMatchObject({
+      mediaIds: [], warnings: ['Không tải được hình: hãy chia sẻ link ở chế độ "Bất kỳ ai có đường liên kết"'],
+    })
   })
 
   it('commit re-validates every item and writes nothing when one is invalid', async () => {

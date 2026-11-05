@@ -73,9 +73,6 @@ function GradeForm(props: { attempt: ManualGradingAttempt; onGraded: (attempt: M
       <ol className="space-y-4">
         {attempt.questions.map((q, index) => (
           <li key={q.id} className="space-y-2 border-b border-slate-100 pb-4">
-            <p className="font-medium text-slate-800">
-              Câu {index + 1}. {q.questionText}
-            </p>
             {q.stemImages && q.stemImages.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {q.stemImages.map((src) => (
@@ -83,6 +80,9 @@ function GradeForm(props: { attempt: ManualGradingAttempt; onGraded: (attempt: M
                 ))}
               </div>
             )}
+            <p className="font-medium text-slate-800">
+              Câu {index + 1}. {q.questionText}
+            </p>
             <p className="whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm text-slate-700">
               {q.answer ?? <span className="italic text-slate-400">(Học viên không trả lời)</span>}
             </p>

@@ -8,12 +8,14 @@ import {
   type LevelCode,
   type QuestionSkill,
 } from '@lms/shared'
-import { checkImportItem, issue } from './import-item.js'
+import { googleImageUrl } from './import-image-url.js'
+import { checkImportItem, issue, type ItemCheck } from './import-item.js'
 import { attr, decodeXml, ImportFileError, xmlPart } from './import-zip.js'
 
 /**
  * Excel (.xlsx, first sheet only) / CSV parser for exam-set import (slice-11b). Header = IMPORT_COLUMNS
  * (slice-3) + optional `order`; blank `level`/`skill`/`difficulty` cells take the form defaults.
+ * A header with "Cau hoi" switches to the teacher-friendly multiple-choice layout (slice-11c, parseFriendly).
  * Errors carry the real spreadsheet row number.
  */
 
@@ -140,6 +142,8 @@ export function parseSheet(rows: SheetRow[], level: LevelCode, skill: QuestionSk
   if (!header) return { items: [], errors: [issue({}, 'file', 'File khong co du lieu')], warnings: [] }
   const headers = header.cells.map((c) => c.trim().toLowerCase())
   while (headers.length > 0 && headers.at(-1) === '') headers.pop()
+  const names = headers.map(plainText)
+  if (names.includes('cau hoi')) return parseFriendly(filled, names, level, skill)
   const at = { row: header.row }
   if (new Set(headers).size !== headers.length) errors.push(issue(at, 'header', 'Ten cot bi trung'))
   for (const h of headers) if (!ALLOWED_COLUMNS.has(h)) errors.push(issue(at, 'header', `Cot khong ho tro: "${h}"`))
@@ -150,7 +154,7 @@ export function parseSheet(rows: SheetRow[], level: LevelCode, skill: QuestionSk
   if (data.length > EXAM_SET_MAX_ITEMS) {
     return { items: [], errors: [issue({}, 'file', `Toi da ${EXAM_SET_MAX_ITEMS} cau trong mot bo de`)], warnings: [] }
   }
-  const ordered: { order: number; seq: number; item: ExamSetImportItem }[] = []
+  const ordered: Ordered[] = []
   const usedOrders = new Map<number, number>()
   data.forEach((sheetRow, seq) => {
     const where = { row: sheetRow.row }
@@ -169,15 +173,8 @@ export function parseSheet(rows: SheetRow[], level: LevelCode, skill: QuestionSk
     if (!difficulty.success) { errors.push(issue(where, 'difficulty', `Do kho khong hop le: "${cell('difficulty')}"`)); return }
     const pointsCell = cell('points')
     if (pointsCell !== '' && !/^\d+$/.test(pointsCell)) { errors.push(issue(where, 'points', 'Diem phai la so nguyen')); return }
-    const orderCell = cell('order')
-    let order = Number.POSITIVE_INFINITY
-    if (orderCell !== '') {
-      if (!/^\d+$/.test(orderCell) || Number(orderCell) < 1) { errors.push(issue(where, 'order', 'Thu tu phai la so nguyen duong')); return }
-      order = Number(orderCell)
-      const clash = usedOrders.get(order)
-      if (clash !== undefined) { errors.push(issue(where, 'order', `Thu tu ${order} trung voi dong ${clash}`)); return }
-      usedOrders.set(order, sheetRow.row)
-    }
+    const order = rowOrder(cell('order'), where, usedOrders)
+    if (typeof order !== 'number') { errors.push(order); return }
     const options = cell('options').split('|').map((o) => o.trim()).filter((o) => o !== '')
     const draft = {
       questionType: type.data,
@@ -190,26 +187,135 @@ export function parseSheet(rows: SheetRow[], level: LevelCode, skill: QuestionSk
     }
     const checked = checkImportItem(draft, level, skill)
     if (!checked.ok) { errors.push(issue(where, checked.field, checked.message)); return }
-    ordered.push({
-      order,
-      seq,
-      item: {
-        order: 0,
-        questionType: checked.row.question_type,
-        difficulty: checked.row.difficulty,
-        questionText: checked.row.question_text,
-        options: checked.row.options ?? null,
-        correctAnswer: checked.row.correct_answer,
-        points: checked.row.points ?? 1,
-        explanation: checked.row.explanation ?? null,
-        warnings: [],
-        imageRefs: [],
-        mediaIds: [],
-      },
-    })
+    ordered.push({ order, seq, item: toItem(checked.row, []) })
   })
+  return finish(ordered, errors)
+}
+
+type Ordered = { order: number; seq: number; item: ExamSetImportItem }
+
+function rowOrder(value: string, where: { row: number }, used: Map<number, number>): number | ExamSetImportIssue {
+  if (value === '') return Number.POSITIVE_INFINITY
+  if (!/^\d+$/.test(value) || Number(value) < 1) return issue(where, 'order', 'Thu tu phai la so nguyen duong')
+  const order = Number(value)
+  const clash = used.get(order)
+  if (clash !== undefined) return issue(where, 'order', `Thu tu ${order} trung voi dong ${clash}`)
+  used.set(order, where.row)
+  return order
+}
+
+function toItem(row: Extract<ItemCheck, { ok: true }>['row'], imageRefs: string[]): ExamSetImportItem {
+  return {
+    order: 0,
+    questionType: row.question_type,
+    difficulty: row.difficulty,
+    questionText: row.question_text,
+    options: row.options ?? null,
+    correctAnswer: row.correct_answer,
+    points: row.points ?? 1,
+    explanation: row.explanation ?? null,
+    warnings: [],
+    imageRefs,
+    mediaIds: [],
+  }
+}
+
+function finish(ordered: Ordered[], errors: ExamSetImportIssue[]): ParsedImport {
   ordered.sort((a, b) => a.order - b.order || a.seq - b.seq)
   const items = ordered.map((entry, index) => ({ ...entry.item, order: index + 1 }))
   if (items.length === 0 && errors.length === 0) errors.push(issue({}, 'file', 'File khong co cau hoi nao'))
   return { items, errors, warnings: [] }
+}
+
+/** Lowercase, no Vietnamese accents, no "(...)" notes: "Hinh (link Google)" -> "hinh". */
+function plainText(raw: string): string {
+  return raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0111\u0110]/g, 'd')
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const FRIENDLY_COLUMNS = new Map<string, string>([
+  ['stt', 'order'], ['thu tu', 'order'],
+  ['hinh', 'image'], ['hinh anh', 'image'], ['link hinh', 'image'], ['anh', 'image'],
+  ['cau hoi', 'question'], ['dap an', 'answer'], ['dap an dung', 'answer'],
+  ['diem', 'points'], ['giai thich', 'explanation'], ['do kho', 'difficulty'],
+  ['a', 'a'], ['b', 'b'], ['c', 'c'], ['d', 'd'], ['e', 'e'], ['f', 'f'],
+])
+const FRIENDLY_REQUIRED: [key: string, label: string][] = [['question', 'Cau hoi'], ['a', 'A'], ['b', 'B'], ['answer', 'Dap an']]
+const OPTION_KEYS = ['a', 'b', 'c', 'd', 'e', 'f']
+const DIFFICULTY_WORDS = new Map([['de', 'easy'], ['trung binh', 'medium'], ['kho', 'hard']])
+
+/**
+ * Teacher-friendly multiple-choice sheet (slice-11c): STT | Hinh | Cau hoi | A..F | Dap an | Diem | Giai thich |
+ * Do kho. Options Dung/Sai (or True/False) make a true_false item, a letter answer maps to its option, and the
+ * "Hinh" cell holds Google image links (space, new line or | separated) that the service downloads.
+ */
+function parseFriendly(filled: SheetRow[], names: string[], level: LevelCode, skill: QuestionSkill): ParsedImport {
+  const header = filled[0]!
+  const at = { row: header.row }
+  const errors: ExamSetImportIssue[] = []
+  const keys = names.map((name, i) => {
+    const key = FRIENDLY_COLUMNS.get(name)
+    if (!key) errors.push(issue(at, 'header', `Cot khong ho tro: "${(header.cells[i] ?? '').trim()}"`))
+    return key ?? ''
+  })
+  const known = keys.filter((k) => k !== '')
+  if (new Set(known).size !== known.length) errors.push(issue(at, 'header', 'Ten cot bi trung'))
+  for (const [key, label] of FRIENDLY_REQUIRED) if (!keys.includes(key)) errors.push(issue(at, 'header', `Thieu cot bat buoc: ${label}`))
+  if (errors.length > 0) return { items: [], errors, warnings: [] }
+
+  const data = filled.slice(1)
+  if (data.length > EXAM_SET_MAX_ITEMS) {
+    return { items: [], errors: [issue({}, 'file', `Toi da ${EXAM_SET_MAX_ITEMS} cau trong mot bo de`)], warnings: [] }
+  }
+  const ordered: Ordered[] = []
+  const usedOrders = new Map<number, number>()
+  data.forEach((sheetRow, seq) => {
+    const where = { row: sheetRow.row }
+    if (sheetRow.cells.slice(keys.length).some((c) => c.trim() !== '')) {
+      errors.push(issue(where, 'columns', 'Co du lieu nam ngoai cac cot tieu de'))
+      return
+    }
+    const cell = (key: string) => {
+      const index = keys.indexOf(key)
+      return index < 0 ? '' : (sheetRow.cells[index] ?? '').trim()
+    }
+    const order = rowOrder(cell('order'), where, usedOrders)
+    if (typeof order !== 'number') { errors.push(order); return }
+    const options = OPTION_KEYS.map(cell)
+    while (options.length > 0 && options.at(-1) === '') options.pop()
+    if (options.includes('')) { errors.push(issue(where, 'options', 'Lua chon bi bo trong o giua (A, B, C...)')); return }
+    const plainOptions = options.map(plainText).join('|')
+    const trueFalse = plainOptions === 'dung|sai' || plainOptions === 'true|false'
+    const answer = cell('answer')
+    const letter = /^[a-f]$/i.test(answer) ? OPTION_KEYS.indexOf(answer.toLowerCase()) : -1
+    const difficultyCell = cell('difficulty')
+    const difficulty = QuestionDifficulty.safeParse(DIFFICULTY_WORDS.get(plainText(difficultyCell)) ?? (difficultyCell.toLowerCase() || 'medium'))
+    if (!difficulty.success) { errors.push(issue(where, 'difficulty', `Do kho khong hop le: "${difficultyCell}" (de / trung binh / kho)`)); return }
+    const pointsCell = cell('points')
+    if (pointsCell !== '' && !/^\d+$/.test(pointsCell)) { errors.push(issue(where, 'points', 'Diem phai la so nguyen')); return }
+    const links = cell('image').split(/[\s|]+/).filter((l) => l !== '')
+    const badLink = links.find((l) => googleImageUrl(l) === null)
+    if (badLink !== undefined) {
+      errors.push(issue(where, 'image', `Link hinh phai la link Google Drive (https), nhan duoc: "${badLink}"`))
+      return
+    }
+    const checked = checkImportItem({
+      questionType: trueFalse ? 'true_false' : 'multiple_choice',
+      difficulty: difficulty.data,
+      questionText: cell('question'),
+      options,
+      correctAnswer: letter >= 0 && letter < options.length ? options[letter]! : answer,
+      points: pointsCell === '' ? undefined : Number(pointsCell),
+      explanation: cell('explanation') || null,
+    }, level, skill)
+    if (!checked.ok) { errors.push(issue(where, checked.field, checked.message)); return }
+    ordered.push({ order, seq, item: toItem(checked.row, links) })
+  })
+  return finish(ordered, errors)
 }
