@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createDb, type AppDb } from '../../platform/db.js'
+import { listStudentHistory, loadExamAttemptReport, makeExamHistoryStore } from '../examhistory/index.js'
 import { loadStudentReport } from './service.js'
 import { makeReportsStore } from './store.js'
 
@@ -20,6 +21,7 @@ describeWithPostgres('reports store on real Postgres', () => {
   let levelId: string
 
   async function cleanup(): Promise<void> {
+    await db.deleteFrom('exam_attempts').where('exam_id', '=', EXAM_ID).execute()
     await db.deleteFrom('exams').where('id', '=', EXAM_ID).execute()
     // Deleting the center cascades to branch -> class -> sessions/records/enrollments.
     await db.deleteFrom('centers').where('id', '=', CENTER_ID).execute()
@@ -64,10 +66,11 @@ describeWithPostgres('reports store on real Postgres', () => {
         created_by: ADMIN_ID,
       })
       .execute()
-    const attempt = (n: number, score: number, passed: boolean, gradedAt: string) => ({
+    const attempt = (n: number, score: number, passed: boolean, gradedAt: string, startedAt: string) => ({
       exam_id: EXAM_ID,
       student_id: STUDENT_ID,
       question_ids: '[]',
+      started_at: startedAt,
       deadline_at: gradedAt,
       submitted_at: gradedAt,
       attempt_number: n,
@@ -78,7 +81,11 @@ describeWithPostgres('reports store on real Postgres', () => {
     })
     await db
       .insertInto('exam_attempts')
-      .values([attempt(1, 4, false, '2026-10-15T10:00:00Z'), attempt(2, 8, true, '2026-11-15T10:00:00Z')])
+      // Attempt 1 starts 2026-10-16 00:30 in Asia/Ho_Chi_Minh (still 2026-10-15 in UTC).
+      .values([
+        attempt(1, 4, false, '2026-10-15T18:00:00Z', '2026-10-15T17:30:00Z'),
+        attempt(2, 8, true, '2026-11-15T10:00:00Z', '2026-11-15T09:45:00Z'),
+      ])
       .execute()
     const sessions = await db
       .insertInto('class_sessions')
@@ -143,5 +150,42 @@ describeWithPostgres('reports store on real Postgres', () => {
       exam_weight: 90,
       attendance_weight: 10,
     })
+  })
+
+  it('reports exam history and retakes per exam from the same attempts, filtering by local day', async () => {
+    const history = makeExamHistoryStore(db)
+    const now = new Date('2026-12-01T00:00:00Z')
+    const report = await loadExamAttemptReport(history, { branchIds: [BRANCH_ID] }, now)
+    expect(report.byExam).toEqual([
+      {
+        examId: EXAM_ID,
+        examTitle: 'Reports IT exam',
+        levelCode: 'starter',
+        students: 1,
+        attempts: 2,
+        retakes: 1,
+        firstAttemptPassRate: 0,
+        finalPassRate: 100,
+        averagePercent: 60,
+        bestPercent: 80,
+      },
+    ])
+    expect(report.attempts.map((a) => [a.attemptNumber, a.percent, a.studentPhone])).toEqual([
+      [2, 80, '0900000821'],
+      [1, 40, '0900000821'],
+    ])
+    expect((await loadExamAttemptReport(history, { branchIds: [CENTER_ID] }, now)).attempts).toEqual([])
+
+    const oct16 = await listStudentHistory(history, STUDENT_ID, { from: '2026-10-16', to: '2026-10-16' }, now)
+    expect(oct16).toMatchObject({
+      ok: true,
+      page: { attempts: [{ attemptNumber: 1, durationSeconds: 1800, passed: false }], nextCursor: null },
+    })
+    expect(await listStudentHistory(history, STUDENT_ID, { to: '2026-10-15' }, now)).toMatchObject({
+      page: { attempts: [] },
+    })
+    expect(await history.isStudentInBranches(STUDENT_ID, [BRANCH_ID])).toBe(true)
+    expect(await history.isStudentInBranches(STUDENT_ID, [CENTER_ID])).toBe(false)
+    await expect(db.deleteFrom('exams').where('id', '=', EXAM_ID).execute()).rejects.toThrow(/foreign key/)
   })
 })

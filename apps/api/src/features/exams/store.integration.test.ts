@@ -173,6 +173,11 @@ describeWithPostgres('exams store on real Postgres', () => {
     expect(archived.ok && archived.examSet.status).toBe('archived')
   })
 
+  async function submitReason(attemptId: string) {
+    const row = await db.selectFrom('exam_attempts').select('submit_reason').where('id', '=', attemptId).executeTakeFirstOrThrow()
+    return row.submit_reason
+  }
+
   async function freshAttempt(deadlineMs = 60_000, skill: 'reading' | 'writing' = 'reading') {
     const store = makeExamsStore(db)
     const level = (await store.findLevelByCode('starter'))!
@@ -199,6 +204,7 @@ describeWithPostgres('exams store on real Postgres', () => {
     expect(new Set(results.map((r) => new Date(r.submitted_at!).toISOString())).size).toBe(1)
     const retry = await store.saveSubmission(attempt.id, '{"value":"overwrite"}', new Date().toISOString())
     expect(retry.answers).toBe(results[0]!.answers)
+    expect(await submitReason(attempt.id)).toBe('manual')
   })
 
   it('checkpoint revision CAS and deadline cutoff preserve saved answers', async () => {
@@ -213,6 +219,7 @@ describeWithPostgres('exams store on real Postgres', () => {
     const ended = await store.saveAnswers(attempt.id, '{"late":"discard"}', 1, late.toISOString())
     expect(ended!.answers).toBe(winner.answers)
     expect(ended!.submitted_at).not.toBeNull()
+    expect(await submitReason(attempt.id)).toBe('deadline_auto')
     const retry = await store.saveSubmission(attempt.id, '{"late":"overwrite"}', late.toISOString())
     expect(retry.answers).toBe(winner.answers)
   })
@@ -232,6 +239,7 @@ describeWithPostgres('exams store on real Postgres', () => {
     const ended = await pending
     expect(ended.answers).toBeNull()
     expect(new Date(ended.submitted_at!).getTime()).toBe(new Date(attempt.deadline_at).getTime())
+    expect(await submitReason(attempt.id)).toBe('deadline_auto')
   })
 
   it('immutable question and grading snapshot survives edits/deletion and never leaks grading fields', async () => {

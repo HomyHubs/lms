@@ -23,6 +23,7 @@ import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranch
 import { makeQuestionsStore, questionsRoutes } from './features/questions/index.js'
 import { examsRoutes, makeExamsStore } from './features/exams/index.js'
 import { examSetsRoutes, makeExamSetsStore } from './features/examsets/index.js'
+import { examHistoryRoutes, makeExamHistoryStore } from './features/examhistory/index.js'
 import { attendanceRoutes, makeAttendanceStore } from './features/attendance/index.js'
 import { aiGenerationRoutes, makeAiGenerationStore } from './features/aigeneration/index.js'
 import { makeReportsStore, reportsRoutes } from './features/reports/index.js'
@@ -128,6 +129,12 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   await examsRoutes(app, { rbac, examsStore: makeExamsStore(db) })
   // slice-11a: fixed exam sets (draft -> published -> archived), Admin/Teacher only.
   await examSetsRoutes(app, { rbac, examSetsStore: makeExamSetsStore(db) })
+  // slice-13: exam history (student + branch-scoped managers) and exam attempt report.
+  await examHistoryRoutes(app, {
+    rbac,
+    examHistoryStore: makeExamHistoryStore(db),
+    branchScope: userBranchesStore,
+  })
 
   // slice-6: Attendance. Only the assigned class teacher marks; admin reads within branch scope.
   await attendanceRoutes(app, {

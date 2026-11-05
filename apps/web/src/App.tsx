@@ -8,6 +8,8 @@ import { AiQuestionsPage } from '@/features/aigeneration/AiQuestionsPage'
 import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { CentersPage } from '@/features/centers/CentersPage'
+import { ExamHistoryPage } from '@/features/examhistory/ExamHistoryPage'
+import { ExamReportsPage } from '@/features/examhistory/ExamReportsPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
 import { ExamSetsPage } from '@/features/examsets/ExamSetsPage'
 import { GradingPage } from '@/features/grading/GradingPage'
@@ -21,11 +23,13 @@ import { WorkHoursPage } from '@/features/workhours/WorkHoursPage'
 const PAGES: Record<NavPath, React.ReactElement> = {
   '/': <HomePage />,
   '/exams': <ExamsPage />,
+  '/exam-history': <ExamHistoryPage />,
   '/attendance': <AttendancePage />,
   '/questions': <QuestionsPage />,
   '/exam-sets': <ExamSetsPage />,
   '/ai-questions': <AiQuestionsPage />,
   '/grading': <GradingPage />,
+  '/exam-reports': <ExamReportsPage />,
   '/work-hours': <WorkHoursPage />,
   '/reports': <ReportsPage />,
   '/users': <UsersPage />,
