@@ -3,7 +3,7 @@
 - Cơ chế: Dọc
 - Owner hiện tại: An Vo
 - Nhánh: `bugfix/slice-4.2-exam-online-completion`
-- PR: (điền sau khi mở)
+- PR: #23 https://github.com/HomyHubs/lms/pull/23
 - Trạng thái: xem `../MVP-BACKLOG.md`
 - Phụ thuộc: slice-4, slice-4.1, slice-5
 - Sửa mục gốc: slice-4
