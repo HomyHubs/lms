@@ -3,7 +3,7 @@
 - Cơ chế: Dọc
 - Owner hiện tại: An Vo
 - Nhánh: `feature/slice-12-hinh-anh-cau-hoi`
-- PR: (điền sau khi mở)
+- PR: #22
 - Trạng thái: xem `../MVP-BACKLOG.md`
 - Phụ thuộc: slice-11a (Task 4 phần ảnh Word phụ thuộc thêm slice-11b)
 - Sửa mục gốc: để trống
