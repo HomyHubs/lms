@@ -650,6 +650,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-4.2 | Hoàn thiện thi online | Dọc | Done | 23 | 2026-11-14 |
 | slice-4.3 | Điều hướng câu & lưu nháp | Dọc | Done | 24 | 2026-11-14 |
 | slice-12.1 | Ảnh ở form câu hỏi ngân hàng | Dọc | Done | 25 | 2026-11-14 |
+| slice-12.3 | Ảnh ở màn chấm tay | Dọc | Done | 26 | 2026-11-14 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

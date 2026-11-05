@@ -31,7 +31,10 @@ const question = (id: string, text: string, points: number, answer: string | nul
 const attempt: ManualGradingAttempt = {
   ...item,
   passPercent: 50,
-  questions: [question(Q1, 'Describe your family', 3, 'I have two sisters.'), question(Q2, 'Your hobby', 2, null)],
+  questions: [
+    { ...question(Q1, 'Describe your family', 3, 'I have two sisters.'), stemImages: ['/api/media/m1'] },
+    question(Q2, 'Your hobby', 2, null),
+  ],
   result: null,
 }
 
@@ -69,6 +72,8 @@ describe('GradingPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Chấm' }))
     expect(await screen.findByText('I have two sisters.')).toBeInTheDocument()
     expect(screen.getByText('(Học viên không trả lời)')).toBeInTheDocument()
+    expect(screen.getByAltText('Hình câu 1')).toHaveAttribute('src', '/api/media/m1')
+    expect(screen.queryByAltText('Hình câu 2')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Điểm câu 1'), { target: { value: '2' } })
     fireEvent.change(screen.getByLabelText('Điểm câu 2'), { target: { value: '0' } })
     fireEvent.change(screen.getByLabelText('Nhận xét cho học viên'), { target: { value: 'Viet dai hon' } })

@@ -49,6 +49,7 @@ Kiểm mime thật, giới hạn kích thước, phân quyền xem ảnh, ảnh 
 | 2026-11-14 | Hoãn | Driver `s3`, xoá media/dọn ảnh mồ côi | Chưa có hạ tầng deploy; asset bất biến nên không cần `delete` cho MVP | 0013 |
 | 2026-11-14 | Hoãn | Ảnh ở form câu hỏi ngân hàng, ảnh nhúng Word (slice-11b, PR #21), ảnh ở màn chấm tay, đổi thứ tự ảnh bằng kéo | Phụ thuộc PR #21 chưa merge; API `PUT /api/questions/:id/media` đã dùng chung được | 0013 |
 | 2026-11-14 | Sửa | Ảnh ở form câu hỏi ngân hàng → làm ở slice-12.1 | Owner đồng ý làm các mục Hoãn | 0013 |
+| 2026-11-14 | Sửa | Ảnh ở màn chấm tay → làm ở slice-12.3 | Owner đồng ý làm các mục Hoãn | 0013 |
 
 ## Cách nghiệm thu
 
