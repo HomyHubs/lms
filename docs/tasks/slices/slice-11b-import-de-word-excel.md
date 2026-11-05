@@ -3,7 +3,7 @@
 - Cơ chế: Dọc
 - Owner hiện tại: An Vo
 - Nhánh: `feature/slice-11b-import-de-word-excel`
-- PR: (sẽ điền)
+- PR: #21
 - Trạng thái: xem `../MVP-BACKLOG.md`
 - Phụ thuộc: slice-11a
 - Sửa mục gốc: để trống
