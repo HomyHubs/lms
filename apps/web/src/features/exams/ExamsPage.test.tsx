@@ -65,6 +65,9 @@ function attempt(status: 'in_progress' | 'submitted', deadlineAt: string, extra:
   }
 }
 
+const notStarted = () => response({ error: 'Chua bat dau lam bai' }, 404)
+const CURRENT = `/api/exams/${EXAM_ID}/attempt`
+
 function graded(score: number, passed: boolean) {
   return { status: 'graded', score, maxScore: 1, percent: score * 100, passPercent: 60, passed,
     gradedAt: '2026-09-27T00:05:00.000Z' }
@@ -92,6 +95,7 @@ describe('ExamsPage', () => {
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input)
         if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT)) return notStarted()
         if (url.endsWith(`/api/exams/${EXAM_ID}/attempts`))
           return response(attempt('in_progress', new Date(Date.now() + 60_000).toISOString()))
         if (url.endsWith(`/api/exams/${EXAM_ID}/submit`)) {
@@ -108,8 +112,9 @@ describe('ExamsPage', () => {
     )
     renderPage()
     await screen.findByText('Starter Reading')
-    fireEvent.click(screen.getByRole('button', { name: /Bắt đầu/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
     await screen.findByText(/What color is the sky/)
+    expect(screen.getByText('Đã trả lời 0/1 câu')).toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Blue'))
     await screen.findByText('Đã lưu đáp án')
     expect(checkpointBody).toEqual({ answers: { [QUESTION_ID]: 'Blue' }, revision: 0 })
@@ -125,6 +130,7 @@ describe('ExamsPage', () => {
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input)
         if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT)) return notStarted()
         if (url.endsWith(`/api/exams/${EXAM_ID}/attempts`))
           return response(attempt('in_progress', new Date(Date.now() - 1000).toISOString()))
         if (url.endsWith(`/api/exams/${EXAM_ID}/submit`)) {
@@ -136,18 +142,20 @@ describe('ExamsPage', () => {
     )
     renderPage()
     await screen.findByText('Starter Reading')
-    fireEvent.click(screen.getByRole('button', { name: /Bắt đầu/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
     await screen.findByText(/Hết giờ — bài đã được tự động nộp/)
     expect(submitCalls).toBe(1)
   })
 
-  it('hien trang thai da nop va khong cho nop lai', async () => {
+  it('mo lai de da nop thi xem ket qua, khong tu sinh luot moi', async () => {
+    let starts = 0
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input)
         if (url.endsWith('/api/exams') && !init?.method) return response(examList())
-        if (url.endsWith(`/api/exams/${EXAM_ID}/attempts`))
+        if (url.endsWith(`/api/exams/${EXAM_ID}/attempts`)) starts += 1
+        if (url.endsWith(CURRENT))
           return response(attempt('submitted', new Date().toISOString(), {
             result: graded(1, true),
             retake: { available: false, reason: 'passed', nextAttemptNumber: null, availableAt: null,
@@ -158,8 +166,9 @@ describe('ExamsPage', () => {
     )
     renderPage()
     await screen.findByText('Starter Reading')
-    fireEvent.click(screen.getByRole('button', { name: /Bắt đầu/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
     await screen.findByText(/Điểm: 1\/1 \(100%\)/)
+    expect(starts).toBe(0)
     expect(screen.getByText('ĐẠT')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nộp bài' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Thi lại/ })).not.toBeInTheDocument()
@@ -172,14 +181,14 @@ describe('ExamsPage', () => {
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input)
         if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT))
+          return response(attempt('submitted', new Date().toISOString(), {
+            result: { ...graded(0, false), feedback: 'Can luyen them' },
+            retake: { available: true, reason: 'retake_ready', nextAttemptNumber: 2,
+              availableAt: new Date(Date.now() - 1000).toISOString(), attemptsUsed: 1, maxAttempts: 2 },
+          }))
         if (url.endsWith(`/api/exams/${EXAM_ID}/attempts`)) {
           starts += 1
-          if (starts === 1)
-            return response(attempt('submitted', new Date().toISOString(), {
-              result: { ...graded(0, false), feedback: 'Can luyen them' },
-              retake: { available: true, reason: 'retake_ready', nextAttemptNumber: 2,
-                availableAt: new Date(Date.now() - 1000).toISOString(), attemptsUsed: 1, maxAttempts: 2 },
-            }))
           return response(attempt('in_progress', new Date(Date.now() + 60_000).toISOString(), { attemptNumber: 2 }))
         }
         throw new Error(`unexpected fetch: ${url}`)
@@ -187,12 +196,41 @@ describe('ExamsPage', () => {
     )
     renderPage()
     await screen.findByText('Starter Reading')
-    fireEvent.click(screen.getByRole('button', { name: /Bắt đầu/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
     await screen.findByText('CHƯA ĐẠT')
+    expect(starts).toBe(0)
     expect(screen.getByText(/Điểm: 0\/1 \(0%\)/)).toBeInTheDocument()
     expect(screen.getByText('Nhận xét của giáo viên: Can luyen them')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Thi lại (lần 2)' }))
     await screen.findByRole('button', { name: 'Nộp bài' })
-    expect(starts).toBe(2)
+    expect(starts).toBe(1)
+  })
+
+  it('hoi xac nhan khi con cau chua tra loi', async () => {
+    let submitCalls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/api/exams') && !init?.method) return response(examList())
+        if (url.endsWith(CURRENT)) return notStarted()
+        if (url.endsWith(`/api/exams/${EXAM_ID}/attempts`))
+          return response(attempt('in_progress', new Date(Date.now() + 60_000).toISOString()))
+        if (url.endsWith(`/api/exams/${EXAM_ID}/submit`)) {
+          submitCalls += 1
+          return response(attempt('submitted', new Date(Date.now() + 60_000).toISOString()))
+        }
+        throw new Error(`unexpected fetch: ${url}`)
+      }),
+    )
+    renderPage()
+    await screen.findByText('Starter Reading')
+    fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Nộp bài' }))
+    expect(screen.getByRole('alertdialog', { name: 'Xác nhận nộp bài' })).toHaveTextContent('Còn 1 câu chưa trả lời')
+    expect(submitCalls).toBe(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Vẫn nộp bài' }))
+    await screen.findByText(/Đã nộp bài thành công/)
+    expect(submitCalls).toBe(1)
   })
 })

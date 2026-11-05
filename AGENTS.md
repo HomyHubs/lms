@@ -645,6 +645,9 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-9b | Thông báo trong app + nhắc nhở tự động | Dọc | Done | 18 | 2026-11-11 |
 | slice-11a | Bộ đề cố định & thi theo bộ đề | Dọc | Done | 19 | 2026-11-12 |
 | slice-13 | Lịch sử thi & báo cáo thi | Dọc | Done | 20 | 2026-11-13 |
+| slice-11b | Import bộ đề từ Word/Excel | Dọc | Done | 21 | 2026-11-14 |
+| slice-12 | Hình ảnh câu hỏi / bộ đề | Dọc | Done | 22 | 2026-11-14 |
+| slice-4.2 | Hoàn thiện thi online | Dọc | Done | 23 | 2026-11-14 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

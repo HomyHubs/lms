@@ -25,6 +25,14 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 
+- slice-4.2 (hoàn thiện thi online): `ExamsPage` mở lượt gần nhất qua `GET /exams/:id/attempt` trước, chỉ `POST` khi 404 (không tự sinh lượt mới khi xem lại); gộp lưu nháp (một request đang chạy, giữ bản mới nhất); cảnh báo `beforeunload` khi đang làm; đếm "Đã trả lời x/N câu"; đồng hồ `role="timer"` đổi màu khi ≤60s; hỏi xác nhận khi nộp còn câu trống; nút "Vào thi" + "Đóng lúc …". Test `ExamsPage.test.tsx` cập nhật + test xác nhận nộp.
+
+**Bước tiếp theo**
+
+- Chưa làm: điều hướng câu/đánh dấu câu, lưu nháp offline. Chưa thử tay trên mobile.
+
+**Đã xong (slice-12)**
+
 - slice-12 (Hình ảnh câu hỏi): feature `media` — `QuestionImages` (tải khi bấm “Hình ảnh” ở từng câu trong trình soạn bộ đề; chọn file / kéo-thả / dán, gắn đề bài hoặc lựa chọn, gỡ; chỉ xem khi bộ đề đã phát hành) và `ExamImage` (lazy, bấm phóng to, Esc đóng). Màn thi hiển thị `stemImages`/`optionImages`. Nút “Chèn hình” disabled của slice-11a đã bỏ. Test `QuestionImages.test.tsx`.
 
 ### 2026-11-13
