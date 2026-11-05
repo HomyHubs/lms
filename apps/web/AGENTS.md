@@ -21,6 +21,16 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-14
+
+**Đã xong**
+
+- slice-4.2 (hoàn thiện thi online): `ExamsPage` mở lượt gần nhất qua `GET /exams/:id/attempt` trước, chỉ `POST` khi 404 (không tự sinh lượt mới khi xem lại); gộp lưu nháp (một request đang chạy, giữ bản mới nhất); cảnh báo `beforeunload` khi đang làm; đếm "Đã trả lời x/N câu"; đồng hồ `role="timer"` đổi màu khi ≤60s; hỏi xác nhận khi nộp còn câu trống; nút "Vào thi" + "Đóng lúc …". Test `ExamsPage.test.tsx` cập nhật + test xác nhận nộp.
+
+**Bước tiếp theo**
+
+- Chưa làm: điều hướng câu/đánh dấu câu, lưu nháp offline. Chưa thử tay trên mobile.
+
 ### 2026-11-12
 
 **Đã xong**

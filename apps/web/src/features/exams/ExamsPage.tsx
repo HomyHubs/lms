@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ClipboardList, Clock3, Send } from 'lucide-react'
 import type { ExamAttemptView } from '@lms/shared'
-import { saveExamAnswers } from '@/lib/api'
+import { ApiError, getExamAttempt, saveExamAnswers } from '@/lib/api'
 import { useSession } from '@/features/auth/useAuth'
 import { BlueprintForm } from './BlueprintForm'
 import { Button } from '@/components/ui/button'
@@ -68,14 +68,20 @@ function AttemptOutcome(props: {
   )
 }
 
+const LOW_TIME_SECONDS = 60
+
 /** UI hoc vien: list de dang mo -> start/resume -> dem nguoc -> nop bai -> ket qua/thi lai. */
 export function ExamsPage(): React.ReactElement {
   const exams = useExams()
   const { user } = useSession()
   const manager = user?.role === 'admin' || user?.role === 'teacher'
   const revision = useRef(0)
-  const saveQueue = useRef<Promise<void>>(Promise.resolve())
+  // One save in flight at a time; newer edits replace older unsent ones.
+  const pendingSave = useRef<{ examId: string; answers: Record<string, string> } | null>(null)
+  const saving = useRef(false)
   const [checkpointMessage, setCheckpointMessage] = useState('')
+  const [opening, setOpening] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const start = useStartExamAttempt()
   const submit = useSubmitExamAttempt()
   const [attempt, setAttempt] = useState<ExamAttemptView | null>(null)
@@ -89,7 +95,16 @@ export function ExamsPage(): React.ReactElement {
     setAnswers(attempt.answers)
     revision.current = attempt.revision
     autoSubmitting.current = attempt.status === 'submitted'
+    setConfirming(false)
   }, [attempt])
+
+  const inProgress = attempt !== null && attempt.status !== 'submitted'
+  useEffect(() => {
+    if (!inProgress) return
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [inProgress])
 
   const submitNow = useCallback(
     (automatic: boolean) => {
@@ -130,14 +145,43 @@ export function ExamsPage(): React.ReactElement {
     const next = { ...answers, [id]: value }
     setAnswers(next)
     setCheckpointMessage('Đang lưu…')
-    saveQueue.current = saveQueue.current.then(async () => {
-      const saved = await saveExamAnswers(attempt.examId, { answers: next, revision: revision.current })
-      revision.current = saved.revision
-      if (saved.status === 'submitted') setAttempt(saved)
-      setCheckpointMessage('Đã lưu đáp án')
-    }).catch((error: unknown) => {
-      setCheckpointMessage(`Chưa lưu: ${(error as Error).message}. Chỉ đáp án lưu trước hạn được tính.`)
-    })
+    pendingSave.current = { examId: attempt.examId, answers: next }
+    void flushSaves()
+  }
+
+  async function flushSaves(): Promise<void> {
+    if (saving.current) return
+    saving.current = true
+    try {
+      while (pendingSave.current) {
+        const { examId, answers: snapshot } = pendingSave.current
+        pendingSave.current = null
+        try {
+          const saved = await saveExamAnswers(examId, { answers: snapshot, revision: revision.current })
+          revision.current = saved.revision
+          if (saved.status === 'submitted') setAttempt(saved)
+          if (!pendingSave.current) setCheckpointMessage('Đã lưu đáp án')
+        } catch (error) {
+          setCheckpointMessage(`Chưa lưu: ${(error as Error).message}. Chỉ đáp án lưu trước hạn được tính.`)
+        }
+      }
+    } finally {
+      saving.current = false
+    }
+  }
+
+  /** Shows the latest attempt (result or resume) first; starts a new one only when none exists. */
+  async function open(examId: string): Promise<void> {
+    setMessage(null)
+    setOpening(true)
+    try {
+      setAttempt(await getExamAttempt(examId))
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) begin(examId)
+      else setMessage((error as Error).message)
+    } finally {
+      setOpening(false)
+    }
   }
 
   function begin(examId: string): void {
@@ -150,6 +194,9 @@ export function ExamsPage(): React.ReactElement {
 
   if (attempt) {
     const submitted = attempt.status === 'submitted'
+    const total = attempt.questions.length
+    const answered = attempt.questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length
+    const lowTime = !submitted && remaining <= LOW_TIME_SECONDS
     return (
       <>
         <div className="flex items-center justify-between">
@@ -157,10 +204,12 @@ export function ExamsPage(): React.ReactElement {
             <p className="text-sm text-slate-500">Bài thi đang làm</p>
             <h1 className="text-2xl font-semibold text-slate-900">{attempt.examTitle}</h1>
           </div>
-          <div className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 font-mono text-white">
+          <div role="timer" aria-label="Thời gian còn lại"
+            className={`flex items-center gap-2 rounded-md px-3 py-2 font-mono text-white ${lowTime ? 'bg-danger-600' : 'bg-primary-600'}`}>
             <Clock3 className="h-4 w-4" /> {submitted ? 'Đã nộp' : formatRemaining(remaining)}
           </div>
         </div>
+        {!submitted && <p className="text-sm text-slate-600">Đã trả lời {answered}/{total} câu</p>}
 
         {message && (
           <p role="status" className={submitted ? 'text-success-700' : 'text-slate-700'}>
@@ -204,10 +253,17 @@ export function ExamsPage(): React.ReactElement {
           </section>
         ))}
 
-        {!submitted && (
-          <Button onClick={() => submitNow(false)} disabled={submit.isPending}>
+        {!submitted && !confirming && (
+          <Button onClick={() => (answered < total ? setConfirming(true) : submitNow(false))} disabled={submit.isPending}>
             <Send className="mr-2 h-4 w-4" /> {submit.isPending ? 'Đang nộp…' : 'Nộp bài'}
           </Button>
+        )}
+        {!submitted && confirming && (
+          <div role="alertdialog" aria-label="Xác nhận nộp bài" className="c-card flex flex-wrap items-center gap-3">
+            <p className="flex-1">Còn {total - answered} câu chưa trả lời. Nộp bài ngay?</p>
+            <Button onClick={() => { setConfirming(false); submitNow(false) }} disabled={submit.isPending}>Vẫn nộp bài</Button>
+            <Button variant="outline" onClick={() => setConfirming(false)}>Làm tiếp</Button>
+          </div>
         )}
         {submitted && <AttemptOutcome attempt={attempt} retaking={start.isPending}
           onRetake={() => begin(attempt.examId)} onBack={() => setAttempt(null)} />}
@@ -229,8 +285,9 @@ export function ExamsPage(): React.ReactElement {
             <p className="mt-1 text-sm text-slate-500">
               {exam.levelCode} · {exam.skill} · {exam.questionCount} câu · {exam.durationMinutes} phút
             </p>
-            <Button className="mt-4" onClick={() => begin(exam.id)} disabled={start.isPending}>
-              Bắt đầu / Tiếp tục
+            <p className="mt-1 text-xs text-slate-500">Đóng lúc {formatTime(exam.closesAt)}</p>
+            <Button className="mt-4" onClick={() => void open(exam.id)} disabled={start.isPending || opening}>
+              Vào thi
             </Button>
           </article>
         ))}
