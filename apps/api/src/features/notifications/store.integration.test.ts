@@ -27,6 +27,7 @@ describeWithPostgres('notifications store on real Postgres', () => {
     // Deleting the center cascades to branch -> class -> sessions; users cascade to notifications.
     await db.deleteFrom('centers').where('id', '=', CENTER_ID).execute()
     await db.deleteFrom('courses').where('id', '=', COURSE_ID).execute()
+    await db.deleteFrom('exam_attempts').where('exam_id', '=', EXAM_ID).execute()
     await db.deleteFrom('exams').where('id', '=', EXAM_ID).execute()
     await db.deleteFrom('users').where('id', 'in', USER_IDS).execute()
   }

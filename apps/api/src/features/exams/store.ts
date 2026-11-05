@@ -264,7 +264,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         const now = new Date(Math.max(Date.parse(nowIso), clock.rows[0]!.now.getTime()))
         if (row.submitted_at !== null) return row
         if (now.getTime() >= row.deadline_at.getTime()) {
-          return trx.updateTable('exam_attempts').set({ submitted_at: row.deadline_at.toISOString() })
+          return trx.updateTable('exam_attempts')
+            .set({ submitted_at: row.deadline_at.toISOString(), submit_reason: 'deadline_auto' })
             .where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
         }
         if (row.answer_revision !== revision) return undefined
@@ -285,6 +286,7 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         return trx.updateTable('exam_attempts').set({
           answers: late ? row.answers : answersJson,
           submitted_at: late ? row.deadline_at.toISOString() : now.toISOString(),
+          submit_reason: late ? 'deadline_auto' : 'manual',
         }).where('id', '=', attemptId).returningAll().executeTakeFirstOrThrow()
       })
     },
