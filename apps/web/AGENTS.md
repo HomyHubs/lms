@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-13
+
+**Đã xong**
+
+- slice-13 (Lịch sử thi & báo cáo thi): route `/exam-history` "Lịch sử thi" (Học viên) và `/exam-reports` "Báo cáo thi" (Admin/GV), mục trong `NAV_ITEMS`. `StudentHistory` (lọc ngày/kết quả, "Tải thêm" theo cursor, giờ hiển thị `Asia/Ho_Chi_Minh`) dùng chung cho trang học viên và xem lịch sử 1 học viên từ báo cáo. Báo cáo: bảng theo đề (bấm để lọc đề), chi tiết lượt thi, Xuất Excel 2 sheet (`examReportToSheets`). `lib/api.ts` thêm helper `queryString` (dùng chung cho các báo cáo). Hook `useExamHistory`; test `ExamHistoryPage.test.tsx`.
+
 ### 2026-11-12
 
 **Đã xong**

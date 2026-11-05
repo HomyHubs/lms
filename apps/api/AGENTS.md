@@ -23,6 +23,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-13
+
+**Đã xong**
+
+- slice-13: feature `examhistory` — `GET /me/exam-attempts` (học viên), `GET /students/:id/exam-attempts` (Admin/GV, 403 nếu học viên không thuộc cơ sở của người gọi), `GET /reports/exam-attempts` (Admin/GV, phạm vi cơ sở như slice-7). Lọc ngày theo `Asia/Ho_Chi_Minh`, cursor `<started_at>~<id>`, 50 dòng/trang, báo cáo tối đa 5000 dòng. `exams/store.ts` ghi `submit_reason` (`manual`/`deadline_auto`). Test: `reports/routes.test.ts`, `reports/store.integration.test.ts`, `exams/store.integration.test.ts`. ADR 0012.
+
 ### 2026-11-12
 
 **Đã xong**

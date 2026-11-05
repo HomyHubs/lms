@@ -644,6 +644,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-9a | Chấm tay Speaking/Writing | Dọc | Done | 16 | 2026-11-10 |
 | slice-9b | Thông báo trong app + nhắc nhở tự động | Dọc | Done | 18 | 2026-11-11 |
 | slice-11a | Bộ đề cố định & thi theo bộ đề | Dọc | Done | 19 | 2026-11-12 |
+| slice-13 | Lịch sử thi & báo cáo thi | Dọc | Done | 20 | 2026-11-13 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
