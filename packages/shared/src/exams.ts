@@ -175,6 +175,10 @@ export const ExamQuestionView = z.object({
   skill: QuestionSkill,
   points: z.number().int(),
   options: z.array(z.string()).nullable(),
+  /** slice-12: image URLs of the question text, in display order (absent = none). */
+  stemImages: z.array(z.string()).optional(),
+  /** slice-12: option index (as string, after shuffling) -> image URL. */
+  optionImages: z.record(z.string(), z.string()).optional(),
 })
 export type ExamQuestionView = z.infer<typeof ExamQuestionView>
 
