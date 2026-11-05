@@ -26,6 +26,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Đã xong**
 
 - slice-11a (Bộ đề cố định): route `/exam-sets` "Bộ đề & đề thi" (Admin/GV, mục trong `NAV_ITEMS`). Danh sách + lọc trạng thái, tạo bộ đề, trình soạn (thêm từ ngân hàng cùng cấp độ/kỹ năng, soạn câu trắc nghiệm/đúng-sai, Lên/Xuống/Bỏ, xem trước kèm đáp án, Phát hành/Lưu trữ/Nhân bản/Xoá; nút "Chèn hình" disabled — slice-12). Trang chứa luôn `BlueprintForm` (thêm "Cách ra đề": ngẫu nhiên / bộ đề cố định + trộn câu/đáp án + cách thi lại) và bảng đề thi. Hook `useExamSets`; test `ExamSetsPage.test.tsx`, `BlueprintForm.test.tsx`.
+- slice-11b (Import bộ đề): `ImportExamSet.tsx` trong trang Bộ đề — nút "Import từ Word/Excel", form tên/cấp độ/kỹ năng/file, "Xem trước" (gửi byte thô), bảng xem trước OK/Cảnh báo + đánh dấu đáp án đúng, danh sách lỗi theo Câu/Dòng, "Xác nhận import" khoá khi có lỗi → mở trình soạn bộ đề vừa tạo. File mẫu `public/templates/mau-bo-de.{docx,xlsx,csv}`. API client `previewExamSetImport`/`commitExamSetImport`. Tách `SetMetaFields` (tên/cấp độ/kỹ năng) dùng chung cho form tạo và import.
 
 ### 2026-11-11
 

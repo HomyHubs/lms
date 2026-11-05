@@ -22,6 +22,8 @@ import type { Tone } from '@/components/ui/tone'
 import { BlueprintForm } from '@/features/exams/BlueprintForm'
 import { useExams } from '@/features/exams/useExams'
 import { useQuestions } from '@/features/questions/useQuestions'
+import { ImportExamSet } from './ImportExamSet'
+import { SetMetaFields } from './LevelSkillFields'
 import { useExamSet, useExamSetCommand, useExamSets } from './useExamSets'
 
 const STATUS: Record<ExamSetStatus, { label: string; tone: Tone }> = {
@@ -43,14 +45,7 @@ function CreateSetForm({ onCreated }: { onCreated: (id: string) => void }): Reac
   }
   return (
     <form aria-label="Tạo bộ đề" onSubmit={submit} className="flex flex-wrap items-end gap-2 text-sm">
-      <label className="grid gap-1">Tên bộ đề<input name="title" required maxLength={200} className="c-input" /></label>
-      <label className="grid gap-1">Cấp độ<select name="level" className="c-input">
-        <option value="starter">Starter</option><option value="mover">Mover</option><option value="flyer">Flyer</option>
-      </select></label>
-      <label className="grid gap-1">Kỹ năng<select name="skill" className="c-input">
-        <option value="reading">Reading</option><option value="listening">Listening</option>
-        <option value="writing">Writing</option><option value="speaking">Speaking</option>
-      </select></label>
+      <SetMetaFields />
       <Button type="submit" disabled={create.isPending}>Tạo bộ đề</Button>
       {(message || create.error) && <p role="alert" className="text-danger-600">{message || errorText(create.error)}</p>}
     </form>
@@ -210,6 +205,7 @@ export function ExamSetsPage(): React.ReactElement {
       <Card className="space-y-4">
         <CardTitle>Bộ đề</CardTitle>
         <CreateSetForm onCreated={setSelected} />
+        <ImportExamSet onImported={setSelected} />
         <label className="block text-sm">Lọc trạng thái<select aria-label="Lọc trạng thái" value={status} className="c-input ml-2"
           onChange={(e) => setStatus(e.target.value as ExamSetStatus | '')}>
           <option value="">Tất cả</option>

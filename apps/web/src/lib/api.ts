@@ -88,6 +88,8 @@ import {
   type ManualGradingItem,
   ExamSetList,
   ExamSetResponse,
+  ExamSetImportPreview,
+  type CommitExamSetImportRequest,
   type AddExamSetQuestionRequest,
   type CreateExamSetRequest,
   type ExamSet,
@@ -584,6 +586,37 @@ export const duplicateExamSet = (id: string) =>
 export async function deleteExamSet(id: string): Promise<void> {
   const res = await fetch(`/api/exam-sets/${id}`, { method: 'DELETE', credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong xoa duoc bo de')
+}
+
+/**
+ * slice-11b: import Word/Excel/CSV. Step 1 sends the raw file bytes
+ * (application/octet-stream) and gets a preview; nothing is saved yet.
+ */
+export async function previewExamSetImport(
+  file: Blob,
+  meta: { title: string; level: string; skill: string; fileName: string },
+): Promise<ExamSetImportPreview> {
+  const params = new URLSearchParams(meta)
+  const res = await fetch(`/api/exam-sets/import/preview?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/octet-stream' },
+    body: file,
+  })
+  if (!res.ok) return throwApiError(res, 'Khong doc duoc file import')
+  return ExamSetImportPreview.parse(await res.json())
+}
+
+/** slice-11b step 2: confirm the previewed items -> draft exam set (all-or-nothing). */
+export async function commitExamSetImport(input: CommitExamSetImportRequest): Promise<ExamSetDetail> {
+  const res = await fetch('/api/exam-sets/import/commit', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return throwApiError(res, 'Import bo de that bai')
+  return ExamSetResponse.parse(await res.json()).examSet
 }
 
 /** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */
