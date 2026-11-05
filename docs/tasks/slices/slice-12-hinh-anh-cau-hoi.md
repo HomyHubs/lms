@@ -1,9 +1,9 @@
 # Slice/Task slice-12 — Hình ảnh trong câu hỏi / bộ đề
 
 - Cơ chế: Dọc
-- Owner hiện tại: ...
+- Owner hiện tại: An Vo
 - Nhánh: `feature/slice-12-hinh-anh-cau-hoi`
-- PR: ...
+- PR: (điền sau khi mở)
 - Trạng thái: xem `../MVP-BACKLOG.md`
 - Phụ thuộc: slice-11a (Task 4 phần ảnh Word phụ thuộc thêm slice-11b)
 - Sửa mục gốc: để trống
@@ -44,6 +44,10 @@ Kiểm mime thật, giới hạn kích thước, phân quyền xem ảnh, ảnh 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-05 | Thêm | Tạo slice | Yêu cầu chèn hình sau khi có bộ đề | 0010 (sẽ viết ở Task 1) |
+| 2026-11-14 | Đổi | ADR đánh số 0013 (0010 đã dùng cho thông báo, 0012 cho slice-13) | Tránh trùng số | 0013 |
+| 2026-11-14 | Đổi | Upload dạng raw `application/octet-stream` thay multipart; không re-encode/resize bằng `sharp`, chỉ gỡ metadata PNG/JPEG | Không thêm phụ thuộc native; kiểm magic bytes + giới hạn vẫn giữ | 0013 |
+| 2026-11-14 | Hoãn | Driver `s3`, xoá media/dọn ảnh mồ côi | Chưa có hạ tầng deploy; asset bất biến nên không cần `delete` cho MVP | 0013 |
+| 2026-11-14 | Hoãn | Ảnh ở form câu hỏi ngân hàng, ảnh nhúng Word (slice-11b, PR #21), ảnh ở màn chấm tay, đổi thứ tự ảnh bằng kéo | Phụ thuộc PR #21 chưa merge; API `PUT /api/questions/:id/media` đã dùng chung được | 0013 |
 
 ## Cách nghiệm thu
 
@@ -55,4 +59,9 @@ Kiểm mime thật, giới hạn kích thước, phân quyền xem ảnh, ảnh 
 
 ## Bàn giao phiên gần nhất
 
-Điền theo mẫu `../../ai-workflow/templates/session-handoff.md` khi dừng giữa chừng.
+**2026-11-14 — An Vo (agent)**
+
+- Đã xong: Task 1–3 đầy đủ (trừ driver s3); Task 4 phần trình soạn bộ đề (nút “Hình ảnh” từng câu: chọn file / kéo-thả / dán, gắn đề bài hoặc lựa chọn, gỡ) và màn thi học viên (lazy, phóng to, Esc đóng). Migration `20261114000000_question_media` (up→down→up trên PG18). Integration PG18: bộ đề published khoá ảnh; đổi ảnh câu ngân hàng sau khi lượt bắt đầu → lượt cũ giữ ảnh cũ; asset đang dùng không xoá được.
+- Chưa làm: xem các dòng “Hoãn” ở trên.
+- Bước tiếp: review PR; nghiệm thu tay trên mobile (mục 1, 3, 4 ở trên; mục 2 chờ PR #21). Khi deploy: mount `MEDIA_DIR` thành volume có backup.
+- Lưu ý merge: PR #21 đăng ký parser `application/octet-stream` ở root; plugin media chỉ đăng ký khi chưa có (`hasContentTypeParser`) và giới hạn 2MB bằng `bodyLimit` của route.

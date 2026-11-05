@@ -28,7 +28,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-10 | Giao diện chung: AppShell, dashboard theo vai trò, restyle | Dọc | Done | — | feature/ui-shell | 15 | slice-8 | `slices/slice-10-giao-dien-chung.md` |
 | slice-11a | Bộ đề thi cố định (tạo trên hệ thống) & thi theo bộ đề | Dọc | Done | — | feature/slice-11a-bo-de-co-dinh | 19 | slice-4, slice-5 | `slices/slice-11a-bo-de-co-dinh.md` |
 | slice-11b | Import bộ đề từ Word (.docx) / Excel (.xlsx, .csv) | Dọc | Chưa bắt đầu | — | — | — | slice-11a | `slices/slice-11b-import-de-word-excel.md` |
-| slice-12 | Hình ảnh trong câu hỏi / bộ đề | Dọc | Đang làm | An Vo (bot-2) | feature/slice-12-hinh-anh-cau-hoi | — | slice-11a (Task 4: + slice-11b) | `slices/slice-12-hinh-anh-cau-hoi.md` |
+| slice-12 | Hình ảnh trong câu hỏi / bộ đề | Dọc | Review | An Vo | feature/slice-12-hinh-anh-cau-hoi | — | slice-11a (Task 4: + slice-11b) | `slices/slice-12-hinh-anh-cau-hoi.md` |
 | slice-13 | Lịch sử thi học viên & báo cáo kết quả/thi lại | Dọc | Chưa bắt đầu | — | — | — | slice-5, slice-7 | `slices/slice-13-lich-su-thi-bao-cao.md` |
 
 ## Công việc bổ sung theo mục 22
