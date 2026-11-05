@@ -28,6 +28,7 @@ export {
   type ExamSetRef,
   type AttemptRow,
   type QuestionLite,
+  type QuestionMediaRef,
   type LevelRef,
   type CreateExamFields,
   type CreateAttemptFields,

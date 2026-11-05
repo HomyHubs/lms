@@ -19,6 +19,8 @@ const EnvSchema = z.object({
     .default(10 * 60),
   /** slice-9b: reminder scan interval in minutes; 0 disables the scheduler (admin can still run it). */
   NOTIFY_INTERVAL_MINUTES: z.coerce.number().int().nonnegative().default(15),
+  /** slice-12: directory of the local media storage driver (ADR 0013). */
+  MEDIA_DIR: z.string().min(1).default('./data/media'),
 })
 
 export type AppConfig = z.infer<typeof EnvSchema>
