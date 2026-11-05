@@ -21,6 +21,12 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-14
+
+**Đã xong**
+
+- slice-12 (Hình ảnh câu hỏi): feature `media` — `QuestionImages` (tải khi bấm “Hình ảnh” ở từng câu trong trình soạn bộ đề; chọn file / kéo-thả / dán, gắn đề bài hoặc lựa chọn, gỡ; chỉ xem khi bộ đề đã phát hành) và `ExamImage` (lazy, bấm phóng to, Esc đóng). Màn thi hiển thị `stemImages`/`optionImages`. Nút “Chèn hình” disabled của slice-11a đã bỏ. Test `QuestionImages.test.tsx`.
+
 ### 2026-11-12
 
 **Đã xong**

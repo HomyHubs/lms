@@ -92,6 +92,10 @@ import {
   type CreateExamSetRequest,
   type ExamSet,
   type ExamSetDetail,
+  MediaResponse,
+  QuestionMediaList,
+  type MediaAsset,
+  type QuestionMediaItem,
   type ExamSetListQuery,
   type UpdateExamSetRequest,
 } from '@lms/shared'
@@ -510,6 +514,30 @@ export function parseQuestionsCsv(text: string): Record<string, string>[] {
   return questionRowsToRecords(parseCsvRows(text))
 }
 
+
+/** slice-12: raw bytes; the server decides the type from magic bytes and strips EXIF. */
+export async function uploadMedia(file: Blob): Promise<MediaAsset> {
+  const res = await fetch('/api/media', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/octet-stream' }, body: file,
+  })
+  if (!res.ok) return throwApiError(res, 'Khong tai duoc anh len')
+  return MediaResponse.parse(await res.json()).media
+}
+
+export async function getQuestionMedia(questionId: string): Promise<QuestionMediaList['media']> {
+  const res = await fetch(`/api/questions/${questionId}/media`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc anh cua cau hoi')
+  return QuestionMediaList.parse(await res.json()).media
+}
+
+export async function setQuestionMedia(questionId: string, media: QuestionMediaItem[]): Promise<QuestionMediaList['media']> {
+  const res = await fetch(`/api/questions/${questionId}/media`, {
+    method: 'PUT', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ media }),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong luu duoc anh cua cau hoi')
+  return QuestionMediaList.parse(await res.json()).media
+}
 
 export async function saveExamAnswers(examId: string, input: SaveExamAnswersRequest): Promise<ExamAttemptView> {
   const res = await fetch(`/api/exams/${examId}/answers`, {
