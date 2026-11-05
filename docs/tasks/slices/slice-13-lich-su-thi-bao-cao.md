@@ -1,9 +1,9 @@
 # Slice/Task slice-13 — Lịch sử thi của học viên & báo cáo kết quả/thi lại
 
 - Cơ chế: Dọc
-- Owner hiện tại: ...
+- Owner hiện tại: An Vo
 - Nhánh: `feature/slice-13-lich-su-thi-bao-cao`
-- PR: ...
+- PR: #20
 - Trạng thái: xem `../MVP-BACKLOG.md`
 - Phụ thuộc: slice-5, slice-7 (Done). Nên merge sau slice-11a để có cột mode/bộ đề (không bắt buộc — thiếu thì cột để trống).
 - Sửa mục gốc: để trống
@@ -45,6 +45,8 @@ RBAC theo chi nhánh/lớp, không xoá được lịch sử, ngày giờ lấy 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-05 | Thêm | Tạo slice | Yêu cầu lịch sử kết quả + số lần thi lại + ngày giờ để report | — |
+| 2026-11-13 | Sửa | `submit_reason` chỉ còn `manual`\|`deadline_auto` (bỏ `late_checkpoint`) | Không có luồng nào sinh giá trị này | 0012 |
+| 2026-11-13 | Sửa | Lịch sử từng học viên mở từ trang "Báo cáo thi" (bấm SĐT) thay vì tab trong chi tiết học viên; xuất chỉ Excel (2 sheet), không CSV | Chưa có trang chi tiết học viên; Excel mở được ở mọi công cụ bảng tính | 0012 |
 
 ## Cách nghiệm thu
 
@@ -56,4 +58,7 @@ RBAC theo chi nhánh/lớp, không xoá được lịch sử, ngày giờ lấy 
 
 ## Bàn giao phiên gần nhất
 
-Điền theo mẫu `../../ai-workflow/templates/session-handoff.md` khi dừng giữa chừng.
+### 2026-11-13 — Review (PR #20)
+
+- Migration `20261113000000_exam_history.sql` (FK restrict, `submit_reason`, index); API `features/examhistory`; web `/exam-history` (học viên) + `/exam-reports` (Admin/GV) với Xuất Excel; ADR 0012.
+- Còn lại (stub cho phép): biểu đồ xu hướng điểm.
