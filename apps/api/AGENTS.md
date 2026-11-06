@@ -23,6 +23,11 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-06 — slice-6.1 đang làm
+
+- Bắt đầu tách giáo viên thực dạy khỏi người ghi điểm danh bằng `session_teacher_events` (ADR 0014); chưa mở quyền Staff/Admin, chưa hoàn thành luồng.
+- Test store PostgreSQL liên quan: 4/4; lint/typecheck đạt. Cần xác minh migration nâng cấp dữ liệu cũ và rollback, hoàn thiện API/UI và RBAC.
+
 ### 2026-11-14
 
 **Đã xong**

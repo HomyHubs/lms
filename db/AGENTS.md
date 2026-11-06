@@ -17,6 +17,10 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-06 — slice-6.1 đang làm
+
+- Thêm migration `20261115000000_attendance_teacher.sql` cho nhật ký giáo viên thực dạy; áp dụng riêng trên DB test. Chưa xác minh backfill với dữ liệu cũ hoặc down/up. Chạy cả thư mục migration gặp lỗi `submit_reason` đã tồn tại trên DB test; cần xử lý thử nghiệm độc lập trước khi bàn giao.
+
 ### 2026-11-14
 
 **Đã xong**

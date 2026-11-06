@@ -108,6 +108,16 @@ describeWithPostgres('attendance store on real Postgres', () => {
       [STUDENT_B, 'late', 'bus'],
     ])
 
+    await store.upsertRecords(session!.id, TEACHER_ID, [{ studentId: STUDENT_B, status: 'late', note: 'left early', arrivedAt: '2026-11-05T11:40:00.000Z', lateMinutes: 10 }])
+    await store.upsertRecords(session!.id, TEACHER_ID, [{ studentId: STUDENT_B, status: 'late', note: 'bus' }])
+    const latest = (await store.listRecords(session!.id)).find((r) => r.student_id === STUDENT_B)!
+    expect(new Date(latest.arrived_at!).toISOString()).toBe('2026-11-05T11:40:00.000Z')
+    expect(latest.late_minutes).toBe(10)
+    const events = await db.selectFrom('attendance_events').selectAll().where('session_id', '=', session!.id).where('student_id', '=', STUDENT_B).orderBy('id').execute()
+    expect(events.map((e) => e.status)).toEqual(['absent', 'late', 'late', 'late'])
+    expect(events[2]?.late_minutes).toBe(10)
+    expect(events[2]?.note).toBe('left early')
+
     const history = await store.listStudentHistory(STUDENT_B, [BRANCH_ID])
     expect(history).toEqual([
       {
@@ -126,5 +136,22 @@ describeWithPostgres('attendance store on real Postgres', () => {
     const scoped = await store.listScopedRecords({ courseId: COURSE_ID, branchIds: [BRANCH_ID] })
     expect(scoped.map((r) => r.status).sort()).toEqual(['late', 'present'])
     expect(await store.listScopedRecords({ classId: CLASS_ID, branchIds: [CENTER_ID] })).toEqual([])
+
+    const concurrent = await store.createSession({ classId: CLASS_ID, sessionDate: '2026-11-06', startsAt: '18:30', topic: null, createdBy: TEACHER_ID, durationMinutes: 90, makeupForSessionId: null })
+    const [cancelled, marked] = await Promise.allSettled([
+      store.cancelSession(concurrent!.id),
+      store.upsertRecords(concurrent!.id, TEACHER_ID, [{ studentId: STUDENT_A, status: 'present', note: null }]),
+    ])
+    const finalSession = await store.findSession(concurrent!.id)
+    const finalRecords = await store.listRecords(concurrent!.id)
+    if (finalSession!.cancelled_at !== null) {
+      expect(cancelled).toMatchObject({ status: 'fulfilled', value: true })
+      expect(marked.status).toBe('rejected')
+      expect(finalRecords).toEqual([])
+    } else {
+      expect(cancelled).toMatchObject({ status: 'fulfilled', value: false })
+      expect(marked.status).toBe('fulfilled')
+      expect(finalRecords).toHaveLength(1)
+    }
   })
 })

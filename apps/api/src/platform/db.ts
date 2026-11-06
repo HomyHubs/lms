@@ -252,6 +252,14 @@ export interface ClassSessionsTable {
   cancelled_at: ColumnType<Date | null, string | null | undefined, string | null>
 }
 
+export interface SessionTeacherEventsTable {
+  id: Generated<string>
+  session_id: string
+  teacher_id: string
+  recorded_by: string
+  recorded_at: Timestamp
+}
+
 /** Table `staff_shifts` — slice-8: one check-in/check-out of a staff member or teacher. */
 export interface StaffShiftsTable {
   id: Generated<string>
@@ -268,6 +276,12 @@ export interface AttendanceRecordsTable {
   note: ColumnType<string | null, string | null | undefined, string | null>
   recorded_by: string
   recorded_at: Timestamp
+  arrived_at: ColumnType<Date | null, string | null | undefined, string | null>
+  late_minutes: ColumnType<number | null, number | null | undefined, number | null>
+}
+
+export interface AttendanceEventsTable extends AttendanceRecordsTable {
+  id: Generated<string>
 }
 
 /** Table `ai_generation_requests` — slice-4.5: a prompt generated for an external AI tool. */
@@ -382,7 +396,9 @@ export interface Database {
   exam_grading_policies: ExamGradingPoliciesTable
   class_teachers: ClassTeachersTable
   class_sessions: ClassSessionsTable
+  session_teacher_events: SessionTeacherEventsTable
   attendance_records: AttendanceRecordsTable
+  attendance_events: AttendanceEventsTable
   ai_generation_requests: AiGenerationRequestsTable
   ai_generated_items: AiGeneratedItemsTable
   student_grading_policies: StudentGradingPoliciesTable

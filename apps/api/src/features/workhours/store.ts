@@ -93,7 +93,7 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
             eb(
               'class_sessions.id',
               'in',
-              eb.selectFrom('attendance_records').select('session_id').where('recorded_by', '=', teacherId),
+              eb.selectFrom('session_teacher_events').select('session_id').where('teacher_id', '=', teacherId),
             ),
           ]),
         )
@@ -104,26 +104,19 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
         .execute()
       if (sessions.length === 0) return []
 
-      // Flat second query: the latest recorder of each session is the teacher who taught it.
-      const recorders = await db
-        .selectFrom('attendance_records')
-        .select(['session_id', 'recorded_by', sql<Date>`max(recorded_at)`.as('last_recorded_at')])
-        .where(
-          'session_id',
-          'in',
-          sessions.map((s) => s.id),
-        )
-        .groupBy(['session_id', 'recorded_by'])
+      const events = await db
+        .selectFrom('session_teacher_events')
+        .select(['session_id', 'teacher_id'])
+        .where('session_id', 'in', sessions.map((s) => s.id))
+        .orderBy('id', 'desc')
         .execute()
-      const taughtBy = new Map<string, { teacher: string; at: number }>()
-      for (const r of recorders) {
-        const at = new Date(r.last_recorded_at).getTime()
-        const current = taughtBy.get(r.session_id)
-        if (!current || at > current.at) taughtBy.set(r.session_id, { teacher: r.recorded_by, at })
+      const taughtBy = new Map<string, string>()
+      for (const event of events) {
+        if (!taughtBy.has(event.session_id)) taughtBy.set(event.session_id, event.teacher_id)
       }
-      return sessions.map(
-        (s): WorkSessionRow => ({ ...s, taught_by: taughtBy.get(s.id)?.teacher ?? null }),
-      )
+      return sessions
+        .map((s): WorkSessionRow => ({ ...s, taught_by: taughtBy.get(s.id) ?? null }))
+        .filter((s) => !teacherId || s.planned_teacher_id === teacherId || s.taught_by === teacherId)
     },
 
     async listUsers(userIds) {

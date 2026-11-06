@@ -114,7 +114,7 @@ describe('App routing + auth guard', () => {
 const SHELL_CASES: { role: UserRole; visible: string[]; hidden: string[]; dashboard: string }[] = [
   { role: 'admin', visible: ['Người dùng', 'Báo cáo & xếp loại', 'Điểm danh'], hidden: ['Bài thi của tôi'], dashboard: 'Lớp học' },
   { role: 'teacher', visible: ['Điểm danh', 'Ngân hàng câu hỏi', 'Ngày công & giờ dạy'], hidden: ['Người dùng', 'Báo cáo & xếp loại'], dashboard: 'Lớp phụ trách' },
-  { role: 'staff', visible: ['Ngày công & giờ dạy'], hidden: ['Điểm danh', 'Người dùng', 'Ngân hàng câu hỏi'], dashboard: 'Ngày công (tháng)' },
+  { role: 'staff', visible: ['Ngày công & giờ dạy', 'Điểm danh'], hidden: ['Người dùng', 'Ngân hàng câu hỏi'], dashboard: 'Ngày công (tháng)' },
   { role: 'student', visible: ['Bài thi của tôi', 'Điểm danh'], hidden: ['Ngày công & giờ dạy', 'Người dùng'], dashboard: 'Tỷ lệ chuyên cần' },
 ]
 

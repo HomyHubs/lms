@@ -59,6 +59,7 @@ import {
   ClassSessionResponse,
   ClassTeacherList,
   SessionAttendance,
+  TodayAttendance,
   StudentAttendance,
   TeachingClassList,
   TodayAttendanceSummary,
@@ -811,6 +812,12 @@ export async function createClassSession(
   })
   if (!res.ok) return throwApiError(res, 'Tao buoi hoc that bai')
   return ClassSessionResponse.parse(await res.json()).session
+}
+
+export async function getTodayAttendance(): Promise<TodayAttendance> {
+  const res = await fetch('/api/attendance/today', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Không tải được điểm danh hôm nay')
+  return TodayAttendance.parse(await res.json())
 }
 
 export async function getSessionAttendance(sessionId: string): Promise<SessionAttendance> {
