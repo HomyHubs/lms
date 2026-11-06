@@ -156,6 +156,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .innerJoin('users', 'users.id', 'enrollments.student_id')
         .select(['enrollments.student_id', 'users.phone_number', 'users.first_name', 'users.last_name'])
         .where('enrollments.class_id', '=', classId)
+        .where('enrollments.ended_at', 'is', null)
         .orderBy('users.last_name', 'asc')
         .orderBy('users.first_name', 'asc')
         .orderBy('users.phone_number', 'asc')
@@ -233,6 +234,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .innerJoin('class_sessions', 'class_sessions.id', 'attendance_records.session_id')
         .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
         .innerJoin('users', 'users.id', 'attendance_records.student_id')
+        .innerJoin('enrollments', (join) => join.onRef('enrollments.class_id', '=', 'classes.id').onRef('enrollments.student_id', '=', 'attendance_records.student_id').on('enrollments.ended_at', 'is', null))
         .select([
           'attendance_records.student_id',
           'users.phone_number',
