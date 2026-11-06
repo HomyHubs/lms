@@ -26,4 +26,5 @@ Nhánh `feature/enrollment-history` chứa điểm danh và bảo toàn ghi danh
 
 - Kế hoạch commit `4dddb02` trước code. Dashboard mở lịch sử ghi danh theo cơ sở, tháng hoặc khoảng ngày; đếm lượt vào/ra và cho biết giới hạn dữ liệu cũ. Có đường dẫn tới bảng điểm danh.
 - API test 8/8 trên PostgreSQL riêng, UI test 1/1, build/lint/typecheck đạt; đổi múi giờ sang UTC làm test ranh giới ngày thất bại, sau đó khôi phục. Chưa kiểm tra giao diện trên trình duyệt thật.
-- Chưa triển khai biểu đồ và Admin chấm công giáo viên; chưa push, merge hay cập nhật demo.
+- Đã bổ sung biểu đồ thanh và tròn cho kết quả thi trong danh sách, điểm danh hôm nay, trạng thái buổi dạy, phút công theo vai trò và xếp loại. Báo cáo thi giới hạn 5.000 lượt gần nhất; phút công phản ánh tất cả cơ sở của nhân sự được gán cơ sở lọc. Bộ test web 67/67 đạt; chưa kiểm tra giao diện trên trình duyệt thật.
+- Admin chấm công giáo viên chưa triển khai; chưa push, merge hay cập nhật demo.

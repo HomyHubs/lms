@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import {
   WORK_SESSION_STATUS_LABELS,
+  WORK_SESSION_STATUSES,
   type StaffShift,
   type TeacherWorkSummary,
   type WorkHoursReport,
@@ -21,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge, Card, CardTitle, PageHeader, StatCard } from '@/components/ui/card'
 import { useSession } from '@/features/auth/useAuth'
+import { ReportCharts } from '@/features/reports/ReportCharts'
 import { currentMonth } from '@/lib/utils'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { toHours, workHoursToSheets } from './work-hours-export'
@@ -318,6 +320,11 @@ function AdminReportView(): React.ReactElement {
             <StatCard label="Nhân sự chấm công" value={String(data.staff.length)} icon={Users} tone="accent" />
             <StatCard label="Tổng giờ công" value={hoursLabel(totalWorked)} icon={Clock} tone="warning" />
           </div>
+          <ReportCharts title="Biểu đồ phút công của nhân sự được gán cơ sở (tất cả cơ sở)" unit="phút" items={[
+            { label: 'Giáo viên', value: data.staff.filter((s) => s.role === 'teacher').reduce((n, s) => n + s.workedMinutes, 0) },
+            { label: 'Nhân viên', value: data.staff.filter((s) => s.role === 'staff').reduce((n, s) => n + s.workedMinutes, 0) },
+          ]} />
+          <ReportCharts title="Biểu đồ trạng thái buổi dạy" unit="buổi" items={WORK_SESSION_STATUSES.map((status) => ({ label: WORK_SESSION_STATUS_LABELS[status], value: data.sessions.filter((s) => s.status === status).length }))} />
           <ReportTables report={data} />
         </>
       )}
