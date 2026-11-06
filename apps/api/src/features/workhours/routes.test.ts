@@ -7,7 +7,7 @@ import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
 import { workHoursRoutes } from './routes.js'
-import type { ShiftRow, WorkHoursStore, WorkSessionRow } from './service.js'
+import type { ShiftEventRow, ShiftRow, WorkHoursStore, WorkSessionRow } from './service.js'
 
 const BRANCH_1 = '20000000-0000-0000-0000-000000000001'
 const BRANCH_2 = '20000000-0000-0000-0000-000000000002'
@@ -47,6 +47,7 @@ const branchScope: BranchScope = {
 /** Staff + teacher work in branch 1; the teacher taught one 90-minute session in branch 1. */
 function makeFakeStore(): WorkHoursStore {
   const shifts: ShiftRow[] = []
+  const events: (ShiftEventRow & { user_id: string })[] = []
   const session: WorkSessionRow = {
     id: 'a0000000-0000-0000-0000-000000000001',
     class_id: 'b0000000-0000-0000-0000-000000000001',
@@ -71,18 +72,21 @@ function makeFakeStore(): WorkHoursStore {
     role: u.role,
   }))
   return {
-    async checkIn(userId) {
+    async checkIn(userId, recordedBy = userId, branchId) {
       if (shifts.some((s) => s.user_id === userId && !s.check_out_at)) return undefined
       const row = { id: `c000000${shifts.length}-0000-0000-0000-000000000001`, user_id: userId, check_in_at: new Date('2026-11-20T01:00:00Z'), check_out_at: null, work_date: '2026-11-20' }
       shifts.push(row)
+      events.push({ user_id: userId, shift_id: row.id, event_type: 'check_in', occurred_at: row.check_in_at, recorded_by: recordedBy, branch_id: branchId ?? null })
       return row
     },
-    async checkOut(userId) {
+    async checkOut(userId, recordedBy = userId, branchId) {
       const open = shifts.find((s) => s.user_id === userId && !s.check_out_at)
       if (!open) return undefined
       open.check_out_at = new Date('2026-11-20T09:00:00Z')
+      events.push({ user_id: userId, shift_id: open.id, event_type: 'check_out', occurred_at: open.check_out_at, recorded_by: recordedBy, branch_id: branchId ?? null })
       return open
     },
+    async listShiftEvents(userId) { return events.filter((event) => event.user_id === userId).reverse() },
     async findOpenShift(userId) {
       return shifts.find((s) => s.user_id === userId && !s.check_out_at)
     },
@@ -95,7 +99,7 @@ function makeFakeStore(): WorkHoursStore {
       return [session]
     },
     async listUsers(ids) {
-      return workers.filter((w) => ids.includes(w.id))
+      return [...workers, { id: ADMIN_B1.id, phone_number: ADMIN_B1.phone_number, role: ADMIN_B1.role }].filter((w) => ids.includes(w.id))
     },
     async listBranchWorkers(branchIds) {
       return branchIds.includes(BRANCH_1) ? workers : []
@@ -150,6 +154,30 @@ describe('work hours routes', () => {
     expect((await teacher('GET', '/reports/work-hours?month=2026-11')).statusCode).toBe(403)
     expect((await (await client(STUDENT))('POST', '/timesheet/check-in')).statusCode).toBe(403)
     expect((await (await client(ADMIN_B1))('POST', '/timesheet/check-in')).statusCode).toBe(403)
+  })
+
+  it('lets only an in-scope admin record teacher shifts and read the actor history', async () => {
+    const store = makeFakeStore()
+    const client = makeClient(store)
+    const admin = await client(ADMIN_B1)
+    const teacher = await client(TEACHER)
+    const path = `/admin/teachers/${TEACHER.id}/timesheet`
+    expect((await teacher('POST', `${path}/check-in?branchId=${BRANCH_1}`)).statusCode).toBe(403)
+    expect((await admin('POST', `${path}/check-in?branchId=${BRANCH_2}`)).statusCode).toBe(404)
+    expect((await admin('POST', `/admin/teachers/${STAFF.id}/timesheet/check-in?branchId=${BRANCH_1}`)).statusCode).toBe(404)
+    expect((await admin('POST', `${path}/check-in?branchId=${BRANCH_1}`)).statusCode).toBe(201)
+    expect((await admin('POST', `${path}/check-in?branchId=${BRANCH_1}`)).statusCode).toBe(409)
+    expect((await admin('POST', `${path}/check-out?branchId=${BRANCH_1}`)).statusCode).toBe(200)
+    await store.checkIn(TEACHER.id, ADMIN_B1.id, BRANCH_2)
+    await store.checkOut(TEACHER.id, ADMIN_B1.id, BRANCH_2)
+    const result = await admin('GET', `${path}?branchId=${BRANCH_1}&month=2026-11`)
+    expect(result.statusCode).toBe(200)
+    expect(result.json().events).toHaveLength(2)
+    expect(result.json()).toMatchObject({ openShift: null, events: [
+      { action: 'check_out', recordedBy: ADMIN_B1.id, recordedByPhone: ADMIN_B1.phone_number, branchId: BRANCH_1 },
+      { action: 'check_in', recordedBy: ADMIN_B1.id, recordedByPhone: ADMIN_B1.phone_number, branchId: BRANCH_1 },
+    ] })
+    expect((await admin('GET', `${path}?branchId=${BRANCH_2}&month=2026-11`)).statusCode).toBe(404)
   })
 
   it('reports teachers and staff of the admin branches only', async () => {

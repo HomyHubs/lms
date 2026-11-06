@@ -67,11 +67,20 @@ export interface SessionScope extends DateRange {
   teacherId?: string
 }
 
+export interface ShiftEventRow {
+  shift_id: string
+  event_type: 'check_in' | 'check_out'
+  occurred_at: Date
+  recorded_by: string | null
+  branch_id: string | null
+}
+
 export interface WorkHoursStore {
   /** Undefined when the user already has an open shift. */
-  checkIn(userId: string): Promise<ShiftRow | undefined>
+  checkIn(userId: string, recordedBy?: string, branchId?: string): Promise<ShiftRow | undefined>
   /** Undefined when the user has no open shift. */
-  checkOut(userId: string): Promise<ShiftRow | undefined>
+  checkOut(userId: string, recordedBy?: string, branchId?: string): Promise<ShiftRow | undefined>
+  listShiftEvents(userId: string, range: DateRange): Promise<ShiftEventRow[]>
   findOpenShift(userId: string): Promise<ShiftRow | undefined>
   listShifts(userIds: string[], range: DateRange): Promise<ShiftRow[]>
   listSessions(scope: SessionScope): Promise<WorkSessionRow[]>

@@ -111,5 +111,19 @@ export const MyTimesheet = z.object({
 })
 export type MyTimesheet = z.infer<typeof MyTimesheet>
 
+export const TeacherShiftEvent = z.object({
+  shiftId: z.string().uuid(),
+  action: z.enum(['check_in', 'check_out']),
+  occurredAt: z.string(),
+  recordedBy: z.string().uuid().nullable(),
+  recordedByPhone: z.string().nullable(),
+  branchId: z.string().uuid().nullable(),
+})
+export const TeacherTimesheet = z.object({
+  openShift: StaffShift.nullable(),
+  events: z.array(TeacherShiftEvent),
+})
+export type TeacherTimesheet = z.infer<typeof TeacherTimesheet>
+
 export const StaffShiftResponse = z.object({ shift: StaffShift })
 export type StaffShiftResponse = z.infer<typeof StaffShiftResponse>

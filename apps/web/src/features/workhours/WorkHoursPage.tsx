@@ -26,11 +26,11 @@ import { ReportCharts } from '@/features/reports/ReportCharts'
 import { currentMonth } from '@/lib/utils'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { toHours, workHoursToSheets } from './work-hours-export'
-import { useBranches, useCheckShift, useMyTimesheet, useWorkHoursReport } from './useWorkHours'
+import { useBranches, useCheckShift, useCheckTeacherShift, useMyTimesheet, useTeacherTimesheet, useWorkHoursReport } from './useWorkHours'
 
 const hoursLabel = (minutes: number): string => `${toHours(minutes)} giờ`
 const timeLabel = (iso: string): string =>
-  new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+  new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' })
 
 /** Họ tên hiển thị (last_name + first_name); fallback về SĐT khi chưa có hồ sơ tên. */
 const personName = (p: { firstName: string | null; lastName: string | null; phoneNumber: string }): string => {
@@ -275,6 +275,60 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
   )
 }
 
+function TeacherTimekeeping({ branchId, month, report }: { branchId: string; month: string; report: WorkHoursReport }): React.ReactElement {
+  const [teacherId, setTeacherId] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const sheet = useTeacherTimesheet(teacherId, branchId, month)
+  const check = useCheckTeacherShift()
+  const teachers = report.staff.filter((worker) => worker.role === 'teacher')
+  const open = sheet.data?.openShift
+
+  function toggle(): void {
+    if (!sheet.data) return
+    const action = open ? 'check-out' : 'check-in'
+    setMessage(null)
+    check.mutate({ teacherId, branchId, action }, {
+      onSuccess: () => setMessage(action === 'check-in' ? 'Đã check-in cho giáo viên.' : 'Đã check-out cho giáo viên.'),
+      onError: (error) => setMessage((error as Error).message),
+    })
+  }
+
+  return (
+    <Card aria-label="Chấm công giáo viên">
+      <CardTitle>Chấm công giáo viên</CardTitle>
+      {!branchId ? <p>Chọn một cơ sở để chấm công.</p> : (
+        <>
+          <p className="text-sm text-slate-600">Ca làm theo giáo viên trên tất cả cơ sở, riêng giờ dạy tính theo buổi. Nút chấm công ghi thời điểm hiện tại của máy chủ (giờ Việt Nam), không phụ thuộc tháng đang xem.</p>
+          <label htmlFor="timesheet-teacher">Giáo viên</label>
+          <select id="timesheet-teacher" className="c-input" value={teacherId} disabled={check.isPending} onChange={(e) => { setTeacherId(e.target.value); setMessage(null) }}>
+            <option value="">Chọn giáo viên</option>
+            {teachers.map((t) => <option key={t.userId} value={t.userId}>{t.phoneNumber}</option>)}
+          </select>
+          {teacherId && sheet.isLoading && <p>Đang tải lịch sử…</p>}
+          {teacherId && sheet.isError && <p role="alert">{(sheet.error as Error).message}</p>}
+          {sheet.data && (
+            <>
+              <p>{open ? `Đang trong ca từ ${timeLabel(open.checkInAt)}` : 'Chưa trong ca'}</p>
+              <Button onClick={toggle} disabled={check.isPending || sheet.isFetching || sheet.isError}>{open ? 'Check-out cho giáo viên' : 'Check-in cho giáo viên'}</Button>
+              {message && <p role="status">{message}</p>}
+              <h3 className="font-semibold">Lịch sử thao tác trong tháng</h3>
+              <p className="text-sm text-slate-600">Lịch sử gồm thao tác tại cơ sở đã chọn và thao tác không rõ cơ sở; ca cũ có thể không xác định được người thao tác.</p>
+              {sheet.data.events.length === 0 ? <p>Chưa có thao tác trong tháng.</p> : (
+                <table className="c-table">
+                  <thead><tr><th>Thời điểm</th><th>Thao tác</th><th>Người ghi</th></tr></thead>
+                  <tbody>{sheet.data.events.map((event) => (
+                    <tr key={`${event.shiftId}-${event.action}`}><td>{timeLabel(event.occurredAt)}</td><td>{event.action === 'check_in' ? 'Check-in' : 'Check-out'}</td><td>{event.recordedByPhone ?? event.recordedBy ?? 'Không xác định'}</td></tr>
+                  ))}</tbody>
+                </table>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </Card>
+  )
+}
+
 /** Admin: monthly payroll report within branch scope + Excel export. */
 function AdminReportView(): React.ReactElement {
   const [query, setQuery] = useState<WorkHoursReportQuery>({ month: currentMonth() })
@@ -325,6 +379,7 @@ function AdminReportView(): React.ReactElement {
             { label: 'Nhân viên', value: data.staff.filter((s) => s.role === 'staff').reduce((n, s) => n + s.workedMinutes, 0) },
           ]} />
           <ReportCharts title="Biểu đồ trạng thái buổi dạy" unit="buổi" items={WORK_SESSION_STATUSES.map((status) => ({ label: WORK_SESSION_STATUS_LABELS[status], value: data.sessions.filter((s) => s.status === status).length }))} />
+          <TeacherTimekeeping key={query.branchId ?? ''} branchId={query.branchId ?? ''} month={query.month} report={data} />
           <ReportTables report={data} />
         </>
       )}
