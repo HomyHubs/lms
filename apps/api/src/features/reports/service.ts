@@ -69,7 +69,19 @@ export interface EnrollmentFilter {
   classId?: string
 }
 
+export interface MovementRow {
+  id: string
+  branch_id: string
+  branch_name: string
+  class_name: string | null
+  phone_number: string | null
+  event_type: 'enrolled' | 'withdrawn'
+  occurred_at: Date
+}
+
 export interface ReportsStore {
+  listMovements: (branchIds: string[], from: string, to: string) => Promise<MovementRow[]>
+  listMovementBranches: (branchIds: string[]) => Promise<{ id: string; name: string }[]>
   listPolicies: () => Promise<PolicyRow[]>
   levelExists: (levelId: string) => Promise<boolean>
   upsertPolicy: (levelId: string, policy: UpdateClassificationPolicyRequest) => Promise<void>

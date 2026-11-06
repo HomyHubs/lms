@@ -21,3 +21,9 @@ Thực hiện các yêu cầu còn lại của chủ dự án sau phần bảo t
 ## Phụ thuộc và giới hạn
 
 Nhánh `feature/enrollment-history` chứa điểm danh và bảo toàn ghi danh; nhánh menu thi còn tách riêng. Chỉ sự kiện mới có ảnh chụp cơ sở; dữ liệu cũ đã bị xóa không thể khôi phục. Rollback migration sau khi phát sinh dữ liệu lịch sử phải tránh làm mất dữ liệu.
+
+## Tiến độ
+
+- Kế hoạch commit `4dddb02` trước code. Dashboard mở lịch sử ghi danh theo cơ sở, tháng hoặc khoảng ngày; đếm lượt vào/ra và cho biết giới hạn dữ liệu cũ. Có đường dẫn tới bảng điểm danh.
+- API test 8/8 trên PostgreSQL riêng, UI test 1/1, build/lint/typecheck đạt; đổi múi giờ sang UTC làm test ranh giới ngày thất bại, sau đó khôi phục. Chưa kiểm tra giao diện trên trình duyệt thật.
+- Chưa triển khai biểu đồ và Admin chấm công giáo viên; chưa push, merge hay cập nhật demo.

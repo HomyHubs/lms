@@ -74,6 +74,8 @@ import {
   type AiGenerationRequest,
   type CreateAiRequestRequest,
   type UpdateAiItemRequest,
+  EnrollmentMovementReport,
+  type EnrollmentMovementQuery,
   ClassificationPolicy,
   ClassificationPolicyList,
   StudentReport,
@@ -894,6 +896,12 @@ function queryString(query: Record<string, string | undefined>): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
   return params.toString()
+}
+
+export async function getEnrollmentMovements(query: EnrollmentMovementQuery): Promise<EnrollmentMovementReport> {
+  const res = await fetch(`/api/reports/enrollment-movements?${queryString(query)}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc lich su ghi danh')
+  return EnrollmentMovementReport.parse(await res.json())
 }
 
 export async function getStudentReport(query: StudentReportQuery): Promise<StudentReport> {

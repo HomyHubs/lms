@@ -89,6 +89,8 @@ function makeFakeStore(): ReportsStore {
   })
   const attempts = [graded('a1', STUDENT_1, 8, true), graded('a2', STUDENT_2, 4, false)]
   return {
+    async listMovements() { return [] },
+    async listMovementBranches(ids) { return ids.map((id) => ({ id, name: 'Co so 1' })) },
     async listPolicies() {
       return [policy]
     },
@@ -157,6 +159,22 @@ describe('reports routes', () => {
     expect(body.totals).toMatchObject({ students: 1, passed: 1, failed: 0 })
     expect((await admin('GET', `/reports/students?branchId=${BRANCH_2}`)).statusCode).toBe(404)
     expect((await admin('GET', '/reports/students?from=11-2026')).statusCode).toBe(400)
+  })
+
+  it('limits movement history to assigned branches and validates dates', async () => {
+    const store = makeFakeStore()
+    let received: unknown
+    store.listMovements = async (ids, from, to) => { received = { ids, from, to }; return [] }
+    const admin = await client(ADMIN_B1, store)
+    const path = '/reports/enrollment-movements?from=2026-01-01&to=2026-01-31'
+    const res = await admin('GET', path)
+    expect(res.statusCode).toBe(200)
+    expect(received).toEqual({ ids: [BRANCH_1], from: '2026-01-01', to: '2026-01-31' })
+    expect(res.json()).toEqual({ branches: [{ id: BRANCH_1, name: 'Co so 1' }], events: [] })
+    expect((await admin('GET', `${path}&branchId=${BRANCH_2}`)).statusCode).toBe(404)
+    expect((await admin('GET', '/reports/enrollment-movements?from=2026-02-30&to=2026-03-01')).statusCode).toBe(400)
+    expect((await admin('GET', '/reports/enrollment-movements?from=2026-02-01&to=2026-01-01')).statusCode).toBe(400)
+    expect((await (await client(TEACHER, store))('GET', path)).statusCode).toBe(403)
   })
 
   it('applies a reconfigured level policy to the classification', async () => {
