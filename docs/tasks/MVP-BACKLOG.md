@@ -1,18 +1,18 @@
 # MVP Backlog
 
-Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là bảng TÓM TẮT — chi tiết từng dòng nằm ở file riêng trong `docs/tasks/slices/`. Không viết mô tả dài trong bảng này để tránh xung đột khi nhiều dev cùng sửa.
+Bß║úng chß╗ë mß╗Ñc cß║Ñp cao cho to├án bß╗Ö Slice / Task / layer-pass. ─É├óy l├á bß║úng T├ôM Tß║«T ΓÇö chi tiß║┐t tß╗½ng d├▓ng nß║▒m ß╗ƒ file ri├¬ng trong `docs/tasks/slices/`. Kh├┤ng viß║┐t m├┤ tß║ú d├ái trong bß║úng n├áy ─æß╗â tr├ính xung ─æß╗Öt khi nhiß╗üu dev c├╣ng sß╗¡a.
 
-## Quy tắc
+## Quy tß║»c
 
-- ID bất biến: chỉ thêm dòng mới, không xóa, không đánh số lại (xem `../../AGENTS.md`, mục "Quy trình thay đổi phạm vi").
-- Mỗi dòng có đúng 1 Owner khi chuyển sang "Đang làm" — không nhận việc đã có Owner.
-- Cột "Phụ thuộc" liệt kê ID phải Done trước khi bắt đầu — dùng để biết việc nào chạy song song được.
-- Cập nhật cột Trạng thái ngay khi đổi, không chờ cuối ngày.
-- Khi Slice/Task merge xong vào `dev`: chuyển Trạng thái = Done, xóa Owner, điền số PR, rồi cập nhật rollup ở `../../AGENTS.md`.
+- ID bß║Ñt biß║┐n: chß╗ë th├¬m d├▓ng mß╗¢i, kh├┤ng x├│a, kh├┤ng ─æ├ính sß╗æ lß║íi (xem `../../AGENTS.md`, mß╗Ñc "Quy tr├¼nh thay ─æß╗òi phß║ím vi").
+- Mß╗ùi d├▓ng c├│ ─æ├║ng 1 Owner khi chuyß╗ân sang "─Éang l├ám" ΓÇö kh├┤ng nhß║¡n viß╗çc ─æ├ú c├│ Owner.
+- Cß╗Öt "Phß╗Ñ thuß╗Öc" liß╗çt k├¬ ID phß║úi Done tr╞░ß╗¢c khi bß║»t ─æß║ºu ΓÇö d├╣ng ─æß╗â biß║┐t viß╗çc n├áo chß║íy song song ─æ╞░ß╗úc.
+- Cß║¡p nhß║¡t cß╗Öt Trß║íng th├íi ngay khi ─æß╗òi, kh├┤ng chß╗¥ cuß╗æi ng├áy.
+- Khi Slice/Task merge xong v├áo `dev`: chuyß╗ân Trß║íng th├íi = Done, x├│a Owner, ─æiß╗ün sß╗æ PR, rß╗ôi cß║¡p nhß║¡t rollup ß╗ƒ `../../AGENTS.md`.
 
-## Bảng chỉ mục
+## Bß║úng chß╗ë mß╗Ñc
 
-| ID | Tên | Cơ chế | Trạng thái | Owner | Nhánh | PR | Phụ thuộc | File chi tiết |
+| ID | T├¬n | C╞í chß║┐ | Trß║íng th├íi | Owner | Nh├ính | PR | Phß╗Ñ thuß╗Öc | File chi tiß║┐t |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | slice-0 | Nền tảng & Auth (walking skeleton + đăng nhập SĐT + quên mật khẩu qua Email) | Dọc | Done | — | feature/slice-0-nen-tang-auth | 1 | — | `slices/slice-0-nen-tang-auth.md` |
 | slice-1 | Quản lý người dùng, cơ sở (Branch) & phân quyền + role superadmin & giới hạn export học viên | Dọc | Done | — | feature/slice-1-user-branch-phan-quyen | 3 | slice-0 | `slices/slice-1-user-branch-phan-quyen.md` |
@@ -55,13 +55,14 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-30 | Menu Học viên (mới): tìm & hồ sơ chi tiết học viên — điểm, giờ học, chuyên cần, thi, học lực (số + chart theo panel) (mục 13) | Dọc | Chưa bắt đầu | — | — | — | slice-13, slice-5, slice-6 | `slices/slice-30-menu-hoc-vien.md` |
 | slice-1.1 | Bảo toàn lịch sử ghi danh (thay đổi slice-1) | Dọc | Đang làm | Notion AI | feature/slice-1.1-lich-su-ghi-danh | — | slice-1, slice-6.1 | `slices/slice-1.1-lich-su-ghi-danh.md` |
 | slice-6.1 | Điểm danh nhiều lớp và hiện diện (thay đổi slice-6) | Dọc | Đang làm | Notion AI | feature/slice-6.1-diem-danh-hien-dien | — | slice-6, slice-8 | `slices/slice-6.1-diem-danh-hien-dien.md` |
+| slice-10.1 | Menu quản lý thi | Dọc | Đang làm | Notion AI | feature/exam-management-menu | — | slice-10, slice-11a, slice-13 | `slices/slice-10.1-menu-quan-ly-thi.md` |
 
-## Trạng thái hợp lệ
+## Trß║íng th├íi hß╗úp lß╗ç
 
-Chưa bắt đầu, Đang làm, Review, Done, Done (còn nợ), Hoãn, Đã hủy, Đã thay thế. Định nghĩa đầy đủ: xem `../../AGENTS.md`, mục "Quy trình thay đổi phạm vi".
+Ch╞░a bß║»t ─æß║ºu, ─Éang l├ám, Review, Done, Done (c├▓n nß╗ú), Ho├ún, ─É├ú hß╗ºy, ─É├ú thay thß║┐. ─Éß╗ïnh ngh─⌐a ─æß║ºy ─æß╗º: xem `../../AGENTS.md`, mß╗Ñc "Quy tr├¼nh thay ─æß╗òi phß║ím vi".
 
-## Cách thêm một Slice/Task mới
+## C├ích th├¬m mß╗Öt Slice/Task mß╗¢i
 
-1. Tạo file từ `slices/_TEMPLATE.md`, đặt tên `slices/<id>-<slug>.md`.
-2. Thêm đúng một dòng vào bảng trên, trạng thái "Chưa bắt đầu".
-3. Nếu đây là thay đổi phạm vi của một Slice/Task đã có, đọc `../../AGENTS.md` mục "Quy trình thay đổi phạm vi" trước.
+1. Tß║ío file tß╗½ `slices/_TEMPLATE.md`, ─æß║╖t t├¬n `slices/<id>-<slug>.md`.
+2. Th├¬m ─æ├║ng mß╗Öt d├▓ng v├áo bß║úng tr├¬n, trß║íng th├íi "Ch╞░a bß║»t ─æß║ºu".
+3. Nß║┐u ─æ├óy l├á thay ─æß╗òi phß║ím vi cß╗ºa mß╗Öt Slice/Task ─æ├ú c├│, ─æß╗ìc `../../AGENTS.md` mß╗Ñc "Quy tr├¼nh thay ─æß╗òi phß║ím vi" tr╞░ß╗¢c.
