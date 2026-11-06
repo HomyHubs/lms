@@ -31,4 +31,8 @@ Bản ghi ghi danh đã bị xóa trước đây không thể tái tạo từ b�
 
 ## Bàn giao phiên gần nhất
 
-- Đặc tả được tạo trước khi code theo yêu cầu chủ dự án.
+- Đặc tả được commit trước khi code: `e654239`.
+- Đã lưu từng giai đoạn ghi danh và sự kiện vào/ra; gỡ khỏi lớp không xóa hồ sơ hoặc lịch sử cá nhân. Chỉ ghi danh đang hoạt động xuất hiện trong danh sách và báo cáo theo lớp; tái ghi danh an toàn khi có yêu cầu đồng thời.
+- PostgreSQL riêng: kiểm tra migration với dữ liệu cũ, rollback/reapply trước khi phát sinh sự kiện mới, và rollback bị chặn khi sẽ làm mất sự kiện mới. API 242/242, build, lint, typecheck đạt.
+- Sự kiện cũ được backfill từ các ghi danh còn tồn tại nhưng không gán cơ sở lịch sử vì không xác định được; các ghi danh đã bị xóa trước đó không thể khôi phục. Không thay đổi hành vi xóa hẳn lớp/học viên.
+- Tiếp theo: Dashboard lọc lịch sử vào/ra, biểu đồ và chấm công giảng viên; hợp nhất nhánh menu thi riêng trước khi phát hành.

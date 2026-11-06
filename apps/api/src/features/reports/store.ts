@@ -70,6 +70,7 @@ export function makeReportsStore(db: AppDb): ReportsStore {
           sql<string | null>`nullif(trim(concat_ws(' ', u.last_name, u.first_name)), '')`.as('student_name'),
         ])
       if (branchIds) q = q.where('c.branch_id', 'in', branchIds)
+      q = q.where('e.ended_at', 'is', null)
       if (levelId) q = q.where('l.id', '=', levelId)
       if (classId) q = q.where('c.id', '=', classId)
       return q.orderBy('c.name').orderBy('u.phone_number').execute()

@@ -138,3 +138,8 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 
 - CI guard đã xanh trên `ca45ef8`; review lại đúng HEAD bằng identity độc lập.
+
+### 2026-11-06 — lịch sử ghi danh
+
+- Gỡ ghi danh kết thúc giai đoạn thay vì xóa; roster và báo cáo theo lớp chỉ tính ghi danh đang hoạt động, lịch sử cá nhân vẫn giữ. Tái ghi danh đồng thời được ràng buộc ở database.
+- API test PostgreSQL riêng 242/242; build, lint và typecheck đạt. Dashboard lịch sử vào/ra còn là phần tiếp theo.

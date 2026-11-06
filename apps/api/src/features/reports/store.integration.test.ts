@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createDb, type AppDb } from '../../platform/db.js'
 import { listStudentHistory, loadExamAttemptReport, makeExamHistoryStore } from '../examhistory/index.js'
+import { makeCatalogStore } from '../catalog/index.js'
 import { loadStudentReport } from './service.js'
 import { makeReportsStore } from './store.js'
 
@@ -23,6 +24,7 @@ describeWithPostgres('reports store on real Postgres', () => {
   async function cleanup(): Promise<void> {
     await db.deleteFrom('exam_attempts').where('exam_id', '=', EXAM_ID).execute()
     await db.deleteFrom('exams').where('id', '=', EXAM_ID).execute()
+    await db.deleteFrom('enrollment_events').where('class_id', '=', CLASS_ID).execute()
     // Deleting the center cascades to branch -> class -> sessions/records/enrollments.
     await db.deleteFrom('centers').where('id', '=', CENTER_ID).execute()
     await db.deleteFrom('courses').where('id', '=', COURSE_ID).execute()
@@ -187,5 +189,13 @@ describeWithPostgres('reports store on real Postgres', () => {
     expect(await history.isStudentInBranches(STUDENT_ID, [BRANCH_ID])).toBe(true)
     expect(await history.isStudentInBranches(STUDENT_ID, [CENTER_ID])).toBe(false)
     await expect(db.deleteFrom('exams').where('id', '=', EXAM_ID).execute()).rejects.toThrow(/foreign key/)
+
+    const catalog = makeCatalogStore(db)
+    const enrollment = await catalog.findEnrollment(CLASS_ID, STUDENT_ID)
+    expect(await catalog.deleteEnrollment(enrollment!.id)).toBe(true)
+    expect((await loadStudentReport(makeReportsStore(db), { branchIds: [BRANCH_ID], classId: CLASS_ID }, {})).ranking).toEqual([])
+    expect((await loadExamAttemptReport(history, { branchIds: [BRANCH_ID], classId: CLASS_ID }, now)).attempts).toEqual([])
+    expect(await history.isStudentInBranches(STUDENT_ID, [BRANCH_ID])).toBe(false)
+    expect(await listStudentHistory(history, STUDENT_ID, {}, now)).toMatchObject({ ok: true, page: { attempts: [expect.anything(), expect.anything()] } })
   })
 })

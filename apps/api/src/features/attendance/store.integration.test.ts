@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createDb, type AppDb } from '../../platform/db.js'
 import { makeAttendanceStore } from './store.js'
+import { createEnrollment, makeCatalogStore } from '../catalog/index.js'
 
 const url = process.env.TEST_DATABASE_URL
 const describeWithPostgres = url ? describe : describe.skip
@@ -18,6 +19,7 @@ describeWithPostgres('attendance store on real Postgres', () => {
   let db: AppDb
 
   async function cleanup(): Promise<void> {
+    await db.deleteFrom('enrollment_events').where('class_id', '=', CLASS_ID).execute()
     // Deleting the center cascades to branch -> class -> sessions/records/teachers/enrollments.
     await db.deleteFrom('centers').where('id', '=', CENTER_ID).execute()
     await db.deleteFrom('courses').where('id', '=', COURSE_ID).execute()
@@ -126,5 +128,45 @@ describeWithPostgres('attendance store on real Postgres', () => {
     const scoped = await store.listScopedRecords({ courseId: COURSE_ID, branchIds: [BRANCH_ID] })
     expect(scoped.map((r) => r.status).sort()).toEqual(['late', 'present'])
     expect(await store.listScopedRecords({ classId: CLASS_ID, branchIds: [CENTER_ID] })).toEqual([])
+
+    const catalog = makeCatalogStore(db)
+    const enrollment = await catalog.findEnrollment(CLASS_ID, STUDENT_B)
+    expect(enrollment).toBeDefined()
+    expect(await catalog.deleteEnrollment(enrollment!.id)).toBe(true)
+    expect(await db.selectFrom('enrollments').select('id').where('id', '=', enrollment!.id).executeTakeFirst()).toEqual({ id: enrollment!.id })
+    expect((await catalog.listEnrollmentsByClass(CLASS_ID)).map((r) => r.student_id)).toEqual([STUDENT_A])
+    expect((await store.listRoster(CLASS_ID)).map((r) => r.student_id)).toEqual([STUDENT_A])
+    expect((await store.listScopedRecords({ classId: CLASS_ID, branchIds: [BRANCH_ID] })).map((r) => r.student_id)).toEqual([STUDENT_A])
+    expect(await store.listStudentHistory(STUDENT_B, [BRANCH_ID])).toHaveLength(1)
+    const reenroll = await Promise.all([
+      createEnrollment(catalog, { classId: CLASS_ID, studentId: STUDENT_B }),
+      createEnrollment(catalog, { classId: CLASS_ID, studentId: STUDENT_B }),
+    ])
+    expect(reenroll.filter((r) => r.ok)).toHaveLength(1)
+    expect(reenroll.filter((r) => !r.ok)).toEqual([{ ok: false, reason: 'already_enrolled' }])
+    expect(await db.selectFrom('enrollments').select('id').where('class_id', '=', CLASS_ID).where('student_id', '=', STUDENT_B).execute()).toHaveLength(2)
+    const changes = await db.selectFrom('enrollment_events').select(['event_type', 'branch_id', 'is_backfilled']).where('class_id', '=', CLASS_ID).where('student_id', '=', STUDENT_B).orderBy('id').execute()
+    expect(changes).toEqual([
+      { event_type: 'enrolled', branch_id: BRANCH_ID, is_backfilled: false },
+      { event_type: 'withdrawn', branch_id: BRANCH_ID, is_backfilled: false },
+      { event_type: 'enrolled', branch_id: BRANCH_ID, is_backfilled: false },
+    ])
+
+    const concurrent = await store.createSession({ classId: CLASS_ID, sessionDate: '2026-11-06', startsAt: '18:30', topic: null, createdBy: TEACHER_ID, durationMinutes: 90, makeupForSessionId: null })
+    const [cancelled, marked] = await Promise.allSettled([
+      store.cancelSession(concurrent!.id),
+      store.upsertRecords(concurrent!.id, TEACHER_ID, [{ studentId: STUDENT_A, status: 'present', note: null }]),
+    ])
+    const finalSession = await store.findSession(concurrent!.id)
+    const finalRecords = await store.listRecords(concurrent!.id)
+    if (finalSession!.cancelled_at !== null) {
+      expect(cancelled).toMatchObject({ status: 'fulfilled', value: true })
+      expect(marked.status).toBe('rejected')
+      expect(finalRecords).toEqual([])
+    } else {
+      expect(cancelled).toMatchObject({ status: 'fulfilled', value: false })
+      expect(marked.status).toBe('fulfilled')
+      expect(finalRecords).toHaveLength(1)
+    }
   })
 })

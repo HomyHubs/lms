@@ -61,6 +61,7 @@ export function makeExamHistoryStore(db: AppDb): ExamHistoryStore {
         .innerJoin('classes as c', 'c.id', 'e.class_id')
         .select('e.student_id')
         .where('e.student_id', '=', studentId)
+        .where('e.ended_at', 'is', null)
         .where('c.branch_id', 'in', branchIds)
         .executeTakeFirst()
       return row !== undefined
@@ -71,6 +72,7 @@ export function makeExamHistoryStore(db: AppDb): ExamHistoryStore {
         .selectFrom('enrollments as e')
         .innerJoin('classes as c', 'c.id', 'e.class_id')
         .select('e.student_id')
+        .where('e.ended_at', 'is', null)
         .where('c.branch_id', 'in', branchIds)
       if (classId) students = students.where('c.id', '=', classId)
       let q = selectAttempts({ from, to }).where('a.student_id', 'in', students)

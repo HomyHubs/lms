@@ -1,3 +1,4 @@
+import { sql } from 'kysely'
 import type { AppDb } from '../../platform/db.js'
 import type { CatalogStore } from './service.js'
 
@@ -93,6 +94,7 @@ export function makeCatalogStore(db: AppDb): CatalogStore {
         .selectFrom('enrollments')
         .select(ENROLLMENT_COLUMNS)
         .where('class_id', '=', classId)
+        .where('ended_at', 'is', null)
         .orderBy('created_at', 'asc')
         .execute()
     },
@@ -102,6 +104,7 @@ export function makeCatalogStore(db: AppDb): CatalogStore {
         .select(ENROLLMENT_COLUMNS)
         .where('class_id', '=', classId)
         .where('student_id', '=', studentId)
+        .where('ended_at', 'is', null)
         .executeTakeFirst()
     },
     async findEnrollmentById(id) {
@@ -109,18 +112,20 @@ export function makeCatalogStore(db: AppDb): CatalogStore {
         .selectFrom('enrollments')
         .select(ENROLLMENT_COLUMNS)
         .where('id', '=', id)
+        .where('ended_at', 'is', null)
         .executeTakeFirst()
     },
     async createEnrollment({ classId, studentId }) {
       return db
         .insertInto('enrollments')
         .values({ class_id: classId, student_id: studentId })
+        .onConflict((oc) => oc.doNothing())
         .returning(ENROLLMENT_COLUMNS)
-        .executeTakeFirstOrThrow()
+        .executeTakeFirst()
     },
     async deleteEnrollment(id) {
-      const res = await db.deleteFrom('enrollments').where('id', '=', id).executeTakeFirst()
-      return (res.numDeletedRows ?? 0n) > 0n
+      const res = await db.updateTable('enrollments').set({ ended_at: sql<string>`now()` }).where('id', '=', id).where('ended_at', 'is', null).executeTakeFirst()
+      return (res.numUpdatedRows ?? 0n) > 0n
     },
   }
 }
