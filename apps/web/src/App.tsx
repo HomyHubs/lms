@@ -11,6 +11,7 @@ import { CentersPage } from '@/features/centers/CentersPage'
 import { ExamHistoryPage } from '@/features/examhistory/ExamHistoryPage'
 import { ExamReportsPage } from '@/features/examhistory/ExamReportsPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
+import { ExamManagementPage } from '@/features/exams/ExamManagementPage'
 import { ExamSetsPage } from '@/features/examsets/ExamSetsPage'
 import { GradingPage } from '@/features/grading/GradingPage'
 import { BranchAttendancePage } from '@/features/home/BranchAttendancePage'
@@ -23,6 +24,7 @@ import { WorkHoursPage } from '@/features/workhours/WorkHoursPage'
 
 const PAGES: Record<NavPath, React.ReactElement> = {
   '/': <HomePage />,
+  '/exam-management': <ExamManagementPage />,
   '/exams': <ExamsPage />,
   '/exam-history': <ExamHistoryPage />,
   '/attendance': <AttendancePage />,

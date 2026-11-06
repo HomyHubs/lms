@@ -46,4 +46,7 @@ Quyền truy cập và các màn hình thi hiện có.
 
 ## Bàn giao phiên gần nhất
 
-- Đặc tả được commit trước khi code theo yêu cầu chủ dự án.
+- Đặc tả được commit trước khi code theo yêu cầu chủ dự án (48eb250).
+- Hoàn thành menu cha, menu con và trang chọn chức năng theo vai trò; giữ URL và guard cũ. Dashboard chỉ hiện lối tắt menu cha.
+- Build, lint, typecheck và 65 test web đạt. Khi cố tình bỏ các mục con, hai test mới thất bại; đã hoàn nguyên và chạy xanh. Build cảnh báo bundle trên 500 kB.
+- Chưa kiểm tra thủ công trên thiết bị di động; chưa push, tạo PR hay cập nhật demo. Các yêu cầu Dashboard, ghi danh, biểu đồ và chấm công là hạng mục tiếp theo.
