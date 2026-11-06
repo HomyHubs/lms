@@ -299,6 +299,12 @@ export interface AttendanceRecordsTable {
   note: ColumnType<string | null, string | null | undefined, string | null>
   recorded_by: string
   recorded_at: Timestamp
+  arrived_at: ColumnType<Date | null, string | null | undefined, string | null>
+  late_minutes: ColumnType<number | null, number | null | undefined, number | null>
+}
+
+export interface AttendanceEventsTable extends AttendanceRecordsTable {
+  id: Generated<string>
 }
 
 /** Table `ai_generation_requests` — slice-4.5: a prompt generated for an external AI tool. */
@@ -414,7 +420,9 @@ export interface Database {
   exam_grading_policies: ExamGradingPoliciesTable
   class_teachers: ClassTeachersTable
   class_sessions: ClassSessionsTable
+  session_teacher_events: SessionTeacherEventsTable
   attendance_records: AttendanceRecordsTable
+  attendance_events: AttendanceEventsTable
   ai_generation_requests: AiGenerationRequestsTable
   ai_generated_items: AiGeneratedItemsTable
   student_grading_policies: StudentGradingPoliciesTable

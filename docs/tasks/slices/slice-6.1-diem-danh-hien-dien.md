@@ -38,8 +38,8 @@ Phân quyền cơ sở; dữ liệu đến, trạng thái vắng/trễ và giáo
 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Thêm | Điểm danh nhiều lớp bởi Staff/Admin, giờ đến và trễ; tách người điểm danh khỏi giáo viên thực dạy | Yêu cầu người dùng; tránh báo cáo công sai | Cần trước khi code |
-| — | Làm rõ | Không điểm danh rời lớp; học viên về sớm chỉ cần ghi chú | Giảm thao tác theo yêu cầu người dùng | Cần trước khi code |
+| 2026-11-06 | Thêm | Điểm danh nhiều lớp bởi Staff/Admin, giờ đến và trễ; tách người điểm danh khỏi giáo viên thực dạy | Yêu cầu người dùng; tránh báo cáo công sai | ADR 0014 |
+| — | Làm rõ | Không điểm danh rời lớp; học viên về sớm chỉ cần ghi chú | Giảm thao tác theo yêu cầu người dùng | ADR 0014 |
 
 ## Cách nghiệm thu
 
@@ -50,4 +50,6 @@ Phân quyền cơ sở; dữ liệu đến, trạng thái vắng/trễ và giáo
 
 ## Bàn giao phiên gần nhất
 
-- Đang lập phạm vi; chưa code, chưa có ADR hay migration, chưa kiểm thử.
+- Đã triển khai bảng nhiều lớp theo cơ sở cho Staff/Admin; chọn tất cả, ghi vắng/trễ, giờ đến và ghi chú về sớm. Bắt buộc xác nhận giáo viên thực dạy; lưu nhật ký điểm danh và giáo viên riêng.
+- Migration được kiểm tra up, rollback, up trên PostgreSQL thử riêng có dữ liệu cũ; không áp dụng vào demo hay production. Rollback làm mất nhật ký và trường mới.
+- Số liệu là lượt đã điểm danh trong ngày, không xác nhận học viên hiện còn ở lớp; liên kết Dashboard và các hạng mục yêu cầu khác chưa thuộc slice này.

@@ -166,4 +166,22 @@ describeWithPostgres('work hours store on real Postgres', () => {
     })
     expect((await loadWorkHoursReport(makeWorkHoursStore(db), '2026-11', [CENTER_ID], new Date())).teachers).toEqual([])
   })
+
+  it('keeps the actual teacher when staff corrects attendance', async () => {
+    const attendance = makeAttendanceStore(db)
+    const session = await attendance.createSession({
+      classId: CLASS_ID,
+      sessionDate: '2026-12-01',
+      startsAt: '18:00',
+      topic: null,
+      createdBy: TEACHER_ID,
+      durationMinutes: 90,
+      makeupForSessionId: null,
+    })
+    await attendance.upsertRecords(session!.id, TEACHER_ID, [{ studentId: STUDENT_ID, status: 'present', note: null }])
+    await attendance.upsertRecords(session!.id, STAFF_ID, [{ studentId: STUDENT_ID, status: 'late', note: 'Updated by staff' }])
+    const sessions = await makeWorkHoursStore(db).listSessions({ from: '2026-12-01', to: '2027-01-01', branchIds: [BRANCH_ID] })
+    expect(sessions.find((s) => s.id === session!.id)?.taught_by).toBe(TEACHER_ID)
+    expect((await attendance.listRecords(session!.id))[0]).toMatchObject({ status: 'late', note: 'Updated by staff' })
+  })
 })

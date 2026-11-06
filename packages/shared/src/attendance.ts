@@ -87,6 +87,8 @@ export const AttendanceRosterEntry = z.object({
   lastName: z.string().nullable().default(null),
   status: AttendanceStatus.nullable(),
   note: z.string().nullable(),
+  arrivedAt: z.string().nullable().optional(),
+  lateMinutes: z.number().int().nullable().optional(),
 })
 export type AttendanceRosterEntry = z.infer<typeof AttendanceRosterEntry>
 
@@ -96,15 +98,30 @@ export const SessionAttendance = z.object({
 })
 export type SessionAttendance = z.infer<typeof SessionAttendance>
 
+export const TodayAttendance = z.object({
+  sessions: z.array(z.object({
+    className: z.string(),
+    branchId: z.string().uuid(),
+    branchName: z.string(),
+    teachers: z.array(ClassTeacher),
+    attendance: SessionAttendance,
+  })),
+})
+export type TodayAttendance = z.infer<typeof TodayAttendance>
+
 export const MarkAttendanceRecord = z.object({
   studentId: z.string().uuid(),
   status: AttendanceStatus,
   note: z.string().trim().max(500).optional(),
-})
+  arrivedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  lateMinutes: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(20)]).nullable().optional(),
+}).refine((r) => (r.status === 'present' || r.status === 'late') || (!r.arrivedAt && !r.lateMinutes), 'Absent students cannot have arrival or lateness')
+  .refine((r) => r.status === 'late' || !r.lateMinutes, 'Lateness requires late status')
 export type MarkAttendanceRecord = z.infer<typeof MarkAttendanceRecord>
 
 export const MarkAttendanceRequest = z.object({
   records: z.array(MarkAttendanceRecord).min(1).max(500),
+  actualTeacherId: z.string().uuid().optional(),
 })
 export type MarkAttendanceRequest = z.infer<typeof MarkAttendanceRequest>
 

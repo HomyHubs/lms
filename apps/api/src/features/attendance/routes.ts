@@ -12,11 +12,13 @@ import {
   type SessionAttendance,
   type StudentAttendance,
   type TeachingClassList,
+  type TodayAttendance,
 } from '@lms/shared'
 import { getSessionUser, type Rbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
 import {
   aggregateBranchRates,
+  SessionCancelledError,
   aggregateRates,
   assignTeacher,
   buildRoster,
@@ -63,6 +65,8 @@ export async function attendanceRoutes(
   const requireTeacher = rbac.requireRole('teacher')
   const requireStudent = rbac.requireRole('student')
   const requireStaff = rbac.requireRole('admin', 'teacher')
+  const requireAttendance = rbac.requireRole('admin', 'teacher', 'staff')
+  const requireOffice = rbac.requireRole('admin', 'staff')
 
   const scopeOf = (request: FastifyRequest): Promise<string[]> =>
     branchScope.branchIdsForUser(getSessionUser(request).id)
@@ -72,7 +76,7 @@ export async function attendanceRoutes(
     const klass = await store.findClass(classId)
     if (!klass) return { ok: false }
     const user = getSessionUser(request)
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'staff') {
       const scoped = await scopeOf(request)
       return scoped.includes(klass.branch_id) ? { ok: true, klass, canWrite: false } : { ok: false }
     }
@@ -250,7 +254,21 @@ export async function attendanceRoutes(
   })
 
   // ----- Attendance of a session -----
-  app.get('/sessions/:id/attendance', { preHandler: requireStaff }, async (request, reply) => {
+  app.get('/attendance/today', { preHandler: requireOffice }, async (request) => {
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    const rows = await store.listTodaySessions(await scopeOf(request), date)
+    const sessions = await Promise.all(rows.map(async (row) => ({
+      className: row.class_name,
+      branchId: row.branch_id,
+      branchName: row.branch_name,
+      teachers: (await store.listClassTeachers(row.class_id)).map((t) => ({ classId: t.class_id, teacherId: t.teacher_id, phoneNumber: t.phone_number })),
+      attendance: await sessionAttendance(row),
+    })))
+    const body: TodayAttendance = { sessions }
+    return body
+  })
+
+  app.get('/sessions/:id/attendance', { preHandler: requireAttendance }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const session = await store.findSession(id)
     if (!session || !(await classAccess(request, session.class_id)).ok) {
@@ -260,7 +278,7 @@ export async function attendanceRoutes(
     return sessionAttendance(session)
   })
 
-  app.put('/sessions/:id/attendance', { preHandler: requireStaff }, async (request, reply) => {
+  app.put('/sessions/:id/attendance', { preHandler: requireAttendance }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const parsed = MarkAttendanceRequest.safeParse(request.body)
     if (!parsed.success) {
@@ -273,15 +291,23 @@ export async function attendanceRoutes(
       reply.code(404)
       return SESSION_NOT_FOUND
     }
-    if (!access.canWrite) {
-      reply.code(403)
-      return ONLY_CLASS_TEACHER
+    const user = getSessionUser(request)
+    if (!access.canWrite && (!parsed.data.actualTeacherId || !(await store.isClassTeacher(session.class_id, parsed.data.actualTeacherId)))) {
+      reply.code(400)
+      return { error: 'Can chon giao vien thuc day duoc gan cho lop' }
     }
     if (session.cancelled_at !== null) {
       reply.code(409)
       return SESSION_CANCELLED
     }
-    const outcome = await markAttendance(store, session, getSessionUser(request).id, parsed.data.records)
+    let outcome
+    try {
+      outcome = await markAttendance(store, session, user.id, parsed.data.records, access.canWrite ? undefined : parsed.data.actualTeacherId)
+    } catch (err) {
+      if (!(err instanceof SessionCancelledError)) throw err
+      reply.code(409)
+      return SESSION_CANCELLED
+    }
     if (!outcome.ok) {
       reply.code(400)
       return outcome.reason === 'duplicate_student'
@@ -363,7 +389,7 @@ export async function attendanceRoutes(
     return body
   })
 
-  // slice-9: bar chart "Diem danh hom nay" — lop co buoi hoc hom nay (gio VN), branch-scoped.
+  // slice-9: bar chart "Diem danh hom nay" â€” lop co buoi hoc hom nay (gio VN), branch-scoped.
   app.get('/attendance/today-summary', { preHandler: requireAdmin }, async (request, reply) => {
     const scoped = await scopeOf(request)
     // Ngay theo gio VN, dang 'YYYY-MM-DD'. Dung en-CA de co dinh dang ISO,
