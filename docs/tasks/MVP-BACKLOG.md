@@ -54,6 +54,7 @@ Bß║úng chß╗ë mß╗Ñc cß║Ñp cao cho to├án bß╗Ö Slice / Task 
 | slice-29 | Ghi danh & Quß║ún l├╜ (─æß╗òi t├¬n tß╗½ G├ín c╞í sß╗ƒ): 2 panel ΓÇö HV/GV g├ín theo lß╗¢p, quß║ún l├╜ g├ín theo c╞í sß╗ƒ (mß╗Ñc 12) | Dß╗ìc | Ch╞░a bß║»t ─æß║ºu | ΓÇö | ΓÇö | ΓÇö | slice-1 | `slices/slice-29-ghi-danh-quan-ly.md` |
 | slice-30 | Menu Hß╗ìc vi├¬n (mß╗¢i): t├¼m & hß╗ô s╞í chi tiß║┐t hß╗ìc vi├¬n ΓÇö ─æiß╗âm, giß╗¥ hß╗ìc, chuy├¬n cß║ºn, thi, hß╗ìc lß╗▒c (sß╗æ + chart theo panel) (mß╗Ñc 13) | Dß╗ìc | Ch╞░a bß║»t ─æß║ºu | ΓÇö | ΓÇö | ΓÇö | slice-13, slice-5, slice-6 | `slices/slice-30-menu-hoc-vien.md` |
 | slice-1.1 | Bß║úo to├án lß╗ïch sß╗¡ ghi danh (thay ─æß╗òi slice-1) | Dß╗ìc | ─Éang l├ám | Notion AI | feature/slice-1.1-lich-su-ghi-danh | ΓÇö | slice-1, slice-6.1 | `slices/slice-1.1-lich-su-ghi-danh.md` |
+| slice-6.1 | ─Éiß╗âm danh nhiß╗üu lß╗¢p v├á hiß╗çn diß╗çn (thay ─æß╗òi slice-6) | Dß╗ìc | ─Éang l├ám | Notion AI | feature/slice-6.1-diem-danh-hien-dien | ΓÇö | slice-6, slice-8 | `slices/slice-6.1-diem-danh-hien-dien.md` |
 
 ## Trß║íng th├íi hß╗úp lß╗ç
 
