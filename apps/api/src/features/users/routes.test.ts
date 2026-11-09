@@ -41,12 +41,28 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
     async findUserByPhone(phoneNumber) {
       return users.find((u) => u.phone_number === phoneNumber)
     },
-    async createUser({ phoneNumber, role, email }) {
+    async createUser({
+      phoneNumber,
+      role,
+      email,
+      lastName,
+      firstName,
+      birthYear,
+      gender,
+      address,
+      parentPhone,
+    }) {
       const row: UserRow = {
         id: `u-${(seq += 1)}`,
         phone_number: phoneNumber,
         email,
         role,
+        last_name: lastName,
+        first_name: firstName,
+        birth_year: birthYear,
+        gender,
+        address,
+        parent_phone: parentPhone,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       }
       users.push(row)
@@ -57,6 +73,12 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
       if (!row) return undefined
       if (input.role !== undefined) row.role = input.role
       if (input.email !== undefined) row.email = input.email
+      if (input.lastName !== undefined) row.last_name = input.lastName
+      if (input.firstName !== undefined) row.first_name = input.firstName
+      if (input.birthYear !== undefined) row.birth_year = input.birthYear
+      if (input.gender !== undefined) row.gender = input.gender
+      if (input.address !== undefined) row.address = input.address
+      if (input.parentPhone !== undefined) row.parent_phone = input.parentPhone
       return row
     },
     async deleteUser(id) {
@@ -125,6 +147,12 @@ describe('users routes — RBAC guard', () => {
         phone_number: '0911111111',
         email: null,
         role: 'student',
+        last_name: 'Nguyễn Minh',
+        first_name: 'An',
+        birth_year: 2015,
+        gender: 'male',
+        address: null,
+        parent_phone: '0912345678',
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])
@@ -135,7 +163,37 @@ describe('users routes — RBAC guard', () => {
       headers: { cookie: ADMIN_COOKIE },
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json().users).toHaveLength(1)
+    const users = res.json().users
+    expect(users).toHaveLength(1)
+    // Ho so hoc vien tra ve dung, age tinh tu dong.
+    expect(users[0].lastName).toBe('Nguyễn Minh')
+    expect(users[0].firstName).toBe('An')
+    expect(users[0].age).toBe(new Date().getFullYear() - 2015)
+  })
+
+  it('POST /users creates a student with profile fields and derives age', async () => {
+    app = await buildTestApp(ADMIN)
+    const res = await app.inject({
+      method: 'POST',
+      url: '/users',
+      headers: { cookie: ADMIN_COOKIE },
+      payload: {
+        phoneNumber: '0912345670',
+        password: 'secret12',
+        role: 'student',
+        lastName: 'Trần Thị',
+        firstName: 'Bình',
+        birthYear: 2016,
+        gender: 'female',
+        parentPhone: '0987654321',
+      },
+    })
+    expect(res.statusCode).toBe(201)
+    const user = res.json().user
+    expect(user.lastName).toBe('Trần Thị')
+    expect(user.firstName).toBe('Bình')
+    expect(user.gender).toBe('female')
+    expect(user.age).toBe(new Date().getFullYear() - 2016)
   })
 })
 
@@ -188,6 +246,12 @@ describe('users routes — CRUD (admin only)', () => {
         phone_number: '0911111111',
         email: null,
         role: 'student',
+        last_name: null,
+        first_name: null,
+        birth_year: null,
+        gender: null,
+        address: null,
+        parent_phone: null,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])
@@ -209,6 +273,12 @@ describe('users routes — CRUD (admin only)', () => {
         phone_number: '0911111111',
         email: null,
         role: 'student',
+        last_name: null,
+        first_name: null,
+        birth_year: null,
+        gender: null,
+        address: null,
+        parent_phone: null,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])

@@ -26,6 +26,7 @@ import { useUsers } from '@/features/users/useUsers'
 import { toHours } from '@/features/workhours/work-hours-export'
 import { useMyTimesheet } from '@/features/workhours/useWorkHours'
 import { cn, currentMonth } from '@/lib/utils'
+import { DashboardCharts } from './DashboardCharts'
 
 const count = (value: number | undefined): string => (value === undefined ? '—' : String(value))
 const hours = (minutes: number | undefined): string => (minutes === undefined ? '—' : `${toHours(minutes)} giờ`)
@@ -95,6 +96,7 @@ function AdminDashboard({ user }: { user: PublicUser }): React.ReactElement {
         <StatCard label="Cơ sở" value={count(branches.data?.length)} icon={Building2} tone="accent" />
         <StatCard label="Lớp học" value={count(classes.data?.length)} icon={School} tone="warning" />
       </StatGrid>
+      <DashboardCharts />
     </>
   )
 }

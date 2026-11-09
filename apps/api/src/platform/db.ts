@@ -14,6 +14,13 @@ export interface UsersTable {
   password_hash: string
   // TODO(slice-1): thay `role` text bang lien ket Branch/role day du.
   role: ColumnType<string, string | undefined, string>
+  // Slice ho so hoc vien: cac truong nullable (khong pha user cu / role khac).
+  last_name: ColumnType<string | null, string | null | undefined, string | null>
+  first_name: ColumnType<string | null, string | null | undefined, string | null>
+  birth_year: ColumnType<number | null, number | null | undefined, number | null>
+  gender: ColumnType<string | null, string | null | undefined, string | null>
+  address: ColumnType<string | null, string | null | undefined, string | null>
+  parent_phone: ColumnType<string | null, string | null | undefined, string | null>
   created_at: Timestamp
   updated_at: Timestamp
 }

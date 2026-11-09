@@ -1,0 +1,63 @@
+import { render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { describe, expect, it, vi } from 'vitest'
+
+// recharts needs a sized container; in jsdom width is 0 so charts don't paint.
+// Replace ResponsiveContainer with a plain sized div so children render.
+vi.mock('recharts', async () => {
+  const actual = await vi.importActual<typeof import('recharts')>('recharts')
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: ReactNode }) => (
+      <div style={{ width: 400, height: 260 }}>{children}</div>
+    ),
+  }
+})
+
+vi.mock('./useDashboardStats', () => ({
+  useDashboardStats: () => ({
+    studentsByCourse: [
+      { name: 'Starters', value: 12 },
+      { name: 'Movers', value: 8 },
+    ],
+    studentsByCenter: [{ name: 'Trung tâm Sunshine', value: 20 }],
+    isLoading: false,
+    isEmpty: false,
+  }),
+}))
+
+vi.mock('@/features/reports/useReports', () => ({
+  useStudentReport: () => ({
+    isLoading: false,
+    data: { totals: { passed: 15, failed: 5 } },
+  }),
+}))
+
+vi.mock('@/features/catalog/useCatalog', () => ({
+  useClasses: () => ({
+    isLoading: false,
+    data: [{ id: 'c1', courseId: 'co1', branchId: 'b1', name: 'Lớp Starters 1', createdAt: '2026-09-16T00:00:00.000Z' }],
+  }),
+}))
+
+vi.mock('@/features/attendance/useAttendance', () => ({
+  useClassRates: () => ({
+    isLoading: false,
+    data: {
+      overall: { present: 20, late: 3, absent: 2, excused: 1, total: 26, ratePercent: 77 },
+      students: [],
+    },
+  }),
+}))
+
+import { DashboardCharts } from './DashboardCharts'
+
+describe('DashboardCharts', () => {
+  it('renders the four chart titles', () => {
+    render(<DashboardCharts />)
+    expect(screen.getByText('Học viên theo khóa học')).toBeInTheDocument()
+    expect(screen.getByText('Học viên theo trung tâm')).toBeInTheDocument()
+    expect(screen.getByText('Tỉ lệ hoàn thành bài')).toBeInTheDocument()
+    expect(screen.getByText('Tỉ lệ điểm danh')).toBeInTheDocument()
+  })
+})

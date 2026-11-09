@@ -47,6 +47,25 @@ export function studentSlug(i: number): string {
   return `${f}.${m}.${g}${i + 1}`
 }
 
+/** Accented Vietnamese display names, parallel to FAMILY/MIDDLE/GIVEN (same order). */
+const FAMILY_VI = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Vũ', 'Đặng', 'Bùi', 'Đỗ', 'Ngô', 'Dương', 'Lý']
+const MIDDLE_VI = ['Minh', 'Thu', 'Gia', 'Bảo', 'Ngọc', 'Khánh', 'Anh', 'Hải', 'Phương', 'Tuấn']
+const GIVEN_VI = [
+  'An', 'Bình', 'Chi', 'Dũng', 'Giang', 'Hân', 'Khoa', 'Lâm', 'My', 'Nhi',
+  'Phúc', 'Quỳnh', 'Sơn', 'Tâm', 'Uyên', 'Vy', 'Yến', 'Long', 'Trang', 'Nam',
+]
+
+/**
+ * Deterministic accented Vietnamese full name for a demo student, derived from the same
+ * index arithmetic as studentSlug (family + middle + given), e.g. "Nguyễn Minh An".
+ */
+export function studentFullName(i: number): string {
+  const f = FAMILY_VI[i % FAMILY_VI.length]
+  const m = MIDDLE_VI[Math.floor(i / FAMILY_VI.length) % MIDDLE_VI.length]
+  const g = GIVEN_VI[(i * 7) % GIVEN_VI.length]
+  return `${f} ${m} ${g}`
+}
+
 export const DEMO_COURSES: ReadonlyArray<{ level: DemoLevel; name: string }> = [
   { level: 'starter', name: 'Starters - Khóa nền tảng' },
   { level: 'mover', name: 'Movers - Khóa phát triển' },

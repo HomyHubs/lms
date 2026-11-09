@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Trash2, UserPlus, Users } from 'lucide-react'
-import { CreateUserRequest, type UserRole } from '@lms/shared'
+import { CreateUserRequest, type Gender, type UserRole } from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from './useUsers'
 
 const ROLES: UserRole[] = ['admin', 'teacher', 'student', 'staff']
+
+/** Nhan giới tính hiển thị tiếng Việt. */
+const GENDER_LABEL: Record<Gender, string> = { male: 'Nam', female: 'Nữ', other: 'Khác' }
 
 /**
  * Trang quan ly nguoi dung (slice-1 Task 1) — chi Admin (route guard theo role).
@@ -21,6 +24,12 @@ export function UsersPage(): React.ReactElement {
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<UserRole>('student')
+  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [birthYear, setBirthYear] = useState('')
+  const [gender, setGender] = useState('')
+  const [address, setAddress] = useState('')
+  const [parentPhone, setParentPhone] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
   function handleCreate(e: FormEvent): void {
@@ -31,6 +40,13 @@ export function UsersPage(): React.ReactElement {
       password,
       role,
       email: email.trim() === '' ? undefined : email,
+      // Truong rong -> undefined (contract coi la khong nhap); birthYear -> Number.
+      lastName: lastName.trim() === '' ? undefined : lastName,
+      firstName: firstName.trim() === '' ? undefined : firstName,
+      birthYear: birthYear.trim() === '' ? undefined : Number(birthYear),
+      gender: gender === '' ? undefined : gender,
+      address: address.trim() === '' ? undefined : address,
+      parentPhone: parentPhone.trim() === '' ? undefined : parentPhone,
     })
     if (!parsed.success) {
       setFormError(parsed.error.issues[0]?.message ?? 'Du lieu khong hop le')
@@ -42,6 +58,12 @@ export function UsersPage(): React.ReactElement {
         setPassword('')
         setEmail('')
         setRole('student')
+        setLastName('')
+        setFirstName('')
+        setBirthYear('')
+        setGender('')
+        setAddress('')
+        setParentPhone('')
       },
       onError: (err) => setFormError((err as Error).message),
     })
@@ -89,6 +111,53 @@ export function UsersPage(): React.ReactElement {
             </option>
           ))}
         </select>
+        <input
+          aria-label="Họ và chữ lót"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Họ và chữ lót"
+          className="c-input"
+        />
+        <input
+          aria-label="Tên"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          placeholder="Tên"
+          className="c-input"
+        />
+        <input
+          aria-label="Năm sinh"
+          type="number"
+          value={birthYear}
+          onChange={(e) => setBirthYear(e.target.value)}
+          placeholder="Năm sinh"
+          className="c-input"
+        />
+        <select
+          aria-label="Giới tính"
+          value={gender}
+          onChange={(e) => setGender(e.target.value)}
+          className="c-input"
+        >
+          <option value="">Giới tính</option>
+          <option value="male">Nam</option>
+          <option value="female">Nữ</option>
+          <option value="other">Khác</option>
+        </select>
+        <input
+          aria-label="Địa chỉ"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Địa chỉ"
+          className="c-input"
+        />
+        <input
+          aria-label="SĐT phụ huynh"
+          value={parentPhone}
+          onChange={(e) => setParentPhone(e.target.value)}
+          placeholder="SĐT phụ huynh"
+          className="c-input"
+        />
         <Button type="submit" disabled={createMutation.isPending}>
           <UserPlus className="mr-1 h-4 w-4" /> Thêm
         </Button>
@@ -110,6 +179,11 @@ export function UsersPage(): React.ReactElement {
             <thead>
               <tr>
                 <th>Số điện thoại</th>
+                <th>Họ tên</th>
+                <th>Năm sinh</th>
+                <th>Tuổi</th>
+                <th>Giới tính</th>
+                <th>SĐT phụ huynh</th>
                 <th>Email</th>
                 <th>Vai trò</th>
                 <th className="text-right">Hành động</th>
@@ -119,6 +193,15 @@ export function UsersPage(): React.ReactElement {
               {usersQuery.data.map((u) => (
                 <tr key={u.id}>
                   <td>{u.phoneNumber}</td>
+                  <td>
+                    {u.lastName || u.firstName
+                      ? [u.lastName, u.firstName].filter(Boolean).join(' ')
+                      : '—'}
+                  </td>
+                  <td>{u.birthYear ?? '—'}</td>
+                  <td>{u.age ?? '—'}</td>
+                  <td>{u.gender ? GENDER_LABEL[u.gender] : '—'}</td>
+                  <td>{u.parentPhone ?? '—'}</td>
                   <td>{u.email ?? '—'}</td>
                   <td>
                     <select

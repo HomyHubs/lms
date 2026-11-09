@@ -12,6 +12,7 @@ import {
   DEMO_TEACHERS,
   LISTENING,
   READING,
+  studentFullName,
   studentSlug,
   type DemoLevel,
   type DemoQuestion,
@@ -60,13 +61,37 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-async function insertUser(db: AppDb, phoneNumber: string, email: string, role: string, passwordHash: string): Promise<string> {
+async function insertUser(
+  db: AppDb,
+  phoneNumber: string,
+  email: string,
+  role: string,
+  passwordHash: string,
+  // Ho so hoc vien (tuy chon): chi set khi seed student.
+  profile?: { lastName: string | null; firstName: string | null },
+): Promise<string> {
   const row = await db
     .insertInto('users')
-    .values({ phone_number: phoneNumber, email, password_hash: passwordHash, role })
+    .values({
+      phone_number: phoneNumber,
+      email,
+      password_hash: passwordHash,
+      role,
+      last_name: profile?.lastName ?? null,
+      first_name: profile?.firstName ?? null,
+    })
     .returning('id')
     .executeTakeFirstOrThrow()
   return row.id
+}
+
+/** Tach full name "Ho giua Ten" thanh lastName (ho + chu lot) va firstName (ten cuoi). */
+function splitStudentName(fullName: string): { lastName: string | null; firstName: string | null } {
+  const parts = fullName.trim().split(/\s+/)
+  if (parts.length <= 1) return { lastName: fullName, firstName: null }
+  const firstName = parts[parts.length - 1] ?? null
+  const lastName = parts.slice(0, -1).join(' ')
+  return { lastName, firstName }
 }
 
 async function seedQuestions(db: AppDb, levelIds: Record<DemoLevel, string>): Promise<Map<string, DemoQuestion>> {
@@ -257,7 +282,14 @@ async function main(): Promise<void> {
 
         const roster: DemoStudent[] = []
         for (let k = 0; k < STUDENTS_PER_CLASS; k += 1) {
-          const id = await insertUser(db, phone('0933', studentNo + 1), `${studentSlug(studentNo)}@hocvien.demo`, 'student', passwordHash)
+          const id = await insertUser(
+            db,
+            phone('0933', studentNo + 1),
+            `${studentSlug(studentNo)}@hocvien.demo`,
+            'student',
+            passwordHash,
+            splitStudentName(studentFullName(studentNo)),
+          )
           studentNo += 1
           await db.insertInto('enrollments').values({ class_id: klass.id, student_id: id }).execute()
           roster.push({ id, ability: 0.35 + rng() * 0.6 })

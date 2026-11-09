@@ -20,3 +20,9 @@ github_app_auth*.py
 
 # Cong cu AI cuc bo
 .claude/
+.workbuddy-ai/
+.agent-worktrees/
+
+# Postman local workspace (cong cu sinh ra, khong thuoc source)
+.postman/
+postman/

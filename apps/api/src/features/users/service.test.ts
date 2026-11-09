@@ -16,12 +16,28 @@ function makeFakeStore(seed: UserRow[] = []): UsersStore {
     async findUserByPhone(phoneNumber) {
       return users.find((u) => u.phone_number === phoneNumber)
     },
-    async createUser({ phoneNumber, role, email }) {
+    async createUser({
+      phoneNumber,
+      role,
+      email,
+      lastName,
+      firstName,
+      birthYear,
+      gender,
+      address,
+      parentPhone,
+    }) {
       const row: UserRow = {
         id: `u-${(seq += 1)}`,
         phone_number: phoneNumber,
         email,
         role,
+        last_name: lastName,
+        first_name: firstName,
+        birth_year: birthYear,
+        gender,
+        address,
+        parent_phone: parentPhone,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       }
       users.push(row)
@@ -32,6 +48,12 @@ function makeFakeStore(seed: UserRow[] = []): UsersStore {
       if (!row) return undefined
       if (input.role !== undefined) row.role = input.role
       if (input.email !== undefined) row.email = input.email
+      if (input.lastName !== undefined) row.last_name = input.lastName
+      if (input.firstName !== undefined) row.first_name = input.firstName
+      if (input.birthYear !== undefined) row.birth_year = input.birthYear
+      if (input.gender !== undefined) row.gender = input.gender
+      if (input.address !== undefined) row.address = input.address
+      if (input.parentPhone !== undefined) row.parent_phone = input.parentPhone
       return row
     },
     async deleteUser(id) {
@@ -69,6 +91,45 @@ describe('createUser', () => {
       role: 'student',
     })
     expect(outcome).toEqual({ ok: false, reason: 'phone_taken' })
+  })
+
+  it('stores the student profile fields and derives age from birthYear', async () => {
+    const store = makeFakeStore()
+    const outcome = await createUser(store, {
+      phoneNumber: '0909999999',
+      password: 'secret12',
+      role: 'student',
+      lastName: 'Nguyễn Minh',
+      firstName: 'An',
+      birthYear: 2015,
+      gender: 'male',
+      address: '123 Đường ABC',
+      parentPhone: '0912345678',
+    })
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.user.lastName).toBe('Nguyễn Minh')
+    expect(outcome.user.firstName).toBe('An')
+    expect(outcome.user.birthYear).toBe(2015)
+    expect(outcome.user.gender).toBe('male')
+    expect(outcome.user.parentPhone).toBe('0912345678')
+    // Tuoi = nam hien tai - birthYear (tinh tu dong o backend).
+    expect(outcome.user.age).toBe(new Date().getFullYear() - 2015)
+  })
+
+  it('leaves profile fields null and age null when not provided', async () => {
+    const store = makeFakeStore()
+    const outcome = await createUser(store, {
+      phoneNumber: '0908888888',
+      password: 'secret12',
+      role: 'student',
+    })
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.user.lastName).toBeNull()
+    expect(outcome.user.firstName).toBeNull()
+    expect(outcome.user.birthYear).toBeNull()
+    expect(outcome.user.age).toBeNull()
   })
 })
 
