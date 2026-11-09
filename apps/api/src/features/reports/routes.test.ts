@@ -72,6 +72,7 @@ function makeFakeStore(): ReportsStore {
     excellent_min: 85,
     good_min: 70,
     average_min: 50,
+    pass_min: 50,
   }
   const enrollments = [enrollment(CLASS_1, BRANCH_1, STUDENT_1), enrollment(CLASS_2, BRANCH_2, STUDENT_2)]
   const graded = (id: string, studentId: string, score: number, passed: boolean): GradedAttemptRow => ({
@@ -101,6 +102,7 @@ function makeFakeStore(): ReportsStore {
         excellent_min: p.excellentMin,
         good_min: p.goodMin,
         average_min: p.averageMin,
+        pass_min: p.passMin,
       })
     },
     async listEnrollments({ branchIds, classId }) {
@@ -162,6 +164,7 @@ describe('reports routes', () => {
       excellentMin: 85,
       goodMin: 70,
       averageMin: 50,
+      passMin: 50,
     })
     expect(invalid.statusCode).toBe(400)
     const updated = await admin('PUT', `/reports/classification-policies/${LEVEL}`, {
@@ -170,6 +173,7 @@ describe('reports routes', () => {
       excellentMin: 90,
       goodMin: 70,
       averageMin: 50,
+      passMin: 50,
     })
     expect(updated.statusCode).toBe(200)
     expect(updated.json()).toMatchObject({ levelId: LEVEL, examWeight: 50, attendanceWeight: 50 })

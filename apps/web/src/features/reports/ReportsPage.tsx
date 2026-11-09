@@ -57,12 +57,20 @@ function Bars({ title, items }: { title: string; items: { label: string; value: 
 /** Màu cho 4 xếp loại + chưa xếp loại: Giỏi, Khá, Trung bình, Yếu, Chưa xếp loại. */
 const CLASSIFICATION_COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#dc2626', '#94a3b8']
 
-/** Pie tỉ lệ xếp loại (recharts) — bổ sung cho biểu đồ cột, in được. */
-function ClassificationPie({ data }: { data: { name: string; value: number }[] }): React.ReactElement {
+/** Pie tròn tỉ lệ (recharts) — bổ sung cho biểu đồ cột, in được. Dùng chung cho xếp loại và Đậu/Rớt. */
+function ClassificationPie({
+  data,
+  title = 'Tỉ lệ xếp loại',
+  colors = CLASSIFICATION_COLORS,
+}: {
+  data: { name: string; value: number }[]
+  title?: string
+  colors?: string[]
+}): React.ReactElement {
   const total = data.reduce((sum, d) => sum + d.value, 0)
   return (
-    <section className="c-card" aria-label="Tỉ lệ xếp loại">
-      <h2 className="font-medium text-slate-800">Tỉ lệ xếp loại</h2>
+    <section className="c-card" aria-label={title}>
+      <h2 className="font-medium text-slate-800">{title}</h2>
       {total === 0 ? (
         <p className="text-sm text-slate-500">Chưa có dữ liệu.</p>
       ) : (
@@ -80,7 +88,7 @@ function ClassificationPie({ data }: { data: { name: string; value: number }[] }
               }
             >
               {data.map((entry, index) => (
-                <Cell key={entry.name} fill={CLASSIFICATION_COLORS[index % CLASSIFICATION_COLORS.length]} />
+                <Cell key={entry.name} fill={colors[index % colors.length]} />
               ))}
             </Pie>
             <Tooltip />
@@ -106,6 +114,7 @@ function RankingTable({ rows }: { rows: StudentReport['ranking'] }): React.React
           <th>Chuyên cần</th>
           <th>Điểm tổng</th>
           <th>Xếp loại</th>
+          <th>Đậu/Rớt</th>
           <th>Đạt / đã thi</th>
           <th>Thi lại</th>
         </tr>
@@ -121,6 +130,7 @@ function RankingTable({ rows }: { rows: StudentReport['ranking'] }): React.React
             <td>{fmt(r.attendanceRate, '%')}</td>
             <td className="font-medium">{fmt(r.finalScore)}</td>
             <td>{r.classification ? CLASSIFICATION_LABELS[r.classification] : 'Chưa xếp loại'}</td>
+            <td>{r.passed === null ? '—' : r.passed ? 'Đậu' : 'Rớt'}</td>
             <td>
               {r.examsPassed} / {r.examsTaken}
             </td>
@@ -141,6 +151,7 @@ const POLICY_FIELDS = [
   ['excellentMin', 'Giỏi từ'],
   ['goodMin', 'Khá từ'],
   ['averageMin', 'Trung bình từ'],
+  ['passMin', 'Đậu từ'],
 ] as const
 
 const toDraft = (policy: ClassificationPolicy): Record<string, string> =>
@@ -229,6 +240,13 @@ export function ReportsPage(): React.ReactElement {
       ]
     : []
 
+  const passPie = data
+    ? [
+        { name: 'Đậu', value: data.totals.studentsPassed },
+        { name: 'Rớt', value: data.totals.studentsFailed },
+      ]
+    : []
+
   function exportExcel(): void {
     if (!data) return
     downloadFile(buildXlsx(reportToSheets(data)), `bao-cao-hoc-vien-${new Date().toISOString().slice(0, 10)}.xlsx`, XLSX_MIME)
@@ -293,11 +311,12 @@ export function ReportsPage(): React.ReactElement {
       {data && (
         <>
           <section className="c-card" aria-label="Tổng quan">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
               <Card label="Học viên" value={String(data.totals.students)} />
               <Card label="Điểm thi TB" value={fmt(data.totals.averageExamScore, '%')} />
               <Card label="Chuyên cần TB" value={fmt(data.totals.averageAttendanceRate, '%')} />
               <Card label="Tỷ lệ đạt" value={fmt(data.totals.passRate, '%')} />
+              <Card label="Đậu / Rớt" value={`${data.totals.studentsPassed} / ${data.totals.studentsFailed}`} />
             </div>
             <p className="text-sm text-slate-600">
               Lượt thi đạt {data.totals.passed} · trượt {data.totals.failed} · điểm tổng TB {fmt(data.totals.averageFinal)}
@@ -312,6 +331,9 @@ export function ReportsPage(): React.ReactElement {
               ]}
             />
             <ClassificationPie data={classificationPie} />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <ClassificationPie data={passPie} title="Tỉ lệ Đậu/Rớt" colors={['#16a34a', '#dc2626']} />
           </div>
           <Bars
             title="Đạt / trượt theo lớp"

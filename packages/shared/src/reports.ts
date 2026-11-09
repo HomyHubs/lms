@@ -28,6 +28,8 @@ export const ClassificationPolicy = z.object({
   excellentMin: Percent,
   goodMin: Percent,
   averageMin: Percent,
+  /** Ngưỡng Đậu: điểm tổng (final) >= passMin => Đậu, ngược lại Rớt. Chỉ admin sửa. */
+  passMin: Percent,
 })
 export type ClassificationPolicy = z.infer<typeof ClassificationPolicy>
 
@@ -41,6 +43,7 @@ export const UpdateClassificationPolicyRequest = z
     excellentMin: Percent,
     goodMin: Percent,
     averageMin: Percent,
+    passMin: Percent,
   })
   .refine((p) => p.examWeight + p.attendanceWeight === 100, {
     message: 'Tong trong so thi + chuyen can phai bang 100',
@@ -77,6 +80,8 @@ export const StudentRankingRow = z.object({
   attendanceRate: z.number().nullable(),
   finalScore: z.number().nullable(),
   classification: StudentClassification.nullable(),
+  /** Đậu (true) / Rớt (false) theo finalScore >= passMin; null khi chưa xếp loại (chưa có điểm). */
+  passed: z.boolean().nullable(),
   examsTaken: z.number().int(),
   examsPassed: z.number().int(),
   attempts: z.number().int(),
@@ -119,6 +124,9 @@ export const StudentReport = z.object({
     averageAttendanceRate: z.number().nullable(),
     averageFinal: z.number().nullable(),
     passRate: z.number().nullable(),
+    /** Số học viên Đậu / Rớt theo ngưỡng passMin (khác passed/failed là lượt thi). */
+    studentsPassed: z.number().int(),
+    studentsFailed: z.number().int(),
     ...PassFail,
   }),
   classifications: z.object({

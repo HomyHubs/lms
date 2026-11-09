@@ -25,7 +25,7 @@ const STUDENT_ID = '80000000-0000-0000-0000-000000000001'
 
 const passFail = { passed: 2, failed: 1 }
 const report: StudentReport = {
-  totals: { students: 1, averageExamScore: 80, averageAttendanceRate: 100, averageFinal: 82, passRate: 67, ...passFail },
+  totals: { students: 1, averageExamScore: 80, averageAttendanceRate: 100, averageFinal: 82, passRate: 67, studentsPassed: 1, studentsFailed: 0, ...passFail },
   classifications: { excellent: 0, good: 1, average: 0, weak: 0, unranked: 0 },
   byClass: [{ classId: CLASS_ID, className: 'Starter A', branchName: 'Cơ sở 1', levelCode: 'starter', students: 1, averageFinal: 82, ...passFail }],
   byLevel: [{ levelId: LEVEL_ID, levelCode: 'starter', students: 1, averageFinal: 82, ...passFail }],
@@ -44,6 +44,7 @@ const report: StudentReport = {
       attendanceRate: 100,
       finalScore: 82,
       classification: 'good',
+      passed: true,
       examsTaken: 2,
       examsPassed: 1,
       attempts: 3,
@@ -52,7 +53,7 @@ const report: StudentReport = {
     },
   ],
 }
-const policy = { levelId: LEVEL_ID, levelCode: 'starter', levelName: 'Starter', examWeight: 90, attendanceWeight: 10, excellentMin: 85, goodMin: 70, averageMin: 50 }
+const policy = { levelId: LEVEL_ID, levelCode: 'starter', levelName: 'Starter', examWeight: 90, attendanceWeight: 10, excellentMin: 85, goodMin: 70, averageMin: 50, passMin: 50 }
 
 const json = (body: unknown) => ({ ok: true, status: 200, json: async () => body })
 
@@ -116,6 +117,6 @@ describe('ReportsPage', () => {
     expect(sheets.map((s) => s.sheet)).toEqual(['Xep hang', 'Theo lop', 'Theo cap do', 'Theo thang'])
     const ranking = sheets[0]!.data
     expect(ranking[0]?.[0]).toBe('Hạng')
-    expect(ranking[1]).toEqual([1, 'Nguyễn Văn A', '0900000021', 'Starter A', 'Cơ sở 1', 'starter', 80, 100, 82, 'Khá', 2, 1, 3, 1, 1])
+    expect(ranking[1]).toEqual([1, 'Nguyễn Văn A', '0900000021', 'Starter A', 'Cơ sở 1', 'starter', 80, 100, 82, 'Khá', 'Đậu', 2, 1, 3, 1, 1])
   })
 })

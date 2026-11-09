@@ -7,7 +7,7 @@ export function reportToSheets(report: StudentReport): XlsxSheet[] {
     {
       name: 'Xep hang',
       rows: [
-        ['Hạng', 'Họ tên', 'Mã HS (SĐT)', 'Lớp', 'Cơ sở', 'Cấp độ', 'Điểm thi (%)', 'Chuyên cần (%)', 'Điểm tổng', 'Xếp loại', 'Số đề đã thi', 'Số đề đạt', 'Lượt thi', 'Thi lại', 'Chờ thi lại'],
+        ['Hạng', 'Họ tên', 'Mã HS (SĐT)', 'Lớp', 'Cơ sở', 'Cấp độ', 'Điểm thi (%)', 'Chuyên cần (%)', 'Điểm tổng', 'Xếp loại', 'Đậu/Rớt', 'Số đề đã thi', 'Số đề đạt', 'Lượt thi', 'Thi lại', 'Chờ thi lại'],
         ...report.ranking.map((r) => [
           r.rank,
           r.studentName ?? '',
@@ -19,6 +19,7 @@ export function reportToSheets(report: StudentReport): XlsxSheet[] {
           r.attendanceRate,
           r.finalScore,
           r.classification ? CLASSIFICATION_LABELS[r.classification] : 'Chưa xếp loại',
+          r.passed === null ? '' : r.passed ? 'Đậu' : 'Rớt',
           r.examsTaken,
           r.examsPassed,
           r.attempts,

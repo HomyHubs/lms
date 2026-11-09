@@ -21,6 +21,7 @@ export interface PolicyRow {
   excellent_min: number
   good_min: number
   average_min: number
+  pass_min: number
 }
 
 export interface EnrollmentRow {
@@ -90,6 +91,7 @@ export function toPolicyDto(row: PolicyRow): ClassificationPolicy {
     excellentMin: row.excellent_min,
     goodMin: row.good_min,
     averageMin: row.average_min,
+    passMin: row.pass_min,
   }
 }
 
@@ -127,6 +129,14 @@ export function classify(
   if (score >= policy.goodMin) return 'good'
   if (score >= policy.averageMin) return 'average'
   return 'weak'
+}
+
+/** Đậu (true) khi điểm tổng đạt ngưỡng passMin; Rớt (false) nếu dưới; null khi chưa có điểm. */
+export function passed(
+  score: number | null,
+  policy: Pick<ClassificationPolicy, 'passMin'>,
+): boolean | null {
+  return score === null ? null : score >= policy.passMin
 }
 
 interface ExamOutcome {
@@ -224,6 +234,7 @@ export function buildStudentReport(input: ReportInput): StudentReport {
         attendanceRate,
         finalScore: score,
         classification: classify(score, policy),
+        passed: passed(score, policy),
         examsTaken: outcomes.length,
         examsPassed: outcomes.filter((o) => o.passed).length,
         attempts,
@@ -277,6 +288,8 @@ export function buildStudentReport(input: ReportInput): StudentReport {
       averageAttendanceRate: average(ranking.map((r) => r.attendanceRate)),
       averageFinal: average(ranking.map((r) => r.finalScore)),
       passRate: percentOf(totalsPassFail.passed, totalsPassFail.passed + totalsPassFail.failed),
+      studentsPassed: ranking.filter((r) => r.passed === true).length,
+      studentsFailed: ranking.filter((r) => r.passed === false).length,
       ...totalsPassFail,
     },
     classifications,

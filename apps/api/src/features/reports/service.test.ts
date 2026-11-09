@@ -23,6 +23,7 @@ const POLICY: PolicyRow = {
   excellent_min: 85,
   good_min: 70,
   average_min: 50,
+  pass_min: 50,
 }
 
 function enrollment(studentId: string, phone: string): EnrollmentRow {
@@ -114,14 +115,15 @@ describe('buildStudentReport', () => {
       attendanceRate: 66.7,
       finalScore: 78.7,
       classification: 'good',
+      passed: true,
       examsTaken: 2,
       examsPassed: 2,
       attempts: 3,
       retakes: 1,
       pendingRetakes: 0,
     })
-    expect(b).toMatchObject({ studentId: B, rank: 2, finalScore: 30, classification: 'weak', pendingRetakes: 1 })
-    expect(c).toMatchObject({ studentId: C, rank: null, finalScore: null, classification: null })
+    expect(b).toMatchObject({ studentId: B, rank: 2, finalScore: 30, classification: 'weak', passed: false, pendingRetakes: 1 })
+    expect(c).toMatchObject({ studentId: C, rank: null, finalScore: null, classification: null, passed: null })
   })
 
   it('aggregates pass/fail by class, level and month', () => {

@@ -302,6 +302,7 @@ export interface StudentGradingPoliciesTable {
   excellent_min: ColumnType<number, number | undefined, number>
   good_min: ColumnType<number, number | undefined, number>
   average_min: ColumnType<number, number | undefined, number>
+  pass_min: ColumnType<number, number | undefined, number>
   updated_at: Timestamp
 }
 

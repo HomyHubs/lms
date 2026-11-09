@@ -21,6 +21,7 @@ export function makeReportsStore(db: AppDb): ReportsStore {
           'p.excellent_min',
           'p.good_min',
           'p.average_min',
+          'p.pass_min',
         ])
         .orderBy('l.code')
         .execute()
@@ -38,6 +39,7 @@ export function makeReportsStore(db: AppDb): ReportsStore {
         excellent_min: p.excellentMin,
         good_min: p.goodMin,
         average_min: p.averageMin,
+        pass_min: p.passMin,
       }
       await db
         .insertInto('student_grading_policies')
