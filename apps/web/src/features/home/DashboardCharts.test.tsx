@@ -20,7 +20,11 @@ vi.mock('./useDashboardStats', () => ({
       { name: 'Starters', value: 12 },
       { name: 'Movers', value: 8 },
     ],
-    studentsByCenter: [{ name: 'Trung tâm Sunshine', value: 20 }],
+    studentsByBranch: [
+      { name: 'Cơ sở Quận 1', value: 12 },
+      { name: 'Cơ sở Quận 3', value: 8 },
+    ],
+    totalStudents: 20,
     isLoading: false,
     isEmpty: false,
   }),
@@ -53,10 +57,11 @@ vi.mock('@/features/attendance/useAttendance', () => ({
 import { DashboardCharts } from './DashboardCharts'
 
 describe('DashboardCharts', () => {
-  it('renders the four chart titles', () => {
+  it('renders the chart titles', () => {
     render(<DashboardCharts />)
     expect(screen.getByText('Học viên theo khóa học')).toBeInTheDocument()
-    expect(screen.getByText('Học viên theo trung tâm')).toBeInTheDocument()
+    expect(screen.getByText('Học viên theo cơ sở')).toBeInTheDocument()
+    expect(screen.getByText('Tỉ lệ học viên theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ hoàn thành bài')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ điểm danh')).toBeInTheDocument()
   })

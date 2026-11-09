@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import type { Branch, Center, Class, Course, Enrollment } from '@lms/shared'
-import { listBranches, listCenters, listClasses, listCourses, listEnrollments } from '@/lib/api'
+import type { Branch, Class, Course, Enrollment } from '@lms/shared'
+import { listBranches, listClasses, listCourses, listEnrollments } from '@/lib/api'
 
 /** One labelled slice/bar of a chart. */
 export interface ChartDatum {
@@ -11,8 +11,10 @@ export interface ChartDatum {
 export interface DashboardStats {
   /** Số học viên (enrollment) theo từng khóa học. */
   studentsByCourse: ChartDatum[]
-  /** Số học viên (enrollment) theo từng trung tâm. */
-  studentsByCenter: ChartDatum[]
+  /** Số học viên (enrollment) theo từng cơ sở (branch). */
+  studentsByBranch: ChartDatum[]
+  /** Tổng số học viên của cả trung tâm (= tổng mọi cơ sở) — dùng để tính tỉ lệ %. */
+  totalStudents: number
   isLoading: boolean
   isEmpty: boolean
 }
@@ -20,14 +22,13 @@ export interface DashboardStats {
 /**
  * Tổng hợp số liệu cho dashboard từ các endpoint hiện có (slice-1):
  *   - học viên theo khóa học: enrollment -> class.courseId -> course
- *   - học viên theo trung tâm: enrollment -> class.branchId -> branch.centerId -> center
+ *   - học viên theo cơ sở: enrollment -> class.branchId -> branch
  * Enrollment được lấy theo từng lớp (listEnrollments nhận classId), nên dùng useQueries
  * để chạy song song một query cho mỗi lớp.
  */
 export function useDashboardStats(): DashboardStats {
   const courses = useQuery<Course[]>({ queryKey: ['courses'], queryFn: listCourses })
   const classes = useQuery<Class[]>({ queryKey: ['classes'], queryFn: listClasses })
-  const centers = useQuery<Center[]>({ queryKey: ['centers'], queryFn: listCenters })
   const branches = useQuery<Branch[]>({ queryKey: ['branches'], queryFn: listBranches })
 
   const classList: Class[] = classes.data ?? []
@@ -39,7 +40,7 @@ export function useDashboardStats(): DashboardStats {
     })),
   })
 
-  const baseLoading = courses.isLoading || classes.isLoading || centers.isLoading || branches.isLoading
+  const baseLoading = courses.isLoading || classes.isLoading || branches.isLoading
   const enrollmentsLoading = enrollmentQueries.some((q) => q.isLoading)
   const isLoading = baseLoading || enrollmentsLoading
 
@@ -59,23 +60,18 @@ export function useDashboardStats(): DashboardStats {
     return { name: course.name, value }
   })
 
-  // Trung tâm: class.branchId -> branch.centerId.
+  // Cơ sở: cộng dồn số học viên của mọi lớp thuộc branch đó.
   const branchList: Branch[] = branches.data ?? []
-  const centerIdByBranch = new Map<string, string>()
-  branchList.forEach((branch: Branch) => centerIdByBranch.set(branch.id, branch.centerId))
-
-  const centerList: Center[] = centers.data ?? []
-  const studentsByCenter: ChartDatum[] = centerList.map((center: Center) => {
+  const studentsByBranch: ChartDatum[] = branchList.map((branch: Branch) => {
     const value = classList
-      .filter((cls: Class) => centerIdByBranch.get(cls.branchId) === center.id)
+      .filter((cls: Class) => cls.branchId === branch.id)
       .reduce((sum: number, cls: Class) => sum + (enrollmentCountByClass.get(cls.id) ?? 0), 0)
-    return { name: center.name, value }
+    return { name: branch.name, value }
   })
 
-  const totalStudents =
-    studentsByCourse.reduce((sum: number, d: ChartDatum) => sum + d.value, 0) +
-    studentsByCenter.reduce((sum: number, d: ChartDatum) => sum + d.value, 0)
+  // Tổng học viên cả trung tâm = tổng mọi cơ sở (1 trung tâm → coi là 100%).
+  const totalStudents = studentsByBranch.reduce((sum: number, d: ChartDatum) => sum + d.value, 0)
   const isEmpty = !isLoading && totalStudents === 0
 
-  return { studentsByCourse, studentsByCenter, isLoading, isEmpty }
+  return { studentsByCourse, studentsByBranch, totalStudents, isLoading, isEmpty }
 }

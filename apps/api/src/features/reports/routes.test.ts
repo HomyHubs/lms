@@ -57,6 +57,7 @@ function enrollment(classId: string, branchId: string, studentId: string): Enrol
     level_code: 'starter',
     student_id: studentId,
     phone_number: `09${studentId.slice(-8)}`,
+    student_name: null,
   }
 }
 

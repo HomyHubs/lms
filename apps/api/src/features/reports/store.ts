@@ -64,6 +64,7 @@ export function makeReportsStore(db: AppDb): ReportsStore {
           'l.code as level_code',
           'e.student_id',
           'u.phone_number',
+          sql<string | null>`nullif(trim(concat_ws(' ', u.last_name, u.first_name)), '')`.as('student_name'),
         ])
         .where('c.branch_id', 'in', branchIds)
       if (levelId) q = q.where('l.id', '=', levelId)

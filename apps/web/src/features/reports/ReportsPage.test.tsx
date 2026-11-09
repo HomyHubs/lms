@@ -7,6 +7,17 @@ import { buildXlsx } from '@/lib/xlsx-export'
 import { reportToSheets } from './report-export'
 import { ReportsPage } from './ReportsPage'
 
+// recharts needs a sized container; jsdom reports 0 width so charts don't paint.
+vi.mock('recharts', async () => {
+  const actual = await vi.importActual<typeof import('recharts')>('recharts')
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+      <div style={{ width: 400, height: 240 }}>{children}</div>
+    ),
+  }
+})
+
 const BRANCH_ID = '10000000-0000-0000-0000-000000000001'
 const LEVEL_ID = '20000000-0000-0000-0000-000000000001'
 const CLASS_ID = '50000000-0000-0000-0000-000000000001'
@@ -24,6 +35,7 @@ const report: StudentReport = {
       rank: 1,
       studentId: STUDENT_ID,
       phoneNumber: '0900000021',
+      studentName: 'Nguyễn Văn A',
       classId: CLASS_ID,
       className: 'Starter A',
       branchName: 'Cơ sở 1',
@@ -104,6 +116,6 @@ describe('ReportsPage', () => {
     expect(sheets.map((s) => s.sheet)).toEqual(['Xep hang', 'Theo lop', 'Theo cap do', 'Theo thang'])
     const ranking = sheets[0]!.data
     expect(ranking[0]?.[0]).toBe('Hạng')
-    expect(ranking[1]).toEqual([1, '0900000021', 'Starter A', 'Cơ sở 1', 'starter', 80, 100, 82, 'Khá', 2, 1, 3, 1, 1])
+    expect(ranking[1]).toEqual([1, 'Nguyễn Văn A', '0900000021', 'Starter A', 'Cơ sở 1', 'starter', 80, 100, 82, 'Khá', 2, 1, 3, 1, 1])
   })
 })

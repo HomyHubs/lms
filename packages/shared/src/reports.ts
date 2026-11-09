@@ -67,6 +67,8 @@ export const StudentRankingRow = z.object({
   rank: z.number().int().nullable(),
   studentId: z.string().uuid(),
   phoneNumber: z.string(),
+  /** Họ tên học viên (Họ/chữ lót + Tên) nếu đã có hồ sơ; null khi chưa nhập. */
+  studentName: z.string().nullable(),
   classId: z.string().uuid(),
   className: z.string(),
   branchName: z.string(),

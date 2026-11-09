@@ -68,7 +68,13 @@ async function insertUser(
   role: string,
   passwordHash: string,
   // Ho so hoc vien (tuy chon): chi set khi seed student.
-  profile?: { lastName: string | null; firstName: string | null },
+  profile?: {
+    lastName: string | null
+    firstName: string | null
+    birthYear?: number | null
+    gender?: 'male' | 'female' | 'other' | null
+    parentPhone?: string | null
+  },
 ): Promise<string> {
   const row = await db
     .insertInto('users')
@@ -79,6 +85,9 @@ async function insertUser(
       role,
       last_name: profile?.lastName ?? null,
       first_name: profile?.firstName ?? null,
+      birth_year: profile?.birthYear ?? null,
+      gender: profile?.gender ?? null,
+      parent_phone: profile?.parentPhone ?? null,
     })
     .returning('id')
     .executeTakeFirstOrThrow()
@@ -92,6 +101,23 @@ function splitStudentName(fullName: string): { lastName: string | null; firstNam
   const firstName = parts[parts.length - 1] ?? null
   const lastName = parts.slice(0, -1).join(' ')
   return { lastName, firstName }
+}
+
+/**
+ * Sinh cac truong ho so demo (nam sinh, gioi tinh, SDT phu huynh) deterministic theo chi so hoc sinh.
+ * Hoc vien Starters/Movers/Flyers la tre em, nen nam sinh roi vao khoang ~6-12 tuoi so voi nam hien tai.
+ */
+function studentProfileExtras(index: number): {
+  birthYear: number
+  gender: 'male' | 'female'
+  parentPhone: string
+} {
+  const currentYear = new Date().getFullYear()
+  const age = 6 + Math.floor(rng() * 7) // 6..12
+  const birthYear = currentYear - age
+  const gender: 'male' | 'female' = rng() < 0.5 ? 'male' : 'female'
+  const parentPhone = phone('0988', index + 1)
+  return { birthYear, gender, parentPhone }
 }
 
 async function seedQuestions(db: AppDb, levelIds: Record<DemoLevel, string>): Promise<Map<string, DemoQuestion>> {
@@ -288,7 +314,7 @@ async function main(): Promise<void> {
             `${studentSlug(studentNo)}@hocvien.demo`,
             'student',
             passwordHash,
-            splitStudentName(studentFullName(studentNo)),
+            { ...splitStudentName(studentFullName(studentNo)), ...studentProfileExtras(studentNo) },
           )
           studentNo += 1
           await db.insertInto('enrollments').values({ class_id: klass.id, student_id: id }).execute()

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BarChart3, FileSpreadsheet, Printer } from 'lucide-react'
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import {
   CLASSIFICATION_LABELS,
   STUDENT_CLASSIFICATIONS,
@@ -53,14 +54,53 @@ function Bars({ title, items }: { title: string; items: { label: string; value: 
   )
 }
 
-function RankingTable({ report }: { report: StudentReport }): React.ReactElement {
-  if (report.ranking.length === 0) return <p className="text-sm text-slate-500">Không có học viên trong phạm vi lọc.</p>
+/** Màu cho 4 xếp loại + chưa xếp loại: Giỏi, Khá, Trung bình, Yếu, Chưa xếp loại. */
+const CLASSIFICATION_COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#dc2626', '#94a3b8']
+
+/** Pie tỉ lệ xếp loại (recharts) — bổ sung cho biểu đồ cột, in được. */
+function ClassificationPie({ data }: { data: { name: string; value: number }[] }): React.ReactElement {
+  const total = data.reduce((sum, d) => sum + d.value, 0)
+  return (
+    <section className="c-card" aria-label="Tỉ lệ xếp loại">
+      <h2 className="font-medium text-slate-800">Tỉ lệ xếp loại</h2>
+      {total === 0 ? (
+        <p className="text-sm text-slate-500">Chưa có dữ liệu.</p>
+      ) : (
+        <ResponsiveContainer width="100%" height={240}>
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              label={(e: { name?: string | number; percent?: number }) =>
+                `${e.name} ${Math.round((e.percent ?? 0) * 100)}%`
+              }
+            >
+              {data.map((entry, index) => (
+                <Cell key={entry.name} fill={CLASSIFICATION_COLORS[index % CLASSIFICATION_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </section>
+  )
+}
+
+function RankingTable({ rows }: { rows: StudentReport['ranking'] }): React.ReactElement {
+  if (rows.length === 0) return <p className="text-sm text-slate-500">Không có học viên trong phạm vi lọc.</p>
   return (
     <table className="c-table">
       <thead>
         <tr>
           <th>Hạng</th>
-          <th>Học viên</th>
+          <th>Họ tên</th>
+          <th>Mã HS (SĐT)</th>
           <th>Lớp</th>
           <th>Điểm thi</th>
           <th>Chuyên cần</th>
@@ -71,9 +111,10 @@ function RankingTable({ report }: { report: StudentReport }): React.ReactElement
         </tr>
       </thead>
       <tbody>
-        {report.ranking.map((r) => (
+        {rows.map((r) => (
           <tr key={`${r.classId}-${r.studentId}`}>
             <td>{fmt(r.rank)}</td>
+            <td>{r.studentName ?? '—'}</td>
             <td>{r.phoneNumber}</td>
             <td>{r.className}</td>
             <td>{fmt(r.examScore, '%')}</td>
@@ -170,6 +211,24 @@ export function ReportsPage(): React.ReactElement {
     setQuery((q) => ({ ...q, [key]: e.target.value || undefined }))
   const data = report.data
 
+  // Tìm theo tên hoặc mã HS (SĐT) — lọc phía client trên bảng xếp hạng.
+  const [search, setSearch] = useState('')
+  const rankingRows = useMemo(() => {
+    const rows = data?.ranking ?? []
+    const term = search.trim().toLowerCase()
+    if (!term) return rows
+    return rows.filter(
+      (r) => (r.studentName ?? '').toLowerCase().includes(term) || r.phoneNumber.toLowerCase().includes(term),
+    )
+  }, [data, search])
+
+  const classificationPie = data
+    ? [
+        ...STUDENT_CLASSIFICATIONS.map((c) => ({ name: CLASSIFICATION_LABELS[c], value: data.classifications[c] })),
+        { name: 'Chưa xếp loại', value: data.classifications.unranked },
+      ]
+    : []
+
   function exportExcel(): void {
     if (!data) return
     downloadFile(buildXlsx(reportToSheets(data)), `bao-cao-hoc-vien-${new Date().toISOString().slice(0, 10)}.xlsx`, XLSX_MIME)
@@ -244,13 +303,16 @@ export function ReportsPage(): React.ReactElement {
               Lượt thi đạt {data.totals.passed} · trượt {data.totals.failed} · điểm tổng TB {fmt(data.totals.averageFinal)}
             </p>
           </section>
-          <Bars
-            title="Xếp loại"
-            items={[
-              ...STUDENT_CLASSIFICATIONS.map((c) => ({ label: CLASSIFICATION_LABELS[c], value: data.classifications[c] })),
-              { label: 'Chưa xếp loại', value: data.classifications.unranked },
-            ]}
-          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Bars
+              title="Xếp loại"
+              items={[
+                ...STUDENT_CLASSIFICATIONS.map((c) => ({ label: CLASSIFICATION_LABELS[c], value: data.classifications[c] })),
+                { label: 'Chưa xếp loại', value: data.classifications.unranked },
+              ]}
+            />
+            <ClassificationPie data={classificationPie} />
+          </div>
           <Bars
             title="Đạt / trượt theo lớp"
             items={data.byClass.map((c) => ({ label: c.className, value: c.passed, hint: `đạt ${c.passed} · trượt ${c.failed}` }))}
@@ -264,8 +326,17 @@ export function ReportsPage(): React.ReactElement {
             items={data.byMonth.map((m) => ({ label: m.month, value: m.passed, hint: `đạt ${m.passed} · trượt ${m.failed}` }))}
           />
           <section className="c-card" aria-label="Xếp hạng">
-            <h2 className="font-medium text-slate-800">Xếp hạng học viên</h2>
-            <RankingTable report={data} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-medium text-slate-800">Xếp hạng học viên</h2>
+              <input
+                aria-label="Tìm theo tên hoặc mã học sinh"
+                className="c-input w-64 max-w-full print:hidden"
+                placeholder="Tìm theo tên hoặc mã HS (SĐT)…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <RankingTable rows={rankingRows} />
           </section>
         </>
       )}

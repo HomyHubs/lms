@@ -32,6 +32,8 @@ export interface EnrollmentRow {
   level_code: string
   student_id: string
   phone_number: string
+  /** Họ tên ghép (last_name + first_name); null khi chưa có hồ sơ. */
+  student_name: string | null
 }
 
 export interface GradedAttemptRow {
@@ -213,6 +215,7 @@ export function buildStudentReport(input: ReportInput): StudentReport {
       {
         studentId: e.student_id,
         phoneNumber: e.phone_number,
+        studentName: e.student_name,
         classId: e.class_id,
         className: e.class_name,
         branchName: e.branch_name,

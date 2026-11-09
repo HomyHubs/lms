@@ -35,6 +35,7 @@ function enrollment(studentId: string, phone: string): EnrollmentRow {
     level_code: 'starter',
     student_id: studentId,
     phone_number: phone,
+    student_name: null,
   }
 }
 
