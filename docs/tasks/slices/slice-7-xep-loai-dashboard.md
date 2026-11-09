@@ -20,6 +20,7 @@ Admin xem duoc dashboard tong quan diem, bang xep hang hoc vien, va xep loai hoc
 | 2 | Dashboard bieu do diem, ty le dat/khong dat theo lop/cap do/thoi gian | - | - |
 | 3 | Bang xep hang hoc vien + theo doi tien do thi lai | - | - |
 | 4 | Export bao cao Excel/PDF | - | - |
+| 5 | Nguong Dau/Rot cau hinh theo cap do (pass_min), chi Admin sua | - | Xong. `passMin` 0-100 tren diem tong; Dau khi final >= passMin; cot Dau/Rot + pie Dau/Rot + cot Excel; commit be1ea9c tren `dev` |
 
 ## Stub cho phep
 
@@ -39,6 +40,7 @@ Du lieu dashboard va xep loai phai la du lieu thuc, chi tinh trong pham vi Branc
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | Lam ro | Chot trong so xep loai: thi 90% + chuyen can 10%, cau hinh doi duoc ve sau | Quyet dinh chu so huu | - |
+| 2026-11-09 | Them | Nguong Dau/Rot `pass_min` cau hinh theo cap do (0-100), mac dinh 50; Dau khi diem tong >= pass_min; chi Admin sua (giu guard `requireRole('admin')`, khong them role moi); them cot Dau/Rot va pie Dau/Rot vao dashboard + cot trong Excel; migration additive `20261116000000_student_grading_pass_min.sql`; commit be1ea9c tren `dev` (gates xanh) | Yeu cau chu so huu: Dau/Rot la settings theo diem, Admin lam duoc | - |
 
 ## Cach nghiem thu
 
