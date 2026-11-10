@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import { CheckCircle2, PenLine } from 'lucide-react'
-import type { ManualGradingAttempt, ManualGradingItem } from '@lms/shared'
+import { CheckCircle2, PenLine, Upload } from 'lucide-react'
+import type { Exam, GradeImportResult, ManualGradingAttempt, ManualGradingItem } from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { Badge, Card, CardTitle, PageHeader } from '@/components/ui/card'
 import { ExamImage } from '@/features/media/ExamImage'
-import { useGradeAttempt, useGradingAttempt, useGradingQueue } from './useGrading'
+import { useExams } from '@/features/exams/useExams'
+import { useGradeAttempt, useGradingAttempt, useGradingQueue, useImportGrades } from './useGrading'
+
+/** Ky nang cham tay (import bang diem chi ap dung cho cac ky nang nay). */
+const MANUAL_SKILLS = ['speaking', 'writing']
 
 const timeLabel = (iso: string): string =>
   new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
@@ -130,6 +134,120 @@ function AttemptPanel({ attemptId, onGraded }: { attemptId: string; onGraded: (a
   return <GradeForm key={attemptId} attempt={attempt.data} onGraded={onGraded} />
 }
 
+/** Bang tom tat ket qua import: so dong da ap, bo qua (kem ly do), loi dinh dang. */
+const SKIP_REASON_LABELS: Record<string, string> = {
+  student_not_found: 'Không tìm thấy học viên (mã/SĐT)',
+  already_graded: 'Bài đã được chấm trước đó',
+  out_of_scope: 'Ngoài phạm vi cơ sở của bạn',
+  score_exceeds_max: 'Điểm vượt quá điểm tối đa',
+  duplicate_in_file: 'Trùng mã học viên trong file',
+}
+
+function ImportResultSummary({ result }: { result: GradeImportResult }): React.ReactElement {
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="flex items-center gap-2 text-success-700">
+        <CheckCircle2 className="h-4 w-4" /> Đã nhập <strong>{result.applied}</strong> điểm.
+      </p>
+      {result.skipped.length > 0 && (
+        <div>
+          <p className="font-medium text-slate-700">Bỏ qua {result.skipped.length} dòng:</p>
+          <ul className="ml-4 list-disc text-slate-600">
+            {result.skipped.map((s) => (
+              <li key={`${s.row}-${s.studentCode}`}>
+                Dòng {s.row} — {s.studentCode}: {SKIP_REASON_LABELS[s.reason] ?? s.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {result.errors.length > 0 && (
+        <div>
+          <p className="font-medium text-danger-700">Lỗi định dạng {result.errors.length} dòng:</p>
+          <ul className="ml-4 list-disc text-danger-600">
+            {result.errors.map((e) => (
+              <li key={e.row}>Dòng {e.row}: {e.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * slice-9a (revised): Staff/Admin nhập bảng điểm Speaking/Writing từ file Excel/CSV theo mã học viên
+ * (= SĐT). Chọn kỳ thi (chỉ Speaking/Writing) rồi tải file; kết quả hiển thị số dòng áp/bỏ qua/lỗi.
+ */
+function GradeImportCard(): React.ReactElement {
+  const exams = useExams()
+  const [examId, setExamId] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [result, setResult] = useState<GradeImportResult | null>(null)
+  const importMut = useImportGrades()
+
+  const manualExams: Exam[] = (exams.data ?? []).filter((e: Exam) => MANUAL_SKILLS.includes(e.skill))
+
+  function submit(event: React.FormEvent): void {
+    event.preventDefault()
+    if (!examId || !file) return
+    importMut.mutate({ examId, file }, { onSuccess: setResult })
+  }
+
+  return (
+    <Card>
+      <CardTitle>Nhập bảng điểm từ Excel/CSV</CardTitle>
+      <p className="mb-3 text-sm text-slate-500">
+        File cần cột <strong>mã học viên</strong> (= số điện thoại) và cột <strong>điểm</strong>; cột{' '}
+        <strong>nhận xét</strong> là tuỳ chọn. Hỗ trợ .xlsx và .csv.
+      </p>
+      <form className="flex flex-wrap items-end gap-3" onSubmit={submit}>
+        <label className="flex flex-col gap-1 text-sm text-slate-600">
+          Kỳ thi (Speaking/Writing)
+          <select
+            aria-label="Kỳ thi"
+            className="c-input min-w-[16rem]"
+            value={examId}
+            onChange={(e) => setExamId(e.target.value)}
+            required
+          >
+            <option value="">— Chọn kỳ thi —</option>
+            {manualExams.map((exam) => (
+              <option key={exam.id} value={exam.id}>
+                {exam.title} ({exam.skill})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-slate-600">
+          File bảng điểm
+          <input
+            aria-label="File bảng điểm"
+            type="file"
+            accept=".xlsx,.csv"
+            className="c-input"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            required
+          />
+        </label>
+        <Button type="submit" disabled={!examId || !file || importMut.isPending}>
+          <Upload className="mr-1 h-4 w-4" />
+          {importMut.isPending ? 'Đang nhập…' : 'Nhập điểm'}
+        </Button>
+      </form>
+      {exams.data && manualExams.length === 0 && (
+        <p className="mt-2 text-sm text-slate-500">Chưa có kỳ thi Speaking/Writing nào.</p>
+      )}
+      {importMut.error && <p className="mt-3 text-sm text-danger-600">{errorText(importMut.error)}</p>}
+      {result && (
+        <div className="mt-4">
+          <ImportResultSummary result={result} />
+        </div>
+      )}
+    </Card>
+  )
+}
+
 /** Admin/Teacher: grade submitted Speaking/Writing attempts; the student sees score + feedback. */
 export function GradingPage(): React.ReactElement {
   const queue = useGradingQueue()
@@ -150,6 +268,7 @@ export function GradingPage(): React.ReactElement {
           <Badge tone={done.result.passed ? 'success' : 'danger'}>{done.result.passed ? 'Đạt' : 'Chưa đạt'}</Badge>
         </p>
       )}
+      <GradeImportCard />
       <Card>
         <CardTitle>Bài chờ chấm</CardTitle>
         {queue.isPending && <p className="text-sm text-slate-500">Đang tải…</p>}

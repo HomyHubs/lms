@@ -629,8 +629,8 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | Slice/Task | Tên | Cơ chế | Kết quả rollup | PR | Ngày merge |
 | --- | --- | --- | --- | --- | --- |
 | slice-0 | Walking skeleton | Dọc | Done | 1 | 2026-09-16 |
-| slice-1 | User, Branch & phân quyền | Dọc | Done | 3 | 2026-09-20 |
-| slice-2 | OTP đa kênh | Dọc | Done (còn nợ) | 4 | 2026-09-21 |
+| slice-1 | User, Branch & phân quyền + superadmin & giới hạn export | Dọc | Done (revised 2026-11-10) | 3 | 2026-09-20 |
+| slice-2 | OTP qua Email (bỏ WhatsApp/Telegram) | Dọc | Done (revised) | 4 | 2026-11-10 |
 | slice-3 | Ngân hàng câu hỏi | Dọc | Done | 5 | 2026-09-21 |
 | slice-3.1 | Question completion (strict CSV/XLSX import) | Dọc | Done | 7 | 2026-11-04 |
 | slice-2.1 | Reset security (fail-closed destination) | Dọc | Done | 8 | 2026-11-04 |
@@ -641,7 +641,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-7 | Xếp loại học viên & Dashboard Admin | Dọc | Done | 13 | 2026-11-07 |
 | slice-8 | Ngày công & giờ dạy | Dọc | Done | 14 | 2026-11-08 |
 | slice-10 | Giao diện chung (AppShell, dashboard theo vai trò) | Dọc | Done | 15 | 2026-11-09 |
-| slice-9a | Chấm tay Speaking/Writing | Dọc | Done | 16 | 2026-11-10 |
+| slice-9a | Chấm tay Speaking/Writing + import bảng điểm Excel | Dọc | Done | 16 | 2026-11-10 |
 | slice-9b | Thông báo trong app + nhắc nhở tự động | Dọc | Done | 18 | 2026-11-11 |
 | slice-11a | Bộ đề cố định & thi theo bộ đề | Dọc | Done | 19 | 2026-11-12 |
 | slice-13 | Lịch sử thi & báo cáo thi | Dọc | Done | 20 | 2026-11-13 |

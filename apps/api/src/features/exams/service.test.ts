@@ -230,6 +230,9 @@ function makeFakeStore(
       else policies.push(row)
       return row
     },
+    async listStudentPhonesInBranches() {
+      return []
+    },
   }
 }
 

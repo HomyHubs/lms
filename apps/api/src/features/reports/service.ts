@@ -63,7 +63,8 @@ export interface DateRange {
 }
 
 export interface EnrollmentFilter {
-  branchIds: string[]
+  /** undefined = khong gioi han co so (superadmin xem/export toan bo); [] = khong co co so nao. */
+  branchIds?: string[]
   levelId?: string
   classId?: string
 }

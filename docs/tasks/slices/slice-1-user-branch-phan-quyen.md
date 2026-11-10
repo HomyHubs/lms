@@ -38,6 +38,7 @@ Phan quyen theo role va theo Branch phai la thuc — khong duoc de mo (moi user 
 
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
+| 2026-11-10 | Sua | Them role 'superadmin' (cao nhat, vuot moi branch-scope, la role duy nhat quan ly tai khoan admin/superadmin va duy nhat duoc export danh sach hoc vien); admin thuong KHONG con export duoc | Yeu cau product: tach quyen quan tri cap cao + chong ro ri danh sach hoc vien | — |
 
 ## Cach nghiem thu
 

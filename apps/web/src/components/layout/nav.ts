@@ -20,6 +20,7 @@ import type { UserRole } from '@lms/shared'
 import type { Tone } from '@/components/ui/tone'
 
 export const ROLE_LABELS: Record<UserRole, string> = {
+  superadmin: 'Quản trị cấp cao',
   admin: 'Quản trị',
   teacher: 'Giáo viên',
   staff: 'Nhân viên',
@@ -44,7 +45,7 @@ export const NAV_ITEMS = [
   { path: '/questions', label: 'Ngân hàng câu hỏi', icon: ListChecks, tone: 'primary', roles: ['admin', 'teacher'] },
   { path: '/exam-sets', label: 'Bộ đề & đề thi', icon: FileStack, tone: 'warning', roles: ['admin', 'teacher'] },
   { path: '/ai-questions', label: 'Sinh câu hỏi AI', icon: Sparkles, tone: 'accent', roles: ['admin', 'teacher'] },
-  { path: '/grading', label: 'Chấm bài', icon: PenLine, tone: 'success', roles: ['admin', 'teacher'] },
+  { path: '/grading', label: 'Chấm bài', icon: PenLine, tone: 'success', roles: ['admin', 'teacher', 'staff'] },
   { path: '/exam-reports', label: 'Báo cáo thi', icon: ClipboardCheck, tone: 'accent', roles: ['admin', 'teacher'] },
   { path: '/work-hours', label: 'Ngày công & giờ dạy', icon: Clock, tone: 'warning', roles: ['admin', 'teacher', 'staff'] },
   { path: '/reports', label: 'Báo cáo & xếp loại', icon: BarChart3, tone: 'danger', roles: ['admin'] },
@@ -57,5 +58,7 @@ export const NAV_ITEMS = [
 export type NavPath = (typeof NAV_ITEMS)[number]['path']
 
 export function navItemsFor(role: UserRole): NavItem[] {
-  return NAV_ITEMS.filter((item) => (item.roles as readonly UserRole[]).includes(role))
+  // superadmin thay het menu cua admin (tai khoan cao nhat, vuot moi guard role).
+  const effective: UserRole = role === 'superadmin' ? 'admin' : role
+  return NAV_ITEMS.filter((item) => (item.roles as readonly UserRole[]).includes(effective))
 }

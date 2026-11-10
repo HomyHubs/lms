@@ -358,6 +358,20 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       return selectGradingRows().where('exam_attempts.id', '=', attemptId).executeTakeFirst()
     },
 
+    async listStudentPhonesInBranches(branchIds): Promise<string[]> {
+      // SDT (ma hoc vien) cua hoc vien ghi danh lop thuoc cac co so da cho — dung cho branch-scope.
+      if (branchIds.length === 0) return []
+      const rows = await db
+        .selectFrom('enrollments')
+        .innerJoin('classes', 'classes.id', 'enrollments.class_id')
+        .innerJoin('users', 'users.id', 'enrollments.student_id')
+        .where('classes.branch_id', 'in', branchIds)
+        .select('users.phone_number as phone')
+        .distinct()
+        .execute()
+      return rows.map((r) => r.phone)
+    },
+
     async findGradingPolicy(levelId): Promise<GradingPolicyRow | undefined> {
       return selectPolicies().where('exam_grading_policies.level_id', '=', levelId).executeTakeFirst()
     },

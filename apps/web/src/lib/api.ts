@@ -89,6 +89,7 @@ import {
   ExamSetList,
   ExamSetResponse,
   ExamSetImportPreview,
+  GradeImportResult,
   type CommitExamSetImportRequest,
   type AddExamSetQuestionRequest,
   type CreateExamSetRequest,
@@ -651,6 +652,26 @@ export async function commitExamSetImport(input: CommitExamSetImportRequest): Pr
   return ExamSetResponse.parse(await res.json()).examSet
 }
 
+/**
+ * slice-9a (revised): nhap bang diem Speaking/Writing tu file Excel/CSV theo ma hoc vien (= SDT).
+ * Gui bytes tho (application/octet-stream); examId + fileName o query. Server loc theo branch-scope
+ * (superadmin vuot). Tra ve so dong da ap, danh sach bo qua (kem ly do) va loi dinh dang.
+ */
+export async function importGrades(
+  file: Blob,
+  meta: { examId: string; fileName: string },
+): Promise<GradeImportResult> {
+  const params = new URLSearchParams(meta)
+  const res = await fetch(`/api/grading/import?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/octet-stream' },
+    body: file,
+  })
+  if (!res.ok) return throwApiError(res, 'Khong nhap duoc bang diem')
+  return GradeImportResult.parse(await res.json())
+}
+
 /** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */
 export async function listExams(): Promise<Exam[]> {
   const res = await fetch('/api/exams', { credentials: 'include' })
@@ -836,6 +857,16 @@ function queryString(query: Record<string, string | undefined>): string {
 export async function getStudentReport(query: StudentReportQuery): Promise<StudentReport> {
   const res = await fetch(`/api/reports/students?${queryString(query)}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc bao cao hoc vien')
+  return StudentReport.parse(await res.json())
+}
+
+/**
+ * slice-1 (revised): xuat danh sach hoc vien — CHI superadmin (server tra 403 cho admin thuong).
+ * Vuot branch-scope o server nen lay duoc toan bo.
+ */
+export async function exportStudentReport(query: StudentReportQuery): Promise<StudentReport> {
+  const res = await fetch(`/api/reports/students/export?${queryString(query)}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Chi Quan tri cap cao duoc xuat danh sach hoc vien')
   return StudentReport.parse(await res.json())
 }
 

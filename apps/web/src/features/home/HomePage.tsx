@@ -164,6 +164,8 @@ function StudentDashboard({ user }: { user: PublicUser }): React.ReactElement {
 }
 
 const DASHBOARDS = {
+  // superadmin dung chung dashboard voi admin (tai khoan cao nhat, thay toan bo).
+  superadmin: AdminDashboard,
   admin: AdminDashboard,
   teacher: TeacherDashboard,
   staff: StaffDashboard,

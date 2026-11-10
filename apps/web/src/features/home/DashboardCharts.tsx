@@ -15,7 +15,11 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { useStudentReport } from '@/features/reports/useReports'
 import { useClassRates } from '@/features/attendance/useAttendance'
 import { useClasses } from '@/features/catalog/useCatalog'
-import { useDashboardStats, type ChartDatum } from './useDashboardStats'
+import {
+  useDashboardStats,
+  type BranchClassGroup,
+  type ChartDatum,
+} from './useDashboardStats'
 
 const BAR_COLOR = '#2563eb'
 const PASS_COLORS = ['#16a34a', '#dc2626']
@@ -139,9 +143,54 @@ function AttendancePieChart(): React.ReactElement {
 }
 
 /**
+ * Sĩ số TỪNG LỚP trong MỘT cơ sở: mỗi cột là một lớp, giá trị = sĩ số riêng của lớp đó.
+ * Cao theo số lớp để nhãn tên lớp không chồng nhau (bar ngang).
+ */
+function BranchClassSizeChart({ group }: { group: BranchClassGroup }): React.ReactElement {
+  // 36px mỗi lớp + đệm; tối thiểu 120px để cơ sở ít lớp vẫn cân đối.
+  const height = Math.max(120, group.classes.length * 36 + 48)
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart
+        layout="vertical"
+        data={group.classes}
+        margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
+      >
+        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+        <YAxis
+          type="category"
+          dataKey="className"
+          width={120}
+          tick={{ fontSize: 12 }}
+          interval={0}
+        />
+        <Tooltip />
+        <Bar dataKey="size" name="Sĩ số" fill={BAR_COLOR} radius={[0, 4, 4, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+/** Mỗi cơ sở một thẻ riêng: tiêu đề kèm tổng sĩ số, bên trong là sĩ số từng lớp. */
+function ClassSizeByBranch({ groups }: { groups: BranchClassGroup[] }): React.ReactElement {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {groups.map((group: BranchClassGroup) => (
+        <Card key={group.branchId}>
+          <CardTitle>
+            {group.branchName} · {group.classes.length} lớp · {group.total} học viên
+          </CardTitle>
+          <BranchClassSizeChart group={group} />
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+/**
  * Các biểu đồ tổng hợp trên trang chủ Admin.
- * Bố cục: 1 hàng bar (khóa học, cơ sở), rồi 1 hàng gồm nhiều pie gọn (tỉ lệ cơ sở,
- * tỉ lệ hoàn thành, tỉ lệ điểm danh) nằm trên cùng một dòng ở màn hình rộng.
+ * Bố cục: 1 hàng bar (khóa học, cơ sở), sĩ số từng lớp theo cơ sở, rồi 1 hàng gồm nhiều pie gọn
+ * (tỉ lệ cơ sở, tỉ lệ hoàn thành, tỉ lệ điểm danh) nằm trên cùng một dòng ở màn hình rộng.
  */
 export function DashboardCharts(): React.ReactElement {
   const stats = useDashboardStats()
@@ -173,6 +222,11 @@ export function DashboardCharts(): React.ReactElement {
           {renderBar(stats.studentsByBranch)}
         </Card>
       </div>
+
+      {/* Sĩ số TỪNG LỚP, nhóm theo cơ sở — mỗi lớp một cột với sĩ số riêng */}
+      {!stats.isLoading && stats.classesByBranch.length > 0 && (
+        <ClassSizeByBranch groups={stats.classesByBranch} />
+      )}
 
       {/* Hàng biểu đồ tròn gọn: nhiều pie trên cùng một dòng */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

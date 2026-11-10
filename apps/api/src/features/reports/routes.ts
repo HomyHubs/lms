@@ -58,8 +58,11 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
       return { error: 'Bo loc bao cao khong hop le' }
     }
     const { branchId, levelId, classId, from, to } = parsed.data
-    const scoped = await branchScope.branchIdsForUser(getSessionUser(request).id)
-    if (branchId && !scoped.includes(branchId)) {
+    const user = getSessionUser(request)
+    // superadmin vuot branch-scope: thay tat ca co so (branchIds = undefined).
+    const scoped =
+      user.role === 'superadmin' ? undefined : await branchScope.branchIdsForUser(user.id)
+    if (branchId && scoped && !scoped.includes(branchId)) {
       reply.code(404)
       return { error: 'Khong tim thay co so' }
     }
@@ -70,4 +73,26 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
     )
     return body
   })
+
+  // GET /reports/students/export — CHI superadmin duoc xuat danh sach hoc vien ra file
+  // (slice-1 revised: chong ro ri thong tin; admin thuong chi xem tren man hinh, khong export).
+  // superadmin vuot branch-scope nen export duoc toan bo.
+  app.get(
+    '/reports/students/export',
+    { preHandler: rbac.requireRole('superadmin') },
+    async (request, reply) => {
+      const parsed = StudentReportQuery.safeParse(request.query)
+      if (!parsed.success) {
+        reply.code(400)
+        return { error: 'Bo loc bao cao khong hop le' }
+      }
+      const { branchId, levelId, classId, from, to } = parsed.data
+      const body: StudentReport = await loadStudentReport(
+        store,
+        { branchIds: branchId ? [branchId] : undefined, levelId, classId },
+        { from, to },
+      )
+      return body
+    },
+  )
 }

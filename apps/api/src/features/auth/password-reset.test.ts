@@ -125,29 +125,6 @@ describe('requestPasswordReset', () => {
     expect(h.createdChannels[0]).toBe('email')
   })
 
-  it('dispatches via WhatsApp with the provided recipient and records the channel', async () => {
-    const h = makeHarness()
-    await requestPasswordReset(h.store, h.dispatcher, {
-      email: h.email,
-      channel: 'whatsapp',
-      recipient: '84901234567',
-      ttlSeconds: 600,
-    })
-    expect(h.sent).toHaveLength(0)
-    expect(h.createdChannels).toHaveLength(0)
-  })
-
-  it('dispatches via Telegram with the provided chat id', async () => {
-    const h = makeHarness()
-    await requestPasswordReset(h.store, h.dispatcher, {
-      email: h.email,
-      channel: 'telegram',
-      recipient: '123456789',
-      ttlSeconds: 600,
-    })
-    expect(h.sent).toHaveLength(0)
-    expect(h.createdChannels).toHaveLength(0)
-  })
 })
 
 describe('security regressions', () => {

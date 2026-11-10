@@ -4,11 +4,17 @@ import {
   UpdateUserRequest,
   type AdminUserList,
   type AdminUserResponse,
+  type PublicUser,
+  type UserRole,
 } from '@lms/shared'
 import type { AuthStore } from '../auth/index.js'
 import { resolveSession, SESSION_COOKIE } from '../auth/index.js'
 import type { UsersStore } from './service.js'
 import { createUser, deleteUser, getUser, listUsers, updateUser } from './service.js'
+
+/** Cac role "cao" chi 'superadmin' moi duoc tao/sua/xoa. */
+const PRIVILEGED_ROLES: readonly UserRole[] = ['admin', 'superadmin']
+const isPrivileged = (role: UserRole): boolean => PRIVILEGED_ROLES.includes(role)
 
 interface UsersRoutesDeps {
   // Dung chung store voi authRoutes de resolve phien (RBAC guard).
@@ -17,9 +23,10 @@ interface UsersRoutesDeps {
 }
 
 /**
- * Guard RBAC that: chi cho qua khi phien hop le VA role === 'admin'.
+ * Guard RBAC that: chi cho qua khi phien hop le VA role la 'admin' hoac 'superadmin'.
  * - 401 khi chua dang nhap / phien het han.
  * - 403 khi da dang nhap nhung khong du quyen.
+ * Gan `request.sessionUser` de handler biet role phien (phan biet admin vs superadmin).
  * Khong duoc de mo (AGENTS slice-1: phan quyen phai la thuc).
  */
 function makeRequireAdmin(authStore: AuthStore) {
@@ -33,10 +40,16 @@ function makeRequireAdmin(authStore: AuthStore) {
       reply.clearCookie(SESSION_COOKIE, { path: '/' })
       return void reply.code(401).send({ error: 'Phien khong hop le hoac da het han' })
     }
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
       return void reply.code(403).send({ error: 'Khong du quyen (chi Admin)' })
     }
+    request.sessionUser = user
   }
+}
+
+/** Lay role phien (guard da gan truoc do). */
+function sessionRole(request: FastifyRequest): UserRole {
+  return (request.sessionUser as PublicUser).role
 }
 
 export async function usersRoutes(app: FastifyInstance, deps: UsersRoutesDeps): Promise<void> {
@@ -56,6 +69,11 @@ export async function usersRoutes(app: FastifyInstance, deps: UsersRoutesDeps): 
     if (!parsed.success) {
       reply.code(400)
       return { error: 'Du lieu tao user khong hop le' }
+    }
+    // Chi superadmin moi tao duoc tai khoan role cao (admin/superadmin).
+    if (isPrivileged(parsed.data.role) && sessionRole(request) !== 'superadmin') {
+      reply.code(403)
+      return { error: 'Chi superadmin moi quan ly tai khoan admin' }
     }
     const outcome = await createUser(usersStore, parsed.data)
     if (!outcome.ok) {
@@ -87,6 +105,16 @@ export async function usersRoutes(app: FastifyInstance, deps: UsersRoutesDeps): 
       reply.code(400)
       return { error: 'Du lieu cap nhat khong hop le' }
     }
+    // Chi superadmin moi sua tai khoan role cao, hoac nang/ha mot user len/xuong role cao.
+    if (sessionRole(request) !== 'superadmin') {
+      const target = await getUser(usersStore, id)
+      const targetIsPrivileged = target ? isPrivileged(target.role) : false
+      const settingPrivileged = parsed.data.role ? isPrivileged(parsed.data.role) : false
+      if (targetIsPrivileged || settingPrivileged) {
+        reply.code(403)
+        return { error: 'Chi superadmin moi quan ly tai khoan admin' }
+      }
+    }
     const outcome = await updateUser(usersStore, id, parsed.data)
     if (!outcome.ok) {
       reply.code(404)
@@ -99,6 +127,14 @@ export async function usersRoutes(app: FastifyInstance, deps: UsersRoutesDeps): 
   // DELETE /users/:id — xoa user (chi Admin). 204 khi thanh cong.
   app.delete('/users/:id', { preHandler: requireAdmin }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    // Chi superadmin moi xoa duoc tai khoan role cao (admin/superadmin).
+    if (sessionRole(request) !== 'superadmin') {
+      const target = await getUser(usersStore, id)
+      if (target && isPrivileged(target.role)) {
+        reply.code(403)
+        return { error: 'Chi superadmin moi quan ly tai khoan admin' }
+      }
+    }
     const ok = await deleteUser(usersStore, id)
     if (!ok) {
       reply.code(404)

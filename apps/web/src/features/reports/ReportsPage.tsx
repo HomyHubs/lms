@@ -12,6 +12,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
+import { exportStudentReport } from '@/lib/api'
+import { useSession } from '@/features/auth/useAuth'
 import { reportToSheets } from './report-export'
 import {
   useClassificationPolicies,
@@ -215,6 +217,9 @@ function PolicyEditor(): React.ReactElement {
 
 /** slice-7 admin dashboard: classification, ranking, pass/fail by class/level/month, Excel + print/PDF. */
 export function ReportsPage(): React.ReactElement {
+  const { user } = useSession()
+  // Chi superadmin duoc xuat danh sach hoc vien (chong ro ri thong tin — slice-1 revised).
+  const canExport = user?.role === 'superadmin'
   const filters = useReportFilters()
   const [query, setQuery] = useState<StudentReportQuery>({})
   const report = useStudentReport(query)
@@ -247,9 +252,10 @@ export function ReportsPage(): React.ReactElement {
       ]
     : []
 
-  function exportExcel(): void {
-    if (!data) return
-    downloadFile(buildXlsx(reportToSheets(data)), `bao-cao-hoc-vien-${new Date().toISOString().slice(0, 10)}.xlsx`, XLSX_MIME)
+  async function exportExcel(): Promise<void> {
+    // Lay du lieu qua endpoint export (server chi cho superadmin; vuot branch-scope).
+    const full = await exportStudentReport(query)
+    downloadFile(buildXlsx(reportToSheets(full)), `bao-cao-hoc-vien-${new Date().toISOString().slice(0, 10)}.xlsx`, XLSX_MIME)
   }
 
   return (
@@ -259,9 +265,11 @@ export function ReportsPage(): React.ReactElement {
         title="Báo cáo & xếp loại học viên"
         actions={
           <div className="flex gap-2 print:hidden">
-            <Button variant="outline" size="sm" onClick={exportExcel} disabled={!data}>
-              <FileSpreadsheet className="mr-1 h-4 w-4" /> Xuất Excel
-            </Button>
+            {canExport && (
+              <Button variant="outline" size="sm" onClick={() => void exportExcel()} disabled={!data}>
+                <FileSpreadsheet className="mr-1 h-4 w-4" /> Xuất Excel
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => window.print()} disabled={!data}>
               <Printer className="mr-1 h-4 w-4" /> In / Xuất PDF
             </Button>

@@ -49,7 +49,8 @@ export function makeReportsStore(db: AppDb): ReportsStore {
     },
 
     async listEnrollments({ branchIds, levelId, classId }) {
-      if (branchIds.length === 0) return []
+      // undefined = superadmin xem toan bo (khong loc co so); [] = khong co co so nao.
+      if (branchIds && branchIds.length === 0) return []
       let q = db
         .selectFrom('enrollments as e')
         .innerJoin('classes as c', 'c.id', 'e.class_id')
@@ -68,7 +69,7 @@ export function makeReportsStore(db: AppDb): ReportsStore {
           'u.phone_number',
           sql<string | null>`nullif(trim(concat_ws(' ', u.last_name, u.first_name)), '')`.as('student_name'),
         ])
-        .where('c.branch_id', 'in', branchIds)
+      if (branchIds) q = q.where('c.branch_id', 'in', branchIds)
       if (levelId) q = q.where('l.id', '=', levelId)
       if (classId) q = q.where('c.id', '=', classId)
       return q.orderBy('c.name').orderBy('u.phone_number').execute()

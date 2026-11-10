@@ -239,6 +239,9 @@ function makeFakeExamsStore(
       return { level_id: levelId, level_code: 'starter', pass_percent: fields.passPercent,
         max_attempts: fields.maxAttempts, retake_cooldown_minutes: fields.retakeCooldownMinutes }
     },
+    async listStudentPhonesInBranches() {
+      return []
+    },
   }
 }
 
@@ -259,7 +262,11 @@ async function buildTestApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: false })
   await app.register(cookie)
-  await examsRoutes(app, { rbac: makeRbac(makeFakeAuthStore(authUser)), examsStore })
+  await examsRoutes(app, {
+    rbac: makeRbac(makeFakeAuthStore(authUser)),
+    examsStore,
+    branchScope: { branchIdsForUser: async () => [] },
+  })
   await app.ready()
   return app
 }

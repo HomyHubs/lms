@@ -106,8 +106,11 @@ function makeFakeStore(): ReportsStore {
       })
     },
     async listEnrollments({ branchIds, classId }) {
+      // branchIds undefined = superadmin (khong loc co so), giong store that.
       return enrollments.filter(
-        (e) => branchIds.includes(e.branch_id) && (!classId || e.class_id === classId),
+        (e) =>
+          (!branchIds || branchIds.includes(e.branch_id)) &&
+          (!classId || e.class_id === classId),
       )
     },
     async listGradedAttempts(studentIds) {

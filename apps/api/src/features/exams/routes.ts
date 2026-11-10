@@ -12,17 +12,22 @@ import {
   type ExamAttemptHistory,
   type ExamList,
   type ExamResponse,
+  type GradeImportResult,
   type GradingPolicyList,
   type ManualGradingAttemptResponse,
   type ManualGradingQueue,
 } from '@lms/shared'
 import { getSessionUser, type Rbac } from '../access/index.js'
+import type { BranchScope } from '../userbranches/index.js'
+import { ImportFileError } from '../examsets/import-zip.js'
+import { parseGradeImport } from './grade-import.js'
 import type { ExamsStore } from './service.js'
 import {
   createExam,
   getAttempt,
   getManualGradingAttempt,
   gradeManually,
+  importGrades,
   listManualGradingQueue,
   listAttemptHistory,
   listExams,
@@ -34,6 +39,9 @@ import {
   saveAttemptAnswers,
 } from './service.js'
 
+/** Gioi han kich thuoc file bang diem (3 MiB). */
+const GRADE_IMPORT_MAX_BYTES = 3 * 1024 * 1024
+
 function attemptSession(request: FastifyRequest): string {
   const token = request.cookies[SESSION_COOKIE]
   if (!token) throw new Error('Authenticated session required')
@@ -41,6 +49,12 @@ function attemptSession(request: FastifyRequest): string {
 }
 
 const AttemptIdParam = z.object({ attemptId: z.string().uuid() })
+
+/** Query cua POST /grading/import: examId (ky thi) + fileName (de xac dinh .xlsx/.csv). */
+const GradeImportQuery = z.object({
+  examId: z.string().uuid({ message: 'examId khong hop le' }),
+  fileName: z.string().min(1, { message: 'Thieu ten file' }),
+})
 
 const GRADING_ERRORS = {
   not_found: { status: 404, error: 'Khong tim thay bai lam' },
@@ -58,6 +72,8 @@ function gradingFailure(reply: FastifyReply, reason: keyof typeof GRADING_ERRORS
 interface ExamsRoutesDeps {
   rbac: Rbac
   examsStore: ExamsStore
+  /** slice-1 Task 4: branch-scope cho import diem (superadmin vuot). */
+  branchScope: BranchScope
 }
 
 /**
@@ -68,11 +84,15 @@ interface ExamsRoutesDeps {
  * Admin/Teacher: ca de); chinh sach cham theo cap do (Admin/Teacher xem, Admin sua).
  */
 export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): Promise<void> {
-  const { rbac, examsStore } = deps
+  const { rbac, examsStore, branchScope } = deps
   const requireManager = rbac.requireRole('admin', 'teacher')
   const requireLogin = rbac.requireRole()
   const requireStudent = rbac.requireRole('student')
   const requireAdmin = rbac.requireRole('admin')
+  // slice-9a (revised): nhap bang diem Speaking/Writing — Staff/Admin (superadmin vuot guard).
+  const requireGradeImporter = rbac.requireRole('admin', 'staff')
+  // Luu y: content-type parser 'application/octet-stream' (raw body) da duoc examSetsRoutes
+  // dang ky tren cung app instance; KHONG dang ky lai o day (tranh FST_ERR_CTP_ALREADY_PRESENT).
 
   app.get('/exam-policies', { preHandler: requireManager }, async () => {
     const body: GradingPolicyList = { policies: await listGradingPolicies(examsStore) }
@@ -139,6 +159,69 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
     if (!outcome.ok) return gradingFailure(reply, outcome.reason)
     return { attempt: outcome.attempt } satisfies ManualGradingAttemptResponse
   })
+
+  // slice-9a (revised): nhap bang diem Speaking/Writing tu file Excel/CSV theo ma hoc vien (= SDT).
+  // Thay cho cham tay tung cau: Staff/Admin tai file da co diem; superadmin vuot branch-scope.
+  // File gui duoi dang raw body (application/octet-stream); ten file + examId o query param.
+  app.post(
+    '/grading/import',
+    { preHandler: requireGradeImporter, bodyLimit: GRADE_IMPORT_MAX_BYTES },
+    async (request, reply) => {
+      const query = GradeImportQuery.safeParse(request.query)
+      if (!query.success) {
+        return reply
+          .code(400)
+          .send({ error: query.error.issues[0]?.message ?? 'Thong tin import khong hop le' })
+      }
+      if (!Buffer.isBuffer(request.body)) {
+        return reply.code(415).send({ error: 'Gui file voi Content-Type application/octet-stream' })
+      }
+
+      // Parse file -> cac dong hop le + loi dinh dang (thieu cot, diem sai).
+      let parsed: ReturnType<typeof parseGradeImport>
+      try {
+        parsed = parseGradeImport(query.data.fileName, request.body)
+      } catch (err) {
+        if (err instanceof ImportFileError) {
+          return reply.code(400).send({ error: err.message, code: 'invalid_file' })
+        }
+        throw err
+      }
+
+      // Branch-scope: superadmin xem toan bo; con lai chi duoc cham hoc vien trong co so minh phu trach.
+      const user = getSessionUser(request)
+      let allowedPhones: ReadonlySet<string> | undefined
+      if (user.role !== 'superadmin') {
+        const branchIds = await branchScope.branchIdsForUser(user.id)
+        const phones = await examsStore.listStudentPhonesInBranches(branchIds)
+        allowedPhones = new Set(phones)
+      }
+
+      const outcome = await importGrades(
+        examsStore,
+        query.data.examId,
+        parsed.rows,
+        user.id,
+        new Date(),
+        allowedPhones,
+      )
+      if (!outcome.ok) {
+        const map = {
+          exam_not_found: { status: 404, error: 'Khong tim thay ky thi' },
+          not_manual: { status: 409, error: 'Ky thi nay khong cham tay (Speaking/Writing)' },
+        } as const
+        const m = map[outcome.reason]
+        return reply.code(m.status).send({ error: m.error, code: outcome.reason })
+      }
+
+      const body: GradeImportResult = {
+        applied: outcome.summary.applied,
+        skipped: outcome.summary.skipped,
+        errors: parsed.errors,
+      }
+      return body
+    },
+  )
 
   app.get('/exams', { preHandler: requireLogin }, async (request) => {
     // N002: hoc vien chi thay de dang mo (trong cua so lich); quan tri xem toan bo de quan ly.

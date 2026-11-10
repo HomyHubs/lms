@@ -41,6 +41,7 @@ Du lieu dashboard va xep loai phai la du lieu thuc, chi tinh trong pham vi Branc
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | Lam ro | Chot trong so xep loai: thi 90% + chuyen can 10%, cau hinh doi duoc ve sau | Quyet dinh chu so huu | - |
 | 2026-11-09 | Them | Nguong Dau/Rot `pass_min` cau hinh theo cap do (0-100), mac dinh 50; Dau khi diem tong >= pass_min; chi Admin sua (giu guard `requireRole('admin')`, khong them role moi); them cot Dau/Rot va pie Dau/Rot vao dashboard + cot trong Excel; migration additive `20261116000000_student_grading_pass_min.sql`; commit be1ea9c tren `dev` (gates xanh) | Yeu cau chu so huu: Dau/Rot la settings theo diem, Admin lam duoc | - |
+| 2026-11-10 | Sua | Lam lai chart dashboard: si so TUNG LOP nhom theo co so (moi lop 1 cot giu so rieng) | Yeu cau product: chart cu gop sai | — |
 
 ## Cach nghiem thu
 

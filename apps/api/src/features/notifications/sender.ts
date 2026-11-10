@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
-import { sendTelegramText, sendWhatsAppText, whatsAppConfigFromEnv } from '../auth/index.js'
+import { sendTelegramText, sendWhatsAppText, whatsAppConfigFromEnv } from './transports.js'
 import { toE164, type NotificationSender } from './service.js'
 
 function escapeHtml(text: string): string {

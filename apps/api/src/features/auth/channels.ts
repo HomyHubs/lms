@@ -1,19 +1,17 @@
 import type { FastifyBaseLogger } from 'fastify'
 import type { OtpEmailSender } from './password-reset.js'
-import type { OtpWhatsAppSender } from './whatsapp.js'
-import type { OtpTelegramSender } from './telegram.js'
 
-export type OtpChannel = 'email' | 'whatsapp' | 'telegram'
+/**
+ * OTP is email-only (slice-2 revised 2026-11: WhatsApp/Telegram channels dropped — the owner has
+ * no WhatsApp Business account and reminders over Telegram now live in the notifications feature).
+ * The dispatcher is kept as a thin seam so adding a channel later stays a local change.
+ */
+export type OtpChannel = 'email'
 
 export interface OtpDispatchArgs {
-  /** Kênh gửi được người dùng chọn */
+  /** Kênh gửi OTP — hiện chỉ còn 'email'. */
   channel: OtpChannel
-  /**
-   * Địa chỉ nhận tuỳ theo kênh:
-   * - email     → địa chỉ email
-   * - whatsapp  → số điện thoại định dạng E.164 (vd: "84901234567")
-   * - telegram  → chat_id Telegram
-   */
+  /** Địa chỉ email nhận OTP. */
   recipient: string
   otp: string
   expiresAt: Date
@@ -25,26 +23,12 @@ export interface OtpDispatcher {
 
 export function makeOtpDispatcher(
   emailSender: OtpEmailSender,
-  whatsappSender: OtpWhatsAppSender,
-  telegramSender: OtpTelegramSender,
   logger: FastifyBaseLogger,
 ): OtpDispatcher {
   return {
     async dispatch({ channel, recipient, otp, expiresAt }) {
       logger.info({ channel }, 'Dispatching OTP')
-
-      switch (channel) {
-        case 'email':
-          return emailSender.sendOtp({ email: recipient, otp, expiresAt })
-        case 'whatsapp':
-          return whatsappSender.sendOtp({ phone: recipient, otp, expiresAt })
-        case 'telegram':
-          return telegramSender.sendOtp({ chatId: recipient, otp, expiresAt })
-        default: {
-          const _exhaustive: never = channel
-          throw new Error(`Kênh OTP không xác định: ${_exhaustive}`)
-        }
-      }
+      return emailSender.sendOtp({ email: recipient, otp, expiresAt })
     },
   }
 }

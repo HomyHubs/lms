@@ -38,7 +38,8 @@ export function makeRbac(authStore: AuthStore): Rbac {
         reply.clearCookie(SESSION_COOKIE, { path: '/' })
         return void reply.code(401).send({ error: 'Phien khong hop le hoac da het han' })
       }
-      if (roles.length > 0 && !roles.includes(user.role)) {
+      // superadmin vuot moi guard role (tai khoan cao nhat): luon du quyen khi da dang nhap.
+      if (user.role !== 'superadmin' && roles.length > 0 && !roles.includes(user.role)) {
         return void reply.code(403).send({ error: 'Khong du quyen' })
       }
       request.sessionUser = user

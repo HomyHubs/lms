@@ -24,6 +24,23 @@ vi.mock('./useDashboardStats', () => ({
       { name: 'Cơ sở Quận 1', value: 12 },
       { name: 'Cơ sở Quận 3', value: 8 },
     ],
+    classesByBranch: [
+      {
+        branchId: 'b1',
+        branchName: 'Cơ sở Quận 1',
+        classes: [
+          { classId: 'c1', className: 'Lớp Starters 1', size: 7 },
+          { classId: 'c2', className: 'Lớp Movers 1', size: 5 },
+        ],
+        total: 12,
+      },
+      {
+        branchId: 'b2',
+        branchName: 'Cơ sở Quận 3',
+        classes: [{ classId: 'c3', className: 'Lớp Starters 2', size: 8 }],
+        total: 8,
+      },
+    ],
     totalStudents: 20,
     isLoading: false,
     isEmpty: false,
@@ -64,5 +81,8 @@ describe('DashboardCharts', () => {
     expect(screen.getByText('Tỉ lệ học viên theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ hoàn thành bài')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ điểm danh')).toBeInTheDocument()
+    // Sĩ số từng lớp theo cơ sở: tiêu đề cơ sở kèm số lớp + tổng học viên.
+    expect(screen.getByText('Cơ sở Quận 1 · 2 lớp · 12 học viên')).toBeInTheDocument()
+    expect(screen.getByText('Cơ sở Quận 3 · 1 lớp · 8 học viên')).toBeInTheDocument()
   })
 })

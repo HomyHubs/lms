@@ -24,9 +24,10 @@ export type LoginRequest = z.infer<typeof LoginRequest>
 /**
  * Vai tro nguoi dung cho RBAC.
  * slice-1 Task 1: mo rong tu 'admin' (slice-0) sang du 4 vai tro nghiep vu.
- * TODO(slice-1 Task 4): rang buoc them theo Branch (branch-scoped access).
+ * slice-1 (revised 2026-11): them 'superadmin' — tai khoan cao nhat, vuot moi branch-scope,
+ * la role duy nhat quan ly duoc tai khoan admin/superadmin va duy nhat duoc export danh sach hoc vien.
  */
-export const UserRole = z.enum(['admin', 'teacher', 'student', 'staff'])
+export const UserRole = z.enum(['superadmin', 'admin', 'teacher', 'student', 'staff'])
 export type UserRole = z.infer<typeof UserRole>
 
 /** Thong tin user an toan de tra ve FE (khong bao gio kem password_hash). */
@@ -50,7 +51,8 @@ export type MeResponse = z.infer<typeof MeResponse>
 
 /**
  * Task 3 (slice-0): quen mat khau qua OTP.
- * Slice-2: mo rong sang WhatsApp + Telegram.
+ * Slice-2 (revised 2026-11): OTP chi con kenh Email. Cac kenh WhatsApp/Telegram da bi bo
+ * (chu so huu khong co tai khoan WhatsApp Business; nhac lich qua Telegram thuoc notifications).
  */
 
 /** Email nhan OTP dat lai mat khau. */
@@ -63,9 +65,10 @@ export const OtpCode = z
   .regex(/^\d{6}$/, 'Ma OTP gom 6 chu so')
 
 /**
- * Slice-2: kenh gui OTP — email (tu slice-0), whatsapp, telegram.
+ * Slice-2 (revised): kenh gui OTP chi con 'email'. Giu lai duoi dang enum mot phan tu de
+ * de mo rong ve sau neu can, va de contract van co truong `channel` tuong minh.
  */
-export const OtpChannel = z.enum(['email', 'whatsapp', 'telegram'])
+export const OtpChannel = z.enum(['email'])
 export type OtpChannel = z.infer<typeof OtpChannel>
 
 /**

@@ -21,6 +21,7 @@ Giao vien/Admin mo trang "Cham bai", thay cac bai Speaking/Writing hoc vien da n
 | 3 | Bai qua gio chua nop van vao hang cho, duoc chot tu checkpoint khi mo | API | Giong luong het gio phia hoc vien |
 | 4 | Trang `/grading` "Cham bai" trong AppShell (Admin/GV) | Web | `features/grading/` |
 | 5 | Hoc vien thay "Nhan xet cua giao vien" trong ket qua | Web | `ExamsPage` `AttemptOutcome` |
+| 6 | Import bang diem Speaking/Writing tu Excel/CSV theo ma hoc vien (=SDT), theo branch-scope | API+Web | POST /grading/import (Admin/Staff; superadmin vuot); features/grading GradeImportCard |
 
 ## Stub cho phep
 
@@ -41,12 +42,13 @@ Diem luu that vao Postgres qua trigger ghi-mot-lan; RBAC that (hoc vien 403).
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-10 | Them | Tach tu slice-9 task 1, owner yeu cau lam | slice-9 bi hoan, owner mo lai | 0009 |
+| 2026-11-10 | Them | Them luong nhap bang diem Speaking/Writing tu file Excel/CSV theo ma hoc vien (= phone_number), theo co so/lop; Staff+Admin dung duoc (superadmin vuot branch-scope). Bo sung canh cham tay tung cau | Yeu cau product: staff/admin upload Excel diem thay vi cham tay tung cau | — |
 
 ## Cach nghiem thu
 
 Hoc vien lam de Writing/Speaking va nop -> GV vao "Cham bai" thay bai, nhap diem + nhan xet, luu -> bai bien khoi hang cho; hoc vien mo lai de thay diem, nhan xet; truot thi co nut thi lai. Cham lai lan 2 bi tu choi.
 
-Da kiem: api `service.test.ts` (hang cho -> cham -> hoc vien thay diem + nhan xet; cham lai bi chan; diem vuot/thieu/thua cau bi tu choi; truot -> thi lai; dang lam -> in_progress; het gio -> chot bai; de tu cham -> not_manual), `routes.test.ts` (403/404/400), `store.integration.test.ts` tren Postgres that (hang cho, ghi mot lan, trigger chan sua nhan xet); web `GradingPage.test.tsx`, `ExamsPage.test.tsx` (nhan xet). Migration up -> down -> up tren DB test. Mutation (bo kiem tra diem vuot diem toi da -> 1 test do).
+Da kiem: api `service.test.ts` (hang cho -> cham -> hoc vien thay diem + nhan xet; cham lai bi chan; diem vuot/thieu/thua cau bi tu choi; truot -> thi lai; dang lam -> in_progress; het gio -> chot bai; de tu cham -> not_manual), `routes.test.ts` (403/404/400), `store.integration.test.ts` tren Postgres that (hang cho, ghi mot lan, trigger chan sua nhan xet); web `GradingPage.test.tsx`, `ExamsPage.test.tsx` (nhan xet). Migration up -> down -> up tren DB test. Mutation (bo kiem tra diem vuot diem toi da -> 1 test do). slice-9a revised: parseGradeImport + importGrades + branch-scope; web GradingPage import card; api exams routes.test.ts/service.test.ts + reports routes.test.ts xanh (3 files/54 tests), web GradingPage.test.tsx + DashboardCharts.test.tsx xanh.
 
 ## Ban giao phien gan nhat
 

@@ -284,7 +284,7 @@ describe('password reset routes (Task 3 + Slice-2)', () => {
     }
   })
 
-  it('POST /auth/forgot-password dispatches via the chosen channel (WhatsApp)', async () => {
+  it('POST /auth/forgot-password rejects a non-email channel (email-only)', async () => {
     const reset = makeFakeResetHarness()
     const app = await buildTestApp(makeFakeStore([user]), reset)
     try {

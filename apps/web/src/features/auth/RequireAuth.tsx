@@ -24,7 +24,8 @@ export function RequireAuth({
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
   const roles = role === undefined ? [] : Array.isArray(role) ? role : [role]
-  if (roles.length > 0 && !roles.includes(user.role)) {
+  // superadmin vuot moi guard role (thay het menu/route cua admin).
+  if (roles.length > 0 && user.role !== 'superadmin' && !roles.includes(user.role)) {
     return <Navigate to="/" replace />
   }
   return children

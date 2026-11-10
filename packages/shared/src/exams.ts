@@ -307,3 +307,43 @@ export const SaveExamAnswersRequest = z.object({
   revision: z.number().int().nonnegative(),
 }).strict()
 export type SaveExamAnswersRequest = z.infer<typeof SaveExamAnswersRequest>
+
+/**
+ * slice-9a (revised): nhap diem Speaking/Writing bang file Excel/CSV theo MA HOC VIEN.
+ * Header file chap nhan cac bien the cot; toi thieu: cot ma hoc vien + cot diem; nhan xet tuy chon.
+ */
+export const GRADE_IMPORT_STUDENT_HEADERS = ['ma_hoc_vien', 'student_code', 'phone', 'sdt'] as const
+export const GRADE_IMPORT_SCORE_HEADERS = ['diem', 'score', 'điểm'] as const
+export const GRADE_IMPORT_FEEDBACK_HEADERS = ['nhan_xet', 'feedback', 'nhận xét', 'nhan xet'] as const
+
+/** Ly do mot dong bi bo qua khi nhap diem. */
+export const GRADE_IMPORT_SKIP_REASONS = [
+  'student_not_found',
+  'already_graded',
+  'out_of_scope',
+  'score_exceeds_max',
+  'duplicate_in_file',
+] as const
+export const GradeImportSkipReason = z.enum(GRADE_IMPORT_SKIP_REASONS)
+export type GradeImportSkipReason = z.infer<typeof GradeImportSkipReason>
+
+export const GradeImportSkipped = z.object({
+  row: z.number().int(),
+  studentCode: z.string(),
+  reason: GradeImportSkipReason,
+})
+export type GradeImportSkipped = z.infer<typeof GradeImportSkipped>
+
+export const GradeImportError = z.object({
+  row: z.number().int(),
+  message: z.string(),
+})
+export type GradeImportError = z.infer<typeof GradeImportError>
+
+/** Ket qua nhap diem: so dong da ap, danh sach bo qua (kem ly do) va loi dinh dang. */
+export const GradeImportResult = z.object({
+  applied: z.number().int(),
+  skipped: z.array(GradeImportSkipped),
+  errors: z.array(GradeImportError),
+})
+export type GradeImportResult = z.infer<typeof GradeImportResult>

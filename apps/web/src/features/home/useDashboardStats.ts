@@ -8,11 +8,29 @@ export interface ChartDatum {
   value: number
 }
 
+/** Một lớp cùng sĩ số riêng của nó (dùng để vẽ sĩ số từng lớp). */
+export interface ClassSizeDatum {
+  classId: string
+  className: string
+  size: number
+}
+
+/** Một cơ sở kèm danh sách lớp (mỗi lớp có sĩ số riêng) thuộc cơ sở đó. */
+export interface BranchClassGroup {
+  branchId: string
+  branchName: string
+  classes: ClassSizeDatum[]
+  /** Tổng sĩ số của cơ sở = tổng sĩ số các lớp trong cơ sở. */
+  total: number
+}
+
 export interface DashboardStats {
   /** Số học viên (enrollment) theo từng khóa học. */
   studentsByCourse: ChartDatum[]
   /** Số học viên (enrollment) theo từng cơ sở (branch). */
   studentsByBranch: ChartDatum[]
+  /** Sĩ số TỪNG LỚP, nhóm theo cơ sở (mỗi lớp là một mục riêng, không cộng gộp). */
+  classesByBranch: BranchClassGroup[]
   /** Tổng số học viên của cả trung tâm (= tổng mọi cơ sở) — dùng để tính tỉ lệ %. */
   totalStudents: number
   isLoading: boolean
@@ -69,9 +87,25 @@ export function useDashboardStats(): DashboardStats {
     return { name: branch.name, value }
   })
 
+  // Sĩ số TỪNG LỚP, nhóm theo cơ sở: mỗi lớp giữ sĩ số riêng (KHÔNG cộng gộp theo cơ sở).
+  // Chỉ giữ cơ sở có ít nhất một lớp để chart không hiện cơ sở rỗng.
+  const classesByBranch: BranchClassGroup[] = branchList
+    .map((branch: Branch) => {
+      const classes: ClassSizeDatum[] = classList
+        .filter((cls: Class) => cls.branchId === branch.id)
+        .map((cls: Class) => ({
+          classId: cls.id,
+          className: cls.name,
+          size: enrollmentCountByClass.get(cls.id) ?? 0,
+        }))
+      const total = classes.reduce((sum: number, c: ClassSizeDatum) => sum + c.size, 0)
+      return { branchId: branch.id, branchName: branch.name, classes, total }
+    })
+    .filter((group: BranchClassGroup) => group.classes.length > 0)
+
   // Tổng học viên cả trung tâm = tổng mọi cơ sở (1 trung tâm → coi là 100%).
   const totalStudents = studentsByBranch.reduce((sum: number, d: ChartDatum) => sum + d.value, 0)
   const isEmpty = !isLoading && totalStudents === 0
 
-  return { studentsByCourse, studentsByBranch, totalStudents, isLoading, isEmpty }
+  return { studentsByCourse, studentsByBranch, classesByBranch, totalStudents, isLoading, isEmpty }
 }

@@ -218,6 +218,8 @@ export interface ExamsStore {
   /** Ungraded attempts of `skills` exams that are submitted or past their deadline, oldest first. */
   listUngradedAttempts: (skills: readonly string[], nowIso: string) => Promise<GradingRow[]>
   findGradingRow: (attemptId: string) => Promise<GradingRow | undefined>
+  /** SDT (ma hoc vien) cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope import diem). */
+  listStudentPhonesInBranches: (branchIds: string[]) => Promise<string[]>
   findGradingPolicy: (levelId: string) => Promise<GradingPolicyRow | undefined>
   listGradingPolicies: () => Promise<GradingPolicyRow[]>
   upsertGradingPolicy: (levelId: string, fields: GradingPolicyFields) => Promise<GradingPolicyRow>
@@ -1014,4 +1016,116 @@ export async function gradeManually(
   const won = saved.graded_by === graderId && saved.graded_at != null && toIso(saved.graded_at) === gradedAt
   if (!won) return { ok: false, reason: 'already_graded' }
   return { ok: true, attempt: toGradingAttempt({ ...row, ...saved }) }
+}
+
+/**
+ * slice-9a (revised 2026-11): Speaking/Writing duoc giao vien cham NGOAI he thong; Staff/Admin
+ * UPLOAD bang diem (Excel/CSV) va he thong ghi diem theo MA HOC VIEN (= so dien thoai dang nhap).
+ * - Khop moi dong voi mot luot Speaking/Writing dang CHO CHAM cua dung hoc vien trong de nay.
+ * - maxScore = tong diem toi da cua de (tinh tu snapshot cua luot do). passed theo nguong cua de.
+ * - Ghi mot lan (trigger DB chan sua). Cac dong khong khop / da cham / vuot diem -> bo qua co ly do.
+ * - Pham vi: `allowedPhones` = undefined nghia la khong gioi han (superadmin); nguoc lai chi ap cho
+ *   hoc vien co SDT trong tap nay (branch-scoped).
+ */
+export interface GradeImportInputRow {
+  row: number
+  studentCode: string
+  score: number
+  feedback: string | null
+}
+
+export type GradeImportSkipReason =
+  | 'student_not_found'
+  | 'already_graded'
+  | 'out_of_scope'
+  | 'score_exceeds_max'
+  | 'duplicate_in_file'
+
+export interface GradeImportSkipped {
+  row: number
+  studentCode: string
+  reason: GradeImportSkipReason
+}
+
+export interface GradeImportSummary {
+  applied: number
+  skipped: GradeImportSkipped[]
+}
+
+export type ImportGradesOutcome =
+  | { ok: true; summary: GradeImportSummary }
+  | { ok: false; reason: 'exam_not_found' | 'not_manual' }
+
+export async function importGrades(
+  store: ExamsStore,
+  examId: string,
+  rows: readonly GradeImportInputRow[],
+  graderId: string,
+  now: Date,
+  allowedPhones: ReadonlySet<string> | undefined,
+): Promise<ImportGradesOutcome> {
+  const exam = await store.findExamById(examId)
+  if (!exam) return { ok: false, reason: 'exam_not_found' }
+  if (!isManualSkill(exam.skill)) return { ok: false, reason: 'not_manual' }
+
+  // Cac luot cho cham cua dung de nay, lap chi muc theo SDT hoc vien (mot luot moi nhat moi hoc vien).
+  const queue = (await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString()))
+    .filter((r) => r.exam_id === examId)
+  const byPhone = new Map<string, GradingRow>()
+  for (const r of queue) if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
+
+  const summary: GradeImportSummary = { applied: 0, skipped: [] }
+  const seen = new Set<string>()
+
+  for (const input of rows) {
+    const code = input.studentCode
+    if (seen.has(code)) {
+      summary.skipped.push({ row: input.row, studentCode: code, reason: 'duplicate_in_file' })
+      continue
+    }
+    seen.add(code)
+
+    if (allowedPhones && !allowedPhones.has(code)) {
+      summary.skipped.push({ row: input.row, studentCode: code, reason: 'out_of_scope' })
+      continue
+    }
+    const target = byPhone.get(code)
+    if (!target) {
+      summary.skipped.push({ row: input.row, studentCode: code, reason: 'student_not_found' })
+      continue
+    }
+
+    // Chot luot qua gio (giong loadGradable) de co snapshot cuoi cung.
+    const loaded = await loadGradable(store, target.id, now)
+    if (!loaded.ok) {
+      summary.skipped.push({ row: input.row, studentCode: code, reason: 'student_not_found' })
+      continue
+    }
+    const graded = loaded.row
+    if (graded.graded_at) {
+      summary.skipped.push({ row: input.row, studentCode: code, reason: 'already_graded' })
+      continue
+    }
+    const maxScore = snapshot(graded).reduce((sum, q) => sum + q.points, 0)
+    if (input.score > maxScore) {
+      summary.skipped.push({ row: input.row, studentCode: code, reason: 'score_exceeds_max' })
+      continue
+    }
+    const gradedAt = now.toISOString()
+    const saved = await store.saveGrade(graded.id, {
+      score: input.score,
+      maxScore,
+      passed: input.score * 100 >= graded.pass_percent * maxScore,
+      gradedAt,
+      // Cham ngoai he thong: khong co chi tiet tung cau, danh dau la diem import.
+      detailJson: JSON.stringify({ imported: true, score: input.score, maxScore }),
+      gradedBy: graderId,
+      feedback: input.feedback,
+    })
+    const won = saved.graded_by === graderId && saved.graded_at != null && toIso(saved.graded_at) === gradedAt
+    if (won) summary.applied += 1
+    else summary.skipped.push({ row: input.row, studentCode: code, reason: 'already_graded' })
+  }
+
+  return { ok: true, summary }
 }

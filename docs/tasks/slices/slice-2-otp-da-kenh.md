@@ -10,6 +10,8 @@
 
 ## Muc tieu bam duoc / nghiem thu duoc
 
+> Cap nhat 2026-11-10: OTP quen/khoi phuc mat khau nay chi con qua Email (email-only); da bo kenh WhatsApp/Telegram.
+
 Hoc vien/giao vien chon kenh nhan OTP (WhatsApp, Telegram, hoac Email da co tu slice-0) de doi/khoi phuc mat khau.
 
 ## Task
@@ -41,6 +43,7 @@ Rate limit cho endpoint OTP/login (chong brute-force) phai la thuc.
 | --- | --- | --- | --- | --- |
 | 2026-09-21 | Them | Cot `channel` (password_reset_otps) + field `channel`/`recipient` trong ForgotPasswordRequest | Ho tro OTP da kenh (WhatsApp/Telegram), thiet ke provider-agnostic | 0001 |
 | 2026-11-02 | Bo pham vi | Bo kenh WhatsApp; kenh chinh = Email (Telegram giu code, bat neu co bot token) | Chu so huu khong co tai khoan WhatsApp Business | - |
+| 2026-11-10 | Sua | Bo kenh WhatsApp/Telegram; OTP quen mat khau chi con qua Email | Yeu cau product: chi dung OTP email | — |
 
 ## Cach nghiem thu
 

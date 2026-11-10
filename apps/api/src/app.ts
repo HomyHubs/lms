@@ -11,8 +11,6 @@ import {
   makeEmailSender,
   makeOtpDispatcher,
   makePasswordResetStore,
-  makeTelegramSender,
-  makeWhatsAppSender,
 } from './features/auth/index.js'
 import { healthRoutes } from './features/health/index.js'
 import { makeUsersStore, usersRoutes } from './features/users/index.js'
@@ -90,14 +88,8 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   // RBAC guard that dung chung cho cac feature quan tri (slice-1 Task 2+).
   const rbac = makeRbac(authStore)
 
-  // Slice-2: bo dieu phoi OTP da kenh (provider-agnostic). Moi sender doc secret tu env;
-  // thieu cau hinh se fallback (email -> console) hoac nem loi ro rang (whatsapp/telegram).
-  const otpDispatcher = makeOtpDispatcher(
-    makeEmailSender(app.log),
-    makeWhatsAppSender(app.log),
-    makeTelegramSender(app.log),
-    app.log,
-  )
+  // Slice-2 (revised): OTP chi con kenh Email. Dispatcher giu lai nhu mot seam mong de de mo rong.
+  const otpDispatcher = makeOtpDispatcher(makeEmailSender(app.log), app.log)
 
   await healthRoutes(app, db)
   await authRoutes(app, {
@@ -127,7 +119,7 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   await questionsRoutes(app, { rbac, questionsStore: makeQuestionsStore(db) })
 
   // slice-4: Tao de & Thi online. Admin/Teacher tao de; Student lam/nop bai (de an dap an).
-  await examsRoutes(app, { rbac, examsStore: makeExamsStore(db) })
+  await examsRoutes(app, { rbac, examsStore: makeExamsStore(db), branchScope: userBranchesStore })
   // slice-12: question images (ADR 0013); students only read images frozen into their own attempts.
   const mediaStore = makeMediaStore(db)
   const mediaStorage = makeLocalMediaStorage(config.MEDIA_DIR)

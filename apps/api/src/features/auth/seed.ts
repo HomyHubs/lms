@@ -3,31 +3,58 @@ import { createDb } from '../../platform/db.js'
 import { hashPassword } from './service.js'
 
 /**
- * Seed tai khoan admin dau tien (idempotent) — de demo dang nhap Task 2 (slice-0).
+ * Seed tai khoan admin + superadmin dau tien (idempotent) — de demo dang nhap (slice-0 / slice-1 revise).
  * Doc SDT/mat khau tu env; KHONG luu plain text (chi luu bcrypt hash).
  *
  *   SEED_ADMIN_PHONE=0901234567 SEED_ADMIN_PASSWORD=secret12 \
+ *   SEED_SUPERADMIN_PHONE=0900000000 SEED_SUPERADMIN_PASSWORD=secret12 \
  *     pnpm --filter @lms/api seed
  */
-async function main(): Promise<void> {
-  const phone = process.env.SEED_ADMIN_PHONE ?? '0901234567'
-  const password = process.env.SEED_ADMIN_PASSWORD ?? 'changeme8'
-  // Task 3: email de demo luong quen mat khau qua OTP.
-  const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com'
+type SeedRole = 'admin' | 'superadmin'
 
+async function main(): Promise<void> {
   const config = loadConfig()
   const db = createDb(config.DATABASE_URL)
 
+  const accounts: Array<{ phone: string; email: string; password: string; role: SeedRole }> = [
+    {
+      phone: process.env.SEED_ADMIN_PHONE ?? '0901234567',
+      // Task 3: email de demo luong quen mat khau qua OTP.
+      email: process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com',
+      password: process.env.SEED_ADMIN_PASSWORD ?? 'changeme8',
+      role: 'admin',
+    },
+    {
+      // slice-1 revise: superadmin cap cao nhat (vuot branch-scope, quan ly admin, export danh sach hoc vien).
+      phone: process.env.SEED_SUPERADMIN_PHONE ?? '0900000000',
+      email: process.env.SEED_SUPERADMIN_EMAIL ?? 'superadmin@example.com',
+      password: process.env.SEED_SUPERADMIN_PASSWORD ?? 'changeme8',
+      role: 'superadmin',
+    },
+  ]
+
   try {
-    const passwordHash = await hashPassword(password)
-    await db
-      .insertInto('users')
-      .values({ phone_number: phone, email, password_hash: passwordHash, role: 'admin' })
-      .onConflict((oc) =>
-        oc.column('phone_number').doUpdateSet({ password_hash: passwordHash, email }),
-      )
-      .execute()
-    console.log(`Seeded admin user: ${phone} (${email})`)
+    for (const account of accounts) {
+      const passwordHash = await hashPassword(account.password)
+      await db
+        .insertInto('users')
+        .values({
+          phone_number: account.phone,
+          email: account.email,
+          password_hash: passwordHash,
+          role: account.role,
+        })
+        .onConflict((oc) =>
+          // Giu role dung voi tai khoan (admin/superadmin) khi chay lai seed.
+          oc.column('phone_number').doUpdateSet({
+            password_hash: passwordHash,
+            email: account.email,
+            role: account.role,
+          }),
+        )
+        .execute()
+      console.log(`Seeded ${account.role} user: ${account.phone} (${account.email})`)
+    }
   } finally {
     await db.destroy()
   }

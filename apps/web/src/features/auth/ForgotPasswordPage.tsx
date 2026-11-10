@@ -1,20 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { KeyRound } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ForgotPasswordRequest, ResetPasswordRequest, type OtpChannel } from '@lms/shared'
+import { ForgotPasswordRequest, ResetPasswordRequest } from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { useForgotPassword, useResetPassword } from './useAuth'
 
 /**
- * Task 3 (slice-0) + Slice-2: quen mat khau qua OTP da kenh (Email/WhatsApp/Telegram).
- * Luong 2 buoc: (1) nhap email + chon kenh -> nhan OTP; (2) nhap OTP + mat khau moi.
+ * Task 3 (slice-0) + Slice-2 (revised 2026-11): quen mat khau qua OTP — CHI kenh Email.
+ * Luong 2 buoc: (1) nhap email -> nhan OTP qua email; (2) nhap OTP + mat khau moi.
  * Validate phia client bang contract chung (Zod). Giao dien toi thieu.
  */
-const CHANNEL_LABELS: Record<OtpChannel, string> = {
-  email: 'Email',
-  whatsapp: 'WhatsApp',
-  telegram: 'Telegram',
-}
 
 export function ForgotPasswordPage(): React.ReactElement {
   const navigate = useNavigate()
@@ -23,8 +18,6 @@ export function ForgotPasswordPage(): React.ReactElement {
 
   const [step, setStep] = useState<'request' | 'reset'>('request')
   const [email, setEmail] = useState('')
-  const [channel, setChannel] = useState<OtpChannel>('email')
-  const [recipient, setRecipient] = useState('')
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [fieldError, setFieldError] = useState<string | null>(null)
@@ -33,10 +26,7 @@ export function ForgotPasswordPage(): React.ReactElement {
   function handleRequest(e: FormEvent): void {
     e.preventDefault()
     setFieldError(null)
-    const parsed = ForgotPasswordRequest.safeParse({
-      email,
-      channel,
-    })
+    const parsed = ForgotPasswordRequest.safeParse({ email })
     if (!parsed.success) {
       setFieldError(parsed.error.issues[0]?.message ?? 'Du lieu khong hop le')
       return
@@ -85,8 +75,8 @@ export function ForgotPasswordPage(): React.ReactElement {
           className="w-full space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
         >
           <p className="text-sm text-slate-500">
-            Nhập email tài khoản và chọn kênh nhận mã. Nếu tài khoản tồn tại, chúng tôi sẽ gửi mã
-            OTP để đặt lại mật khẩu.
+            Nhập email tài khoản. Nếu tài khoản tồn tại, chúng tôi sẽ gửi mã OTP qua email để đặt
+            lại mật khẩu.
           </p>
           <div className="space-y-1">
             <label htmlFor="email" className="block text-sm font-medium text-slate-700">
@@ -104,38 +94,6 @@ export function ForgotPasswordPage(): React.ReactElement {
             />
           </div>
 
-          <div className="space-y-1">
-            <label htmlFor="channel" className="block text-sm font-medium text-slate-700">
-              Kênh nhận OTP
-            </label>
-            <select
-              id="channel"
-              name="channel"
-              value={channel}
-              onChange={(e) => setChannel(e.target.value as OtpChannel)}
-              className="c-input w-full"
-            >
-              <option value="email">Email</option>
-            </select>
-          </div>
-
-          {channel !== 'email' && (
-            <div className="space-y-1">
-              <label htmlFor="recipient" className="block text-sm font-medium text-slate-700">
-                {channel === 'whatsapp' ? 'Số WhatsApp (E.164)' : 'Chat ID Telegram'}
-              </label>
-              <input
-                id="recipient"
-                name="recipient"
-                type="text"
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                className="c-input w-full"
-                placeholder={channel === 'whatsapp' ? '84901234567' : '123456789'}
-              />
-            </div>
-          )}
-
           {(fieldError || requestError) && (
             <p role="alert" className="text-sm text-danger-600">
               {fieldError ?? requestError}
@@ -152,12 +110,8 @@ export function ForgotPasswordPage(): React.ReactElement {
           className="w-full space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
         >
           <p className="text-sm text-slate-500">
-            Nhập mã OTP đã gửi qua{' '}
-            <span className="font-medium">
-              {CHANNEL_LABELS[channel]}
-              {channel === 'email' ? ` (${email})` : recipient ? ` (${recipient})` : ''}
-            </span>{' '}
-            và mật khẩu mới.
+            Nhập mã OTP đã gửi qua <span className="font-medium">Email ({email})</span> và mật khẩu
+            mới.
           </p>
           <div className="space-y-1">
             <label htmlFor="otp" className="block text-sm font-medium text-slate-700">
