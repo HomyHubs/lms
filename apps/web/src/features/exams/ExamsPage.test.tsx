@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ExamsPage } from './ExamsPage'
@@ -340,8 +340,14 @@ describe('ExamsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
     fireEvent.click(await screen.findByLabelText('Blue'))
     await screen.findByText(/Mất kết nối/)
-    const stored = JSON.parse(window.localStorage.getItem(`lms.examDraft:${EXAM_ID}:2026-09-27T00:00:00.000Z`) ?? '{}')
-    expect(stored.answers).toEqual({ [QUESTION_ID]: 'Blue' })
+    // Ban nhap duoc ghi xuong localStorage bat dong bo sau khi checkpoint that bai,
+    // nen cho toi khi no duoc luu thay vi doc ngay (tranh race khi chay cung ca suite).
+    await waitFor(() => {
+      const stored = JSON.parse(
+        window.localStorage.getItem(`lms.examDraft:${EXAM_ID}:2026-09-27T00:00:00.000Z`) ?? '{}',
+      )
+      expect(stored.answers).toEqual({ [QUESTION_ID]: 'Blue' })
+    })
     fireEvent(window, new Event('online'))
     await screen.findByText('Đã lưu đáp án')
     expect(checkpointCalls).toBe(2)
