@@ -124,15 +124,27 @@ function SessionRoster({ sessionId, editable }: { sessionId: string; editable: b
       <table className="c-table">
         <thead>
           <tr>
-            <th>Học viên (SĐT)</th>
+            <th>Học viên</th>
             <th>Trạng thái</th>
             <th>Ghi chú</th>
           </tr>
         </thead>
         <tbody>
-          {roster.map((r) => (
+          {roster.map((r) => {
+            // Hien ho ten (lastName + firstName); neu chua co ten thi fallback ve SDT.
+            const fullName = [r.lastName, r.firstName].filter(Boolean).join(' ').trim()
+            return (
             <tr key={r.studentId}>
-              <td>{r.phoneNumber}</td>
+              <td>
+                {fullName ? (
+                  <div className="flex flex-col">
+                    <span>{fullName}</span>
+                    <span className="text-xs text-slate-400">{r.phoneNumber}</span>
+                  </div>
+                ) : (
+                  r.phoneNumber
+                )}
+              </td>
               <td>
                 {editable ? (
                   <select
@@ -166,7 +178,8 @@ function SessionRoster({ sessionId, editable }: { sessionId: string; editable: b
                 )}
               </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
       {editable && (

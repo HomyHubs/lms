@@ -44,6 +44,8 @@ export interface SessionRow {
 export interface RosterStudentRow {
   student_id: string
   phone_number: string
+  first_name: string | null
+  last_name: string | null
 }
 
 export interface RecordRow {
@@ -190,6 +192,8 @@ export function buildRoster(
     return {
       studentId: s.student_id,
       phoneNumber: s.phone_number,
+      firstName: s.first_name ?? null,
+      lastName: s.last_name ?? null,
       status: rec ? toStatus(rec.status) : null,
       note: rec?.note ?? null,
     }

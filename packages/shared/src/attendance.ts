@@ -82,6 +82,9 @@ export type ClassSessionResponse = z.infer<typeof ClassSessionResponse>
 export const AttendanceRosterEntry = z.object({
   studentId: z.string().uuid(),
   phoneNumber: z.string(),
+  // Ten hoc vien (co the trong voi du lieu cu) de hien thi thay cho SDT.
+  firstName: z.string().nullable().default(null),
+  lastName: z.string().nullable().default(null),
   status: AttendanceStatus.nullable(),
   note: z.string().nullable(),
 })

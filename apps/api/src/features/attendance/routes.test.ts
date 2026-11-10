@@ -126,7 +126,12 @@ function makeFakeStore(): AttendanceStore {
       return true
     },
     async listRoster(classId) {
-      return (enrollments[classId] ?? []).map((id) => ({ student_id: id, phone_number: phone(id) }))
+      return (enrollments[classId] ?? []).map((id) => ({
+        student_id: id,
+        phone_number: phone(id),
+        first_name: null,
+        last_name: null,
+      }))
     },
     async listRecords(sessionId) {
       return records.filter((r) => r.session_id === sessionId)
@@ -212,8 +217,8 @@ describe('attendance routes', () => {
     const { teacher, sessionId, marked } = await createMarkedSession(store)
     expect(marked.statusCode).toBe(200)
     expect(marked.json().roster).toEqual([
-      { studentId: STUDENT_1.id, phoneNumber: '0900000021', status: 'present', note: null },
-      { studentId: STUDENT_2.id, phoneNumber: '0900000022', status: 'absent', note: 'sick' },
+      { studentId: STUDENT_1.id, phoneNumber: '0900000021', firstName: null, lastName: null, status: 'present', note: null },
+      { studentId: STUDENT_2.id, phoneNumber: '0900000022', firstName: null, lastName: null, status: 'absent', note: 'sick' },
     ])
     expect((await teacher('GET', '/attendance/classes')).json().classes.map((c: { id: string }) => c.id)).toEqual([
       CLASS_1,

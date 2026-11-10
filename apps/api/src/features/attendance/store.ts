@@ -150,8 +150,10 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       return db
         .selectFrom('enrollments')
         .innerJoin('users', 'users.id', 'enrollments.student_id')
-        .select(['enrollments.student_id', 'users.phone_number'])
+        .select(['enrollments.student_id', 'users.phone_number', 'users.first_name', 'users.last_name'])
         .where('enrollments.class_id', '=', classId)
+        .orderBy('users.last_name', 'asc')
+        .orderBy('users.first_name', 'asc')
         .orderBy('users.phone_number', 'asc')
         .execute()
     },

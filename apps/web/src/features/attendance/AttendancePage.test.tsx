@@ -41,7 +41,9 @@ function stubTeacherFetch() {
       const status = init?.method === 'PUT' ? 'absent' : null
       return json({
         session,
-        roster: [{ studentId: STUDENT_ID, phoneNumber: '0900000021', status, note: null }],
+        roster: [
+          { studentId: STUDENT_ID, phoneNumber: '0900000021', firstName: 'An', lastName: 'Nguyễn Minh', status, note: null },
+        ],
       })
     }
     throw new Error(`unexpected fetch: ${url}`)
@@ -69,6 +71,8 @@ describe('AttendancePage', () => {
     await waitFor(() => expect(screen.getByRole('option', { name: 'Starter A' })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Chọn lớp'), { target: { value: CLASS_ID } })
     fireEvent.click(await screen.findByRole('button', { name: /2026-11-05 18:00/ }))
+    // Roster hien ho ten (lastName + firstName); SDT la dong phu.
+    expect(await screen.findByText('Nguyễn Minh An')).toBeInTheDocument()
     fireEvent.change(await screen.findByLabelText('Trạng thái 0900000021'), { target: { value: 'absent' } })
     fireEvent.click(screen.getByRole('button', { name: 'Lưu điểm danh' }))
 
