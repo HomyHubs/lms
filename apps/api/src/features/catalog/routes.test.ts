@@ -186,8 +186,15 @@ describe('catalog routes — RBAC guard', () => {
     expect((await app.inject({ method: 'GET', url: '/levels' })).statusCode).toBe(401)
   })
 
-  it('GET /levels returns 403 for a non-admin', async () => {
+  it('GET /levels cho phep Teacher/Staff doc (slice-14 — de chon lop khi tao de)', async () => {
     app = await buildTestApp(TEACHER, makeFakeCatalogStore(), scope)
+    const res = await app.inject({ method: 'GET', url: '/levels', headers: { cookie: COOKIE } })
+    expect(res.statusCode).toBe(200)
+  })
+
+  it('GET /levels van chan Student (403)', async () => {
+    const student: UserRecord = { id: 'student-x', phone_number: '0900000009', password_hash: 'x', role: 'student' }
+    app = await buildTestApp(student, makeFakeCatalogStore(), scope)
     const res = await app.inject({ method: 'GET', url: '/levels', headers: { cookie: COOKIE } })
     expect(res.statusCode).toBe(403)
   })

@@ -181,6 +181,12 @@ export interface ExamSetLinksTable {
   position: number
 }
 
+/** Bang `exam_classes` — slice-14: lop ap dung cho mot de (many-to-many, cung cap do). */
+export interface ExamClassesTable {
+  exam_id: string
+  class_id: string
+}
+
 /** Bang `exam_grading_policies` — slice-5: chinh sach cham/thi lai mac dinh theo cap do. */
 export interface ExamGradingPoliciesTable {
   level_id: string
@@ -365,6 +371,7 @@ export interface Database {
   exam_sets: ExamSetsTable
   exam_set_items: ExamSetItemsTable
   exam_set_links: ExamSetLinksTable
+  exam_classes: ExamClassesTable
   exam_attempts: ExamAttemptsTable
   exam_grading_policies: ExamGradingPoliciesTable
   class_teachers: ClassTeachersTable

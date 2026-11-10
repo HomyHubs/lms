@@ -78,6 +78,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       .select(EXAM_COLUMNS)
       .select(sql<string[]>`coalesce((select array_agg(l.exam_set_id::text order by l.position)
         from exam_set_links l where l.exam_id = exams.id), '{}')`.as('exam_set_ids'))
+      .select(sql<string[]>`coalesce((select array_agg(ec.class_id::text order by ec.class_id)
+        from exam_classes ec where ec.exam_id = exams.id), '{}')`.as('exam_class_ids'))
   }
 
   async function requireExamById(id: string): Promise<ExamRow> {
@@ -167,6 +169,13 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         if (examSetIds.length > 0) {
           await trx.insertInto('exam_set_links')
             .values(examSetIds.map((examSetId, index) => ({ exam_id: inserted.id, exam_set_id: examSetId, position: index + 1 })))
+            .execute()
+        }
+        // slice-14: gan lop ap dung (cung cap do) cho de.
+        const classIds = input.classIds ?? []
+        if (classIds.length > 0) {
+          await trx.insertInto('exam_classes')
+            .values(classIds.map((classId) => ({ exam_id: inserted.id, class_id: classId })))
             .execute()
         }
         return inserted.id
@@ -366,6 +375,30 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         .innerJoin('classes', 'classes.id', 'enrollments.class_id')
         .innerJoin('users', 'users.id', 'enrollments.student_id')
         .where('classes.branch_id', 'in', branchIds)
+        .select('users.phone_number as phone')
+        .distinct()
+        .execute()
+      return rows.map((r) => r.phone)
+    },
+
+    async listClassRefsForLevel(levelId): Promise<{ id: string; branchId: string }[]> {
+      // slice-14: cac lop cung cap do voi de (map lop -> course -> level), kem co so.
+      const rows = await db
+        .selectFrom('classes')
+        .innerJoin('courses', 'courses.id', 'classes.course_id')
+        .where('courses.level_id', '=', levelId)
+        .select(['classes.id as id', 'classes.branch_id as branchId'])
+        .execute()
+      return rows
+    },
+
+    async listStudentPhonesInClasses(classIds): Promise<string[]> {
+      // slice-14: SDT hoc vien ghi danh CAC LOP da cho — gioi han cohort cham diem theo lop.
+      if (classIds.length === 0) return []
+      const rows = await db
+        .selectFrom('enrollments')
+        .innerJoin('users', 'users.id', 'enrollments.student_id')
+        .where('enrollments.class_id', 'in', classIds)
         .select('users.phone_number as phone')
         .distinct()
         .execute()

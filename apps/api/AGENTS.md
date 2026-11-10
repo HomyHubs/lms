@@ -54,6 +54,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 
+- slice-14 (Bài thi theo lớp): `POST /exams` mở cho `admin,teacher,staff` (+superadmin). `createExam` nhận `classIds` (≤100), validate mọi lớp cùng cấp độ với đề (`class_level_mismatch` → 400); non-superadmin gán lớp ngoài chi nhánh → 403 `class_out_of_scope`. `importGrades` giao danh sách SĐT học viên trong lớp gán (`listStudentPhonesInClasses`) với phạm vi chi nhánh → chỉ nghiệm thu học viên trong giao đó; để trống classIds = toàn cấp độ (hành vi cũ). `store.ts`: subquery `exam_class_ids`, ghi `exam_classes` trong transaction tạo đề, `listClassRefsForLevel`. `catalog/routes.ts`: `GET /levels`, `GET /courses`, `GET /classes` mở cho teacher/staff (phục vụ UI chọn lớp), vẫn chặn học viên. Test: `exams/{service,routes}.test.ts`, `catalog/routes.test.ts`.
 - slice-9a (Chấm tay Speaking/Writing): feature `exams` thêm `GET /grading/attempts`, `GET /grading/attempts/:attemptId`, `POST /grading/attempts/:attemptId/grade` (Admin/GV). Điểm từng câu 0..điểm tối đa, ngưỡng đạt đóng băng của đề, ghi một lần (người chấm đầu tiên thắng), `ExamResult.feedback` cho học viên. Xem ADR 0009.
 
 ### 2026-11-08

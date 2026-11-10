@@ -86,6 +86,8 @@ interface ExamsRoutesDeps {
 export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): Promise<void> {
   const { rbac, examsStore, branchScope } = deps
   const requireManager = rbac.requireRole('admin', 'teacher')
+  // slice-14: gan/tao de co the gan lop — cho phep admin + teacher + staff (superadmin tu vuot guard).
+  const requireExamAuthor = rbac.requireRole('admin', 'teacher', 'staff')
   const requireLogin = rbac.requireRole()
   const requireStudent = rbac.requireRole('student')
   const requireAdmin = rbac.requireRole('admin')
@@ -234,19 +236,38 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
     return body
   })
 
-  app.post('/exams', { preHandler: requireManager }, async (request, reply) => {
+  app.post('/exams', { preHandler: requireExamAuthor }, async (request, reply) => {
     const parsed = CreateExamRequest.safeParse(request.body)
     if (!parsed.success) {
       reply.code(400)
       return { error: parsed.error.issues[0]?.message ?? 'Du lieu de thi khong hop le' }
     }
-    const outcome = await createExam(examsStore, parsed.data, getSessionUser(request).id)
+    // slice-14: non-superadmin chi duoc gan lop thuoc co so minh phu trach (branch-scope).
+    const user = getSessionUser(request)
+    const classIds = parsed.data.classIds ?? []
+    if (classIds.length > 0 && user.role !== 'superadmin') {
+      const level = await examsStore.findLevelByCode(parsed.data.level)
+      if (level) {
+        const refs = await examsStore.listClassRefsForLevel(level.id)
+        const branchByClass = new Map(refs.map((c) => [c.id, c.branchId]))
+        const allowedBranches = new Set(await branchScope.branchIdsForUser(user.id))
+        const outOfScope = classIds.some((id) => {
+          const branchId = branchByClass.get(id)
+          return branchId === undefined || !allowedBranches.has(branchId)
+        })
+        if (outOfScope) {
+          return reply.code(403).send({ error: 'Lop nam ngoai co so ban phu trach', code: 'class_out_of_scope' })
+        }
+      }
+    }
+    const outcome = await createExam(examsStore, parsed.data, user.id)
     if (!outcome.ok) {
       const errors: Record<typeof outcome.reason, string> = {
         level_not_found: 'Cap do khong ton tai',
         exam_set_not_found: 'Khong tim thay bo de',
         exam_set_not_published: 'Chi tao ky thi tu bo de da phat hanh',
         exam_set_mismatch: 'Bo de phai cung cap do va ky nang voi ky thi',
+        class_level_mismatch: 'Lop phai cung cap do voi ky thi',
       }
       reply.code(400)
       return { error: errors[outcome.reason], code: outcome.reason }

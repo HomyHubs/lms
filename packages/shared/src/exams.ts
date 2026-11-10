@@ -95,6 +95,8 @@ const ExamBlueprintFields = {
   passPercent: optionalFormNumber(PassPercent),
   maxAttempts: optionalFormNumber(MaxAttempts),
   retakeCooldownMinutes: optionalFormNumber(RetakeCooldownMinutes),
+  // slice-14: lop ap dung (cung cap do). Rong/thieu = ap cho toan cap do (hanh vi cu).
+  classIds: z.array(z.string().uuid('Lop khong hop le')).max(100, 'Toi da 100 lop').optional(),
 }
 
 const RandomExamRequest = z.object({
@@ -154,6 +156,8 @@ export const Exam = z.object({
   mode: ExamMode.default('random'),
   /** Linked sets in serving order (fixed_set only). */
   examSetIds: z.array(z.string().uuid()).default([]),
+  /** slice-14: lop ap dung (cung cap do); rong = ap cho toan cap do. */
+  classIds: z.array(z.string().uuid()).default([]),
   shuffleQuestions: z.boolean().default(false),
   shuffleOptions: z.boolean().default(false),
   retakeStrategy: RetakeStrategy.default('same_set_shuffled'),

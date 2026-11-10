@@ -33,6 +33,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-11c | Import trắc nghiệm từ Excel | Dọc | Done | — | dev | 28 | slice-11a | `slices/slice-11c-mc-excel.md` |
 | slice-12 | Hình ảnh câu hỏi (bank + docx + chấm) | Dọc | Done | — | dev | 22 | slice-3 | `slices/slice-12-hinh-anh-cau-hoi.md` |
 | slice-13 | Lịch sử thi & Báo cáo thi | Dọc | Done | — | dev | 20 | slice-5 | `slices/slice-13-lich-su-thi-bao-cao.md` |
+| slice-14 | Bài thi theo lớp | Dọc | Done | — | dev | — | slice-4 | `slices/slice-14-bai-thi-theo-lop.md` |
 
 ## Trạng thái hợp lệ
 

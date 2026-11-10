@@ -47,8 +47,10 @@ interface CatalogRoutesDeps {
 export async function catalogRoutes(app: FastifyInstance, deps: CatalogRoutesDeps): Promise<void> {
   const { rbac, catalogStore, branchScope } = deps
   const requireAdmin = rbac.requireRole('admin')
-  // Doc du lieu theo Branch: Admin/Teacher/Student deu duoc, nhung bi loc theo Branch gan.
-  const requireViewer = rbac.requireRole('admin', 'teacher', 'student')
+  // Doc du lieu theo Branch: Admin/Teacher/Student/Staff deu duoc, nhung bi loc theo Branch gan.
+  const requireViewer = rbac.requireRole('admin', 'teacher', 'student', 'staff')
+  // slice-14: danh muc chi-doc (levels/courses/classes) can cho nguoi tao de chon lop ap dung.
+  const requireCatalogReader = rbac.requireRole('admin', 'teacher', 'staff')
 
   const scopeOf = (request: FastifyRequest): Promise<string[]> =>
     branchScope.branchIdsForUser(getSessionUser(request).id)
@@ -64,14 +66,14 @@ export async function catalogRoutes(app: FastifyInstance, deps: CatalogRoutesDep
     return scoped.includes(klass.branch_id) ? { ok: true, branchId: klass.branch_id } : { ok: false }
   }
 
-  // ----- Levels (chi doc, chi Admin) -----
-  app.get('/levels', { preHandler: requireAdmin }, async () => {
+  // ----- Levels (chi doc; Admin/Teacher/Staff — slice-14 de chon lop ap dung khi tao de) -----
+  app.get('/levels', { preHandler: requireCatalogReader }, async () => {
     const body: LevelList = { levels: await listLevels(catalogStore) }
     return body
   })
 
-  // ----- Courses (chi Admin) -----
-  app.get('/courses', { preHandler: requireAdmin }, async () => {
+  // ----- Courses (doc: Admin/Teacher/Staff; sua: chi Admin) -----
+  app.get('/courses', { preHandler: requireCatalogReader }, async () => {
     const body: CourseList = { courses: await listCourses(catalogStore) }
     return body
   })

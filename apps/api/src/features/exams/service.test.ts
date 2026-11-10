@@ -49,7 +49,15 @@ interface SeedExamSet {
 
 /** Store gia lap trong bo nho — test logic ma khong can Postgres. */
 function makeFakeStore(
-  seed: { questions?: SeedQuestion[]; exams?: ExamRow[]; policies?: GradingPolicyRow[]; examSets?: SeedExamSet[] } = {},
+  seed: {
+    questions?: SeedQuestion[]
+    exams?: ExamRow[]
+    policies?: GradingPolicyRow[]
+    examSets?: SeedExamSet[]
+    // slice-14: lop theo cap do + SDT theo lop (de test gan lop / cohort import).
+    classRefs?: Record<string, { id: string; branchId: string }[]>
+    classPhones?: Record<string, string[]>
+  } = {},
 ): ExamsStore {
   const examSets = seed.examSets ?? []
   const questions: SeedQuestion[] = seed.questions ? [...seed.questions] : []
@@ -90,6 +98,7 @@ function makeFakeStore(
         shuffle_questions: input.shuffleQuestions ?? false,
         shuffle_options: input.shuffleOptions ?? false,
         retake_strategy: input.retakeStrategy ?? 'same_set_shuffled',
+        exam_class_ids: input.classIds ?? [],
         created_by: input.createdBy,
         created_at: new Date('2026-09-21T00:00:00.000Z'),
       }
@@ -233,6 +242,14 @@ function makeFakeStore(
     async listStudentPhonesInBranches() {
       return []
     },
+    async listClassRefsForLevel(levelId) {
+      return seed.classRefs?.[levelId] ?? []
+    },
+    async listStudentPhonesInClasses(classIds) {
+      const phones = new Set<string>()
+      for (const id of classIds) for (const p of seed.classPhones?.[id] ?? []) phones.add(p)
+      return [...phones]
+    },
   }
 }
 
@@ -342,6 +359,53 @@ describe('createExam', () => {
       'teacher-1',
     )
     expect(out).toEqual({ ok: false, reason: 'level_not_found' })
+  })
+
+  it('slice-14: gan lop cung cap do -> luu classIds', async () => {
+    const store = makeFakeStore({
+      classRefs: { 'lvl-starter': [{ id: 'class-a', branchId: 'branch-1' }] },
+    })
+    const out = await createExam(
+      store,
+      {
+        title: 'Reading Starter',
+        level: 'starter',
+        skill: 'reading',
+        mode: 'random',
+        questionCount: 2,
+        durationMinutes: 30,
+        opensAt: '2026-09-21T09:00:00.000Z',
+        closesAt: '2026-09-21T12:00:00.000Z',
+        classIds: ['class-a'],
+      },
+      'teacher-1',
+    )
+    expect(out.ok).toBe(true)
+    if (!out.ok) return
+    expect(out.exam.classIds).toEqual(['class-a'])
+  })
+
+  it('slice-14: tu choi lop khac cap do', async () => {
+    const store = makeFakeStore({
+      // lvl-starter chi co class-a; class-x (level khac) khong nam trong danh sach.
+      classRefs: { 'lvl-starter': [{ id: 'class-a', branchId: 'branch-1' }] },
+    })
+    const out = await createExam(
+      store,
+      {
+        title: 'Reading Starter',
+        level: 'starter',
+        skill: 'reading',
+        mode: 'random',
+        questionCount: 2,
+        durationMinutes: 30,
+        opensAt: '2026-09-21T09:00:00.000Z',
+        closesAt: '2026-09-21T12:00:00.000Z',
+        classIds: ['class-x'],
+      },
+      'teacher-1',
+    )
+    expect(out).toEqual({ ok: false, reason: 'class_level_mismatch' })
   })
 })
 

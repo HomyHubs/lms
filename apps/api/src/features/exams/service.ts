@@ -53,6 +53,14 @@ export interface ExamRow {
   shuffle_questions?: boolean
   shuffle_options?: boolean
   retake_strategy?: string
+  // slice-14: lop ap dung (cung cap do); absent/rong = ap cho toan cap do.
+  exam_class_ids?: string[]
+}
+
+/** slice-14: lop (cung cap do) co the gan cho de — kem co so de kiem tra branch-scope. */
+export interface ClassRef {
+  id: string
+  branchId: string
 }
 
 /** Exam set as seen by exam creation (slice-11a). */
@@ -175,6 +183,8 @@ export interface CreateExamFields {
   shuffleQuestions?: boolean
   shuffleOptions?: boolean
   retakeStrategy?: RetakeStrategy
+  /** slice-14: lop ap dung (cung cap do); rong = ap cho toan cap do. */
+  classIds?: string[]
 }
 
 export interface CreateAttemptFields {
@@ -220,6 +230,10 @@ export interface ExamsStore {
   findGradingRow: (attemptId: string) => Promise<GradingRow | undefined>
   /** SDT (ma hoc vien) cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope import diem). */
   listStudentPhonesInBranches: (branchIds: string[]) => Promise<string[]>
+  /** slice-14: cac lop (cung cap do) co the gan cho de — kem co so de kiem tra branch-scope. */
+  listClassRefsForLevel: (levelId: string) => Promise<ClassRef[]>
+  /** slice-14: SDT hoc vien ghi danh CAC LOP da cho (gioi han cohort import diem theo lop). */
+  listStudentPhonesInClasses: (classIds: string[]) => Promise<string[]>
   findGradingPolicy: (levelId: string) => Promise<GradingPolicyRow | undefined>
   listGradingPolicies: () => Promise<GradingPolicyRow[]>
   upsertGradingPolicy: (levelId: string, fields: GradingPolicyFields) => Promise<GradingPolicyRow>
@@ -286,6 +300,7 @@ function toExam(row: ExamRow): Exam {
     retakeCooldownMinutes: row.retake_cooldown_minutes,
     mode: row.mode === 'fixed_set' ? 'fixed_set' : 'random',
     examSetIds: row.exam_set_ids ?? [],
+    classIds: row.exam_class_ids ?? [],
     shuffleQuestions: row.shuffle_questions ?? false,
     shuffleOptions: row.shuffle_options ?? false,
     retakeStrategy: row.retake_strategy === 'alternate_sets' ? 'alternate_sets' : 'same_set_shuffled',
@@ -580,7 +595,15 @@ export async function listOpenExams(store: ExamsStore, now: Date): Promise<Exam[
 
 export type CreateExamOutcome =
   | { ok: true; exam: Exam }
-  | { ok: false; reason: 'level_not_found' | 'exam_set_not_found' | 'exam_set_not_published' | 'exam_set_mismatch' }
+  | {
+      ok: false
+      reason:
+        | 'level_not_found'
+        | 'exam_set_not_found'
+        | 'exam_set_not_published'
+        | 'exam_set_mismatch'
+        | 'class_level_mismatch'
+    }
 
 type FixedSetsOutcome =
   | { ok: true; questionCount: number }
@@ -607,6 +630,12 @@ export async function createExam(
 ): Promise<CreateExamOutcome> {
   const level = await store.findLevelByCode(input.level)
   if (!level) return { ok: false, reason: 'level_not_found' }
+  // slice-14: lop gan cho de phai cung cap do voi de (map lop -> course -> level).
+  const classIds = input.classIds ?? []
+  if (classIds.length > 0) {
+    const allowed = new Set((await store.listClassRefsForLevel(level.id)).map((c) => c.id))
+    if (classIds.some((id) => !allowed.has(id))) return { ok: false, reason: 'class_level_mismatch' }
+  }
   // Nguong cua de duoc CHOT luc tao (sao tu chinh sach cap do neu khong ghi de) de doi chinh
   // sach ve sau khong lam doi ket qua cac de/luot da co.
   let questionCount: number
@@ -639,6 +668,7 @@ export async function createExam(
     maxAttempts: input.maxAttempts ?? policy?.max_attempts ?? DEFAULT_GRADING_POLICY.maxAttempts,
     retakeCooldownMinutes:
       input.retakeCooldownMinutes ?? policy?.retake_cooldown_minutes ?? DEFAULT_GRADING_POLICY.retakeCooldownMinutes,
+    classIds,
     createdBy,
   })
   return { ok: true, exam: toExam(row) }
@@ -1068,6 +1098,17 @@ export async function importGrades(
   if (!exam) return { ok: false, reason: 'exam_not_found' }
   if (!isManualSkill(exam.skill)) return { ok: false, reason: 'not_manual' }
 
+  // slice-14: neu de gan lop cu the -> chi cham hoc vien thuoc cac lop do (cohort theo lop).
+  // Giao voi branch-scope san co: ngay ca superadmin cung bi gioi han theo danh sach lop cua de.
+  let effectiveAllowed = allowedPhones
+  const examClassIds = exam.exam_class_ids ?? []
+  if (examClassIds.length > 0) {
+    const classPhones = new Set(await store.listStudentPhonesInClasses(examClassIds))
+    effectiveAllowed = effectiveAllowed
+      ? new Set([...effectiveAllowed].filter((p) => classPhones.has(p)))
+      : classPhones
+  }
+
   // Cac luot cho cham cua dung de nay, lap chi muc theo SDT hoc vien (mot luot moi nhat moi hoc vien).
   const queue = (await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString()))
     .filter((r) => r.exam_id === examId)
@@ -1085,7 +1126,7 @@ export async function importGrades(
     }
     seen.add(code)
 
-    if (allowedPhones && !allowedPhones.has(code)) {
+    if (effectiveAllowed && !effectiveAllowed.has(code)) {
       summary.skipped.push({ row: input.row, studentCode: code, reason: 'out_of_scope' })
       continue
     }

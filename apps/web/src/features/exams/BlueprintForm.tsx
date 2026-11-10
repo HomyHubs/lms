@@ -1,16 +1,19 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { CreateExamRequest, type ExamMode, type ExamSet } from '@lms/shared'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { CreateExamRequest, type ExamMode, type ExamSet, type LevelCode } from '@lms/shared'
 import { createExamBlueprint, listExamSets } from '@/lib/api'
+import { useClasses, useCourses, useLevels } from '@/features/catalog/useCatalog'
 import { Button } from '@/components/ui/button'
 
-const FIXED_SET_KEYS = ['examSetIds', 'shuffleQuestions', 'shuffleOptions']
+// slice-14: classIds la mang; tach khoi FormData roi gan rieng (giong examSetIds).
+const FIXED_SET_KEYS = ['examSetIds', 'shuffleQuestions', 'shuffleOptions', 'classIds']
 
-/** Form values are strings; fixed-set fields are rebuilt into typed arrays/booleans before validation. */
-function formToRequest(data: FormData): unknown {
+/** Form values are strings; fixed-set + class fields are rebuilt into typed arrays/booleans before validation. */
+function formToRequest(data: FormData, classIds: string[]): unknown {
   const base = Object.fromEntries([...data.entries()].filter(([key]) => !FIXED_SET_KEYS.includes(key)))
-  if (base.mode !== 'fixed_set') return base
+  const withClasses = { ...base, classIds }
+  if (base.mode !== 'fixed_set') return withClasses
   return {
-    ...base,
+    ...withClasses,
     examSetIds: data.getAll('examSetIds').map(String),
     shuffleQuestions: data.has('shuffleQuestions'),
     shuffleOptions: data.has('shuffleOptions'),
@@ -22,16 +25,41 @@ export function BlueprintForm({ onCreated }: { onCreated: () => void }): React.R
   const [message, setMessage] = useState('')
   const [mode, setMode] = useState<ExamMode>('random')
   const [sets, setSets] = useState<ExamSet[] | null>(null)
+  // slice-14: level + lop ap dung (controlled de loc lop theo cap do dang chon).
+  const [level, setLevel] = useState<LevelCode>('starter')
+  const [classIds, setClassIds] = useState<string[]>([])
+
+  const levelsQuery = useLevels()
+  const coursesQuery = useCourses()
+  const classesQuery = useClasses()
+
+  // Lop cung cap do dang chon (map lop -> course -> level).
+  const levelClasses = useMemo(() => {
+    const levelId = levelsQuery.data?.find((l) => l.code === level)?.id
+    if (!levelId) return []
+    const courseIds = new Set((coursesQuery.data ?? []).filter((c) => c.levelId === levelId).map((c) => c.id))
+    return (classesQuery.data ?? []).filter((c) => courseIds.has(c.courseId))
+  }, [level, levelsQuery.data, coursesQuery.data, classesQuery.data])
+
+  // Khi doi cap do, bo cac lop da chon khong con thuoc cap do moi.
+  useEffect(() => {
+    const allowed = new Set(levelClasses.map((c) => c.id))
+    setClassIds((prev) => prev.filter((id) => allowed.has(id)))
+  }, [levelClasses])
 
   useEffect(() => {
     if (mode !== 'fixed_set' || sets !== null) return
     listExamSets({ status: 'published' }).then(setSets, (error: Error) => { setSets([]); setMessage(error.message) })
   }, [mode, sets])
 
+  function toggleClass(id: string): void {
+    setClassIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
+  }
+
   async function create(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     const form = event.currentTarget
-    const parsed = CreateExamRequest.safeParse(formToRequest(new FormData(form)))
+    const parsed = CreateExamRequest.safeParse(formToRequest(new FormData(form), classIds))
     if (!parsed.success) { setMessage(parsed.error.issues[0]?.message ?? 'Dữ liệu không hợp lệ'); return }
     setBusy(true)
     try {
@@ -48,7 +76,8 @@ export function BlueprintForm({ onCreated }: { onCreated: () => void }): React.R
     <form aria-label="Tạo đề thi" onSubmit={(event) => void create(event)} className="grid gap-3 rounded-lg border p-5">
       <h2 className="text-lg font-medium">Tạo đề thi</h2>
       <label>Tên đề<input name="title" required maxLength={200} className="ml-2 border p-2" /></label>
-      <label>Cấp độ<select name="level" defaultValue="starter" className="ml-2 border p-2">
+      <label>Cấp độ<select name="level" value={level} onChange={(e) => setLevel(e.target.value as LevelCode)}
+        className="ml-2 border p-2">
         <option value="starter">Starter</option><option value="mover">Mover</option><option value="flyer">Flyer</option>
       </select></label>
       <label>Kỹ năng<select name="skill" defaultValue="reading" className="ml-2 border p-2">
@@ -81,6 +110,23 @@ export function BlueprintForm({ onCreated }: { onCreated: () => void }): React.R
           </select></label>
         </fieldset>
       )}
+      <fieldset className="grid gap-2 rounded border p-3 text-sm">
+        <legend className="px-1 font-medium">Lớp áp dụng (tùy chọn — để trống = toàn cấp độ)</legend>
+        {levelClasses.length === 0 && <p>Chưa có lớp nào thuộc cấp độ này.</p>}
+        {levelClasses.map((klass) => (
+          <label key={klass.id}>
+            <input
+              type="checkbox"
+              name="classIds"
+              value={klass.id}
+              checked={classIds.includes(klass.id)}
+              onChange={() => toggleClass(klass.id)}
+              className="mr-2"
+            />
+            {klass.name}
+          </label>
+        ))}
+      </fieldset>
       <label>Thời lượng (phút)<input name="durationMinutes" type="number" defaultValue={30} min={1} max={600} required className="ml-2 border p-2" /></label>
       <label>Mở lúc (giờ địa phương)<input name="opensAt" type="datetime-local" required className="ml-2 border p-2" /></label>
       <label>Đóng lúc (giờ địa phương)<input name="closesAt" type="datetime-local" required className="ml-2 border p-2" /></label>

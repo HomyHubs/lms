@@ -100,7 +100,12 @@ function openExam(overrides: Partial<ExamRow> = {}): ExamRow {
 
 /** Store gia lap trong bo nho (giong service.test) — test route + RBAC ma khong can Postgres. */
 function makeFakeExamsStore(
-  seed: { questions?: SeedQuestion[]; exams?: ExamRow[] } = {},
+  seed: {
+    questions?: SeedQuestion[]
+    exams?: ExamRow[]
+    // slice-14: lop theo cap do (de test branch-scope / level-mismatch khi gan lop).
+    classRefs?: Record<string, { id: string; branchId: string }[]>
+  } = {},
 ): ExamsStore {
   const questions: SeedQuestion[] = seed.questions ? [...seed.questions] : []
   const exams: ExamRow[] = seed.exams ? [...seed.exams] : []
@@ -133,6 +138,7 @@ function makeFakeExamsStore(
         pass_percent: input.passPercent,
         max_attempts: input.maxAttempts,
         retake_cooldown_minutes: input.retakeCooldownMinutes,
+        exam_class_ids: input.classIds ?? [],
         created_by: input.createdBy,
         created_at: new Date('2026-09-21T00:00:00.000Z'),
       }
@@ -242,6 +248,12 @@ function makeFakeExamsStore(
     async listStudentPhonesInBranches() {
       return []
     },
+    async listClassRefsForLevel(levelId) {
+      return seed.classRefs?.[levelId] ?? []
+    },
+    async listStudentPhonesInClasses() {
+      return []
+    },
   }
 }
 
@@ -259,13 +271,14 @@ function seededStore(): ExamsStore {
 async function buildTestApp(
   authUser: UserRecord | null,
   examsStore: ExamsStore,
+  branchIds: string[] = [],
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: false })
   await app.register(cookie)
   await examsRoutes(app, {
     rbac: makeRbac(makeFakeAuthStore(authUser)),
     examsStore,
-    branchScope: { branchIdsForUser: async () => [] },
+    branchScope: { branchIdsForUser: async () => branchIds },
   })
   await app.ready()
   return app
@@ -387,6 +400,42 @@ describe('exams routes — tao de (admin/teacher)', () => {
       payload: { title: 'X', level: 'starter' },
     })
     expect(res.statusCode).toBe(400)
+  })
+
+  // classIds trong contract phai la UUID — dung UUID that cho cac test duoi.
+  const CLASS_A = '40000000-0000-0000-0000-00000000000a'
+
+  it('slice-14: staff tao de + gan lop trong co so minh (201)', async () => {
+    const store = makeFakeExamsStore({
+      classRefs: { 'lvl-starter': [{ id: CLASS_A, branchId: 'branch-1' }] },
+    })
+    const staff: UserRecord = { id: 'staff-1', phone_number: '0900000004', password_hash: 'x', role: 'staff' }
+    app = await buildTestApp(staff, store, ['branch-1'])
+    const res = await app.inject({
+      method: 'POST',
+      url: '/exams',
+      headers: { cookie: COOKIE },
+      payload: { ...validCreate, classIds: [CLASS_A] },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().exam.classIds).toEqual([CLASS_A])
+  })
+
+  it('slice-14: tu choi gan lop ngoai co so (403 class_out_of_scope)', async () => {
+    const store = makeFakeExamsStore({
+      classRefs: { 'lvl-starter': [{ id: CLASS_A, branchId: 'branch-2' }] },
+    })
+    const staff: UserRecord = { id: 'staff-1', phone_number: '0900000004', password_hash: 'x', role: 'staff' }
+    // Staff chi phu trach branch-1, nhung class-a thuoc branch-2.
+    app = await buildTestApp(staff, store, ['branch-1'])
+    const res = await app.inject({
+      method: 'POST',
+      url: '/exams',
+      headers: { cookie: COOKIE },
+      payload: { ...validCreate, classIds: [CLASS_A] },
+    })
+    expect(res.statusCode).toBe(403)
+    expect(res.json().code).toBe('class_out_of_scope')
   })
 })
 
