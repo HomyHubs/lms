@@ -16,7 +16,7 @@ Giao vien cham diem Speaking/Writing qua UI (ban tu dong); he thong tu dong nhac
 
 | # | Task | Tang | Ghi chu |
 | --- | --- | --- | --- |
-| 1 | Giao dien giao vien cham diem Speaking/Writing (nhap diem/nhan xet thu cong cho cau tu luan da danh dau tu slice-5) | - | - |
+| 1 | ~~Giao dien giao vien cham diem Speaking/Writing (nhap diem/nhan xet thu cong cho cau tu luan da danh dau tu slice-5)~~ | - | **HUY / Khong lam.** Chuc nang cham tay Speaking/Writing qua UI da duoc slice-9a dam nhiem (cham tay + import Excel bang diem). Khong lam them bien the "ban tu dong" nao cho task nay. |
 | 2 | Thong bao tu dong (nhac thi lai, nhac lich day) qua WhatsApp/Telegram, tai su dung tich hop tu slice-2 | - | - |
 
 ## Stub cho phep
@@ -37,6 +37,7 @@ Khong ap dung (slice tuy chon).
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | Hoan | Khong lam slice-9 cho MVP (trang thai -> Hoan). Noi dung con mo ho, lam ro lai neu sau nay can | Quyet dinh chu so huu | - |
+| 2026-11-10 | Huy | Task 1 (giao vien cham Speaking/Writing qua UI, ban tu dong) -> KHONG LAM. Cham tay qua UI + import Excel da do slice-9a (Done) dam nhiem; khong lam them bien the ban tu dong/AI nao. Chi cap nhat docs, khong dung code. | Quyet dinh chu so huu | - |
 
 ## Cach nghiem thu
 
