@@ -42,9 +42,11 @@ describe('ForgotPasswordPage flow (Task 3 + Slice-2)', () => {
     expect(screen.getByLabelText('Mật khẩu mới')).toBeInTheDocument()
   })
 
-  it('offers only Email and never sends a client recipient', async () => {
+  it('offers Email only and sends the email channel with no provider selector', async () => {
     renderPage()
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Email'])
+    // Email-only (slice-2 revised): khong con bo chon kenh / so WhatsApp / Chat ID.
+    expect(screen.queryByLabelText(/Kênh nhận OTP/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('option')).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Số WhatsApp/)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Chat ID/)).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'admin@example.com' } })
@@ -59,19 +61,17 @@ describe('ForgotPasswordPage flow (Task 3 + Slice-2)', () => {
     })
   })
 
-  it('blocks the WhatsApp request when the recipient is empty', async () => {
+  it('blocks the request and shows an error when the email is empty', async () => {
     renderPage()
-    fireEvent.change(screen.getByLabelText('Email'), {
-      target: { value: 'admin@example.com' },
-    })
-    fireEvent.change(screen.getByLabelText('Kênh nhận OTP'), {
-      target: { value: 'whatsapp' },
-    })
+    // Email rong -> validate phia client chan lai, van o buoc yeu cau, khong goi API.
     fireEvent.click(screen.getByRole('button', { name: /Gửi mã OTP/ }))
 
-    // Van o buoc yeu cau (chua chuyen sang nhap OTP) va hien loi.
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.queryByLabelText('Mã OTP')).not.toBeInTheDocument()
+    const call = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes('/forgot-password'))
+    expect(call).toBeUndefined()
   })
 
   it('shows success after resetting with an OTP and new password', async () => {

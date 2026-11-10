@@ -24,6 +24,20 @@ export interface BranchClassGroup {
   total: number
 }
 
+/**
+ * Một cột lớp trong biểu đồ GOM THEO CƠ SỞ: mỗi lớp là một cột (sĩ số riêng),
+ * mang kèm thông tin cơ sở để tô màu + nhóm. Thứ tự: các lớp cùng cơ sở đứng liền nhau.
+ */
+export interface ClassBarDatum {
+  classId: string
+  className: string
+  size: number
+  branchId: string
+  branchName: string
+  /** Chỉ số cơ sở (0..n-1) để tô màu theo cơ sở. */
+  branchIndex: number
+}
+
 export interface DashboardStats {
   /** Số học viên (enrollment) theo từng khóa học. */
   studentsByCourse: ChartDatum[]
@@ -31,6 +45,8 @@ export interface DashboardStats {
   studentsByBranch: ChartDatum[]
   /** Sĩ số TỪNG LỚP, nhóm theo cơ sở (mỗi lớp là một mục riêng, không cộng gộp). */
   classesByBranch: BranchClassGroup[]
+  /** Danh sách lớp phẳng (mỗi lớp 1 cột, sĩ số riêng) đã sắp theo cơ sở — cho chart gom theo cơ sở. */
+  classBars: ClassBarDatum[]
   /** Tổng số học viên của cả trung tâm (= tổng mọi cơ sở) — dùng để tính tỉ lệ %. */
   totalStudents: number
   isLoading: boolean
@@ -103,9 +119,30 @@ export function useDashboardStats(): DashboardStats {
     })
     .filter((group: BranchClassGroup) => group.classes.length > 0)
 
+  // Danh sách lớp phẳng, sắp theo cơ sở (các lớp cùng cơ sở đứng liền nhau) để vẽ chart gom theo cơ sở.
+  // Mỗi lớp giữ sĩ số riêng; branchIndex dùng để tô màu theo cơ sở.
+  const classBars: ClassBarDatum[] = classesByBranch.flatMap((group: BranchClassGroup, branchIndex: number) =>
+    group.classes.map((c: ClassSizeDatum) => ({
+      classId: c.classId,
+      className: c.className,
+      size: c.size,
+      branchId: group.branchId,
+      branchName: group.branchName,
+      branchIndex,
+    })),
+  )
+
   // Tổng học viên cả trung tâm = tổng mọi cơ sở (1 trung tâm → coi là 100%).
   const totalStudents = studentsByBranch.reduce((sum: number, d: ChartDatum) => sum + d.value, 0)
   const isEmpty = !isLoading && totalStudents === 0
 
-  return { studentsByCourse, studentsByBranch, classesByBranch, totalStudents, isLoading, isEmpty }
+  return {
+    studentsByCourse,
+    studentsByBranch,
+    classesByBranch,
+    classBars,
+    totalStudents,
+    isLoading,
+    isEmpty,
+  }
 }

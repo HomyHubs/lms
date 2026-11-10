@@ -41,6 +41,11 @@ vi.mock('./useDashboardStats', () => ({
         total: 8,
       },
     ],
+    classBars: [
+      { classId: 'c1', className: 'Lớp Starters 1', size: 7, branchId: 'b1', branchName: 'Cơ sở Quận 1', branchIndex: 0 },
+      { classId: 'c2', className: 'Lớp Movers 1', size: 5, branchId: 'b1', branchName: 'Cơ sở Quận 1', branchIndex: 0 },
+      { classId: 'c3', className: 'Lớp Starters 2', size: 8, branchId: 'b2', branchName: 'Cơ sở Quận 3', branchIndex: 1 },
+    ],
     totalStudents: 20,
     isLoading: false,
     isEmpty: false,
@@ -81,8 +86,9 @@ describe('DashboardCharts', () => {
     expect(screen.getByText('Tỉ lệ học viên theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ hoàn thành bài')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ điểm danh')).toBeInTheDocument()
-    // Sĩ số từng lớp theo cơ sở: tiêu đề cơ sở kèm số lớp + tổng học viên.
-    expect(screen.getByText('Cơ sở Quận 1 · 2 lớp · 12 học viên')).toBeInTheDocument()
-    expect(screen.getByText('Cơ sở Quận 3 · 1 lớp · 8 học viên')).toBeInTheDocument()
+    // Một chart gom theo cơ sở: tiêu đề + chú thích màu theo cơ sở (kèm tổng sĩ số).
+    expect(screen.getByText('Sĩ số từng lớp theo cơ sở')).toBeInTheDocument()
+    expect(screen.getByText('Cơ sở Quận 1 (12)')).toBeInTheDocument()
+    expect(screen.getByText('Cơ sở Quận 3 (8)')).toBeInTheDocument()
   })
 })

@@ -19,6 +19,7 @@ import {
   useDashboardStats,
   type BranchClassGroup,
   type ChartDatum,
+  type ClassBarDatum,
 } from './useDashboardStats'
 
 const BAR_COLOR = '#2563eb'
@@ -142,48 +143,64 @@ function AttendancePieChart(): React.ReactElement {
   )
 }
 
-/**
- * Sĩ số TỪNG LỚP trong MỘT cơ sở: mỗi cột là một lớp, giá trị = sĩ số riêng của lớp đó.
- * Cao theo số lớp để nhãn tên lớp không chồng nhau (bar ngang).
- */
-function BranchClassSizeChart({ group }: { group: BranchClassGroup }): React.ReactElement {
-  // 36px mỗi lớp + đệm; tối thiểu 120px để cơ sở ít lớp vẫn cân đối.
-  const height = Math.max(120, group.classes.length * 36 + 48)
+/** Tooltip của chart gom theo cơ sở: hiện tên lớp, cơ sở và sĩ số. */
+function ClassBarTooltip({ active, payload }: {
+  active?: boolean
+  payload?: { payload: ClassBarDatum }[]
+}): React.ReactElement | null {
+  if (!active || !payload || payload.length === 0) return null
+  const d = payload[0]!.payload
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart
-        layout="vertical"
-        data={group.classes}
-        margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
-      >
-        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-        <YAxis
-          type="category"
-          dataKey="className"
-          width={120}
-          tick={{ fontSize: 12 }}
-          interval={0}
-        />
-        <Tooltip />
-        <Bar dataKey="size" name="Sĩ số" fill={BAR_COLOR} radius={[0, 4, 4, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="rounded-md border border-slate-200 bg-white p-2 text-xs shadow-sm">
+      <p className="font-medium text-slate-800">{d.className}</p>
+      <p className="text-slate-500">{d.branchName}</p>
+      <p className="text-slate-700">Sĩ số: {d.size}</p>
+    </div>
   )
 }
 
-/** Mỗi cơ sở một thẻ riêng: tiêu đề kèm tổng sĩ số, bên trong là sĩ số từng lớp. */
-function ClassSizeByBranch({ groups }: { groups: BranchClassGroup[] }): React.ReactElement {
+/**
+ * MỘT biểu đồ cột duy nhất: mỗi cột là một lớp (sĩ số riêng), các lớp được GOM THEO CƠ SỞ
+ * (cùng cơ sở đứng liền nhau và cùng màu). Chú thích màu = cơ sở. Nhãn trục X là tên lớp.
+ */
+function ClassSizeByBranchChart({ groups, bars }: {
+  groups: BranchClassGroup[]
+  bars: ClassBarDatum[]
+}): React.ReactElement {
+  // Rộng theo số lớp để nhãn không chồng; cuộn ngang khi quá nhiều lớp.
+  const minWidth = Math.max(520, bars.length * 56)
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      {groups.map((group: BranchClassGroup) => (
-        <Card key={group.branchId}>
-          <CardTitle>
-            {group.branchName} · {group.classes.length} lớp · {group.total} học viên
-          </CardTitle>
-          <BranchClassSizeChart group={group} />
-        </Card>
-      ))}
-    </div>
+    <Card>
+      <CardTitle>Sĩ số từng lớp theo cơ sở</CardTitle>
+      {/* Chú thích màu theo cơ sở */}
+      <div className="mb-2 flex flex-wrap gap-3 text-xs text-slate-600">
+        {groups.map((g: BranchClassGroup, i: number) => (
+          <span key={g.branchId} className="flex items-center gap-1">
+            <span
+              className="inline-block h-3 w-3 rounded-sm"
+              style={{ backgroundColor: SLICE_COLORS[i % SLICE_COLORS.length] }}
+            />
+            {g.branchName} ({g.total})
+          </span>
+        ))}
+      </div>
+      <div className="overflow-x-auto">
+        <div style={{ minWidth }}>
+          <ResponsiveContainer width="100%" height={BAR_HEIGHT}>
+            <BarChart data={bars} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
+              <XAxis dataKey="className" tick={{ fontSize: 11 }} interval={0} angle={-25} textAnchor="end" height={70} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+              <Tooltip content={<ClassBarTooltip />} />
+              <Bar dataKey="size" name="Sĩ số" radius={[4, 4, 0, 0]}>
+                {bars.map((b: ClassBarDatum) => (
+                  <Cell key={b.classId} fill={SLICE_COLORS[b.branchIndex % SLICE_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </Card>
   )
 }
 
@@ -223,9 +240,9 @@ export function DashboardCharts(): React.ReactElement {
         </Card>
       </div>
 
-      {/* Sĩ số TỪNG LỚP, nhóm theo cơ sở — mỗi lớp một cột với sĩ số riêng */}
-      {!stats.isLoading && stats.classesByBranch.length > 0 && (
-        <ClassSizeByBranch groups={stats.classesByBranch} />
+      {/* Sĩ số TỪNG LỚP gom theo cơ sở — một chart, mỗi lớp một cột (sĩ số riêng), màu theo cơ sở */}
+      {!stats.isLoading && stats.classBars.length > 0 && (
+        <ClassSizeByBranchChart groups={stats.classesByBranch} bars={stats.classBars} />
       )}
 
       {/* Hàng biểu đồ tròn gọn: nhiều pie trên cùng một dòng */}
