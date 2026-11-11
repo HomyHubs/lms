@@ -21,7 +21,11 @@ import {
 
 /**
  * Demo dataset for showing the product: 1 center, 3 branches, 6 classes, 6 teachers, 3 staff,
- * 72 students, a question bank, graded exam attempts (with retakes) and 6 weeks of attendance.
+ * 77 students (15+12+10+18+8+14 across 6 classes), a question bank, graded exam attempts
+ * (with retakes) and 6 weeks of attendance.
+ * Cầu Giấy: 27 students (lớp 0: 15, lớp 1: 12)
+ * Hai Bà Trưng: 28 students (lớp 2: 10, lớp 3: 18)
+ * Quận 7: 22 students (lớp 4: 8, lớp 5: 14)
  * Exams go through the real exam service, so scores are graded exactly like production.
  * Skips when the demo center already exists; `--reset` deletes the previous demo dataset first.
  * Run on a dev/demo database only:
@@ -30,7 +34,8 @@ import {
  */
 
 const DAY_MS = 86_400_000
-const STUDENTS_PER_CLASS = 12
+/** Number of students per class, indexed by classIndex (0..5) across all branches. */
+const CLASS_SIZES = [15, 12, 10, 18, 8, 14]
 const SESSION_WEEKS = 6
 
 /** Classes per branch index: [level, weekdays (0=Sun), start time]. */
@@ -289,6 +294,7 @@ async function main(): Promise<void> {
     let teacherNo = 0
     let sessionCount = 0
     let recordCount = 0
+    let classIndex = 0
     for (const [branchIndex, plan] of CLASS_PLAN.entries()) {
       const branchId = branchIds[branchIndex]!
       for (const [level, weekdays, startsAt] of plan) {
@@ -308,7 +314,9 @@ async function main(): Promise<void> {
         await db.insertInto('class_teachers').values({ class_id: klass.id, teacher_id: teacherId }).execute()
 
         const roster: DemoStudent[] = []
-        for (let k = 0; k < STUDENTS_PER_CLASS; k += 1) {
+        const studentsInClass = CLASS_SIZES[classIndex] ?? 12
+        classIndex += 1
+        for (let k = 0; k < studentsInClass; k += 1) {
           const id = await insertUser(
             db,
             phone('0933', studentNo + 1),
