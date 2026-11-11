@@ -35,6 +35,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-13 | Lịch sử thi & Báo cáo thi | Dọc | Done | — | dev | 20 | slice-5 | `slices/slice-13-lich-su-thi-bao-cao.md` |
 | slice-14 | Bài thi theo lớp | Dọc | Done | — | dev | — | slice-4 | `slices/slice-14-bai-thi-theo-lop.md` |
 | slice-15 | Đồng bộ hiển thị họ tên học viên (thay SĐT làm định danh trên các màn) | Dọc | Done | — | dev | — | slice-5, slice-6, slice-13 | `slices/slice-15-dong-bo-ten-hoc-vien.md` |
+| seed-demo | Dữ liệu demo thực tế hơn: mỗi cơ sở nhiều lớp (4–6) trộn Starter/Mover/Flyer, sĩ số khác nhau (commit `1012ef9`) | — | Done | — | dev | — | slice-6, slice-14 | `apps/api/src/scripts/seed-demo.ts` |
 
 ## Trạng thái hợp lệ
 

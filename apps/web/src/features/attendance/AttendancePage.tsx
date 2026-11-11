@@ -438,27 +438,37 @@ function TeachersSection({ classId }: { classId: string }): React.ReactElement {
   )
 }
 
-/** Bar chart (admin): các lớp có buổi học hôm nay + tỷ lệ điểm danh theo trạng thái. */
+/** Bar chart (admin): các lớp có buổi học trong ngày chọn (mặc định hôm nay) + tỷ lệ điểm danh theo trạng thái. */
 function TodayBarChart(): React.ReactElement {
-  const today = useTodayAttendanceSummary(true)
-  if (today.isLoading)
-    return (
-      <section className="c-card">
-        <p className="text-sm text-slate-500">Đang tải dữ liệu hôm nay…</p>
-      </section>
-    )
-  if (today.isError)
-    return (
-      <section className="c-card">
-        <p className="text-sm text-danger-600">{(today.error as Error).message}</p>
-      </section>
-    )
+  // Rỗng = hôm nay (theo giờ VN, do API quyết định). Admin có thể chọn ngày bất kỳ.
+  const [selectedDate, setSelectedDate] = useState('')
+  const today = useTodayAttendanceSummary(true, selectedDate || undefined)
   const classes = today.data?.classes ?? []
   return (
     <section className="c-card">
-      <h2 className="c-section-title">Điểm danh hôm nay{today.data?.date ? ` — ${today.data.date}` : ''}</h2>
-      {classes.length === 0 ? (
-        <p className="text-sm text-slate-500">Hôm nay không có lớp nào có buổi học.</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="c-section-title">Điểm danh theo ngày{today.data?.date ? ` — ${today.data.date}` : ''}</h2>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            aria-label="Chọn ngày điểm danh"
+            className="c-input"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
+          {selectedDate && (
+            <Button size="sm" variant="outline" onClick={() => setSelectedDate('')}>
+              Hôm nay
+            </Button>
+          )}
+        </div>
+      </div>
+      {today.isLoading ? (
+        <p className="text-sm text-slate-500">Đang tải dữ liệu…</p>
+      ) : today.isError ? (
+        <p className="text-sm text-danger-600">{(today.error as Error).message}</p>
+      ) : classes.length === 0 ? (
+        <p className="text-sm text-slate-500">Không có lớp nào có buổi học trong ngày này.</p>
       ) : (
         <div className="flex flex-col gap-3">
           {classes.map((c) => {

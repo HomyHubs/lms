@@ -125,7 +125,11 @@ export function useMyAttendance(enabled: boolean) {
   return useQuery({ queryKey: ['attendance', 'me'], queryFn: getMyAttendance, enabled })
 }
 
-/** Cac lop co buoi hoc hom nay + ty le diem danh (admin). */
-export function useTodayAttendanceSummary(enabled: boolean) {
-  return useQuery({ queryKey: ['attendance', 'today-summary'], queryFn: getTodayAttendanceSummary, enabled })
+/** Cac lop co buoi hoc trong ngay chon (mac dinh hom nay) + ty le diem danh (admin). */
+export function useTodayAttendanceSummary(enabled: boolean, date?: string) {
+  return useQuery({
+    queryKey: ['attendance', 'today-summary', date ?? 'today'],
+    queryFn: () => getTodayAttendanceSummary(date),
+    enabled,
+  })
 }

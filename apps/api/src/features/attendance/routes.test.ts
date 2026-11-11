@@ -178,7 +178,7 @@ function makeFakeStore(): AttendanceStore {
           status: r.status,
         }))
     },
-    async listTodaySessions() {
+    async listSessionsOnDate() {
       return []
     },
   }

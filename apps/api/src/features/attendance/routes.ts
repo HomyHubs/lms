@@ -344,9 +344,9 @@ export async function attendanceRoutes(
   })
 
   // slice-9: bar chart "Diem danh hom nay" — lop co buoi hoc hom nay (gio VN), branch-scoped.
-  app.get('/attendance/today-summary', { preHandler: requireAdmin }, async (request) => {
+  app.get('/attendance/today-summary', { preHandler: requireAdmin }, async (request, reply) => {
     const scoped = await scopeOf(request)
-    // Ngay hom nay theo gio VN, dang 'YYYY-MM-DD'. Dung en-CA de co dinh dang ISO,
+    // Ngay theo gio VN, dang 'YYYY-MM-DD'. Dung en-CA de co dinh dang ISO,
     // tranh new Date(toLocaleString(...)) bi 'Invalid time value' tren mot so moi truong.
     const todayVN = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Ho_Chi_Minh',
@@ -354,6 +354,16 @@ export async function attendanceRoutes(
       month: '2-digit',
       day: '2-digit',
     }).format(new Date())
-    return buildTodaySummary(store, scoped, todayVN)
+    // Cho phep admin chon ngay bat ky qua ?date=YYYY-MM-DD; khong truyen -> hom nay.
+    const q = request.query as { date?: string }
+    let dateIso = todayVN
+    if (q.date !== undefined && q.date !== '') {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(q.date)) {
+        reply.code(400)
+        return { error: 'Ngay phai co dang YYYY-MM-DD' }
+      }
+      dateIso = q.date
+    }
+    return buildTodaySummary(store, scoped, dateIso)
   })
 }

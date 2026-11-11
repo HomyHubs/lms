@@ -137,8 +137,8 @@ export interface AttendanceStore {
   listStudentHistory(studentId: string, branchIds?: string[]): Promise<HistoryRow[]>
   listScopedRecords(scope: RecordScope): Promise<ScopedRecordRow[]>
 
-  /** Lớp có buổi học hôm nay (giờ VN), branchIds giới hạn phạm vi. */
-  listTodaySessions(branchIds: string[]): Promise<TodaySessionRow[]>
+  /** Lớp có buổi học trong một ngày (YYYY-MM-DD), branchIds giới hạn phạm vi. */
+  listSessionsOnDate(branchIds: string[], dateIso: string): Promise<TodaySessionRow[]>
 }
 
 const STATUSES: readonly AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
@@ -263,9 +263,9 @@ export function aggregateRates(rows: readonly ScopedRecordRow[]): {
 export async function buildTodaySummary(
   store: AttendanceStore,
   branchIds: string[],
-  todayIso: string,
+  dateIso: string,
 ): Promise<TodayAttendanceSummary> {
-  const sessions = await store.listTodaySessions(branchIds)
+  const sessions = await store.listSessionsOnDate(branchIds, dateIso)
   const classes: TodayClassSummary[] = []
   for (const s of sessions) {
     const records = await store.listRecords(s.session_id)
@@ -281,7 +281,7 @@ export async function buildTodaySummary(
     const ratePercent = counted === 0 ? null : Math.round(((counts.present + counts.late) / counted) * 1000) / 10
     classes.push({ classId: s.class_id, className: s.class_name, startsAt: s.starts_at, ...counts, notMarked, total, ratePercent })
   }
-  return { date: todayIso, classes }
+  return { date: dateIso, classes }
 }
 
 export type MarkAttendanceOutcome =

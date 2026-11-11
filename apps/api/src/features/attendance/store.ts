@@ -240,7 +240,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       if (studentId) query = query.where('attendance_records.student_id', '=', studentId)
       return query.execute()
     },
-    async listTodaySessions(branchIds) {
+    async listSessionsOnDate(branchIds, dateIso) {
       if (branchIds.length === 0) return []
       const rows = await db
         .selectFrom('class_sessions')

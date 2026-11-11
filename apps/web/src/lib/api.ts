@@ -828,9 +828,10 @@ export async function getAttendanceRates(query: AttendanceRatesQuery): Promise<A
   return AttendanceRates.parse(await res.json())
 }
 
-export async function getTodayAttendanceSummary(): Promise<TodayAttendanceSummary> {
-  const res = await fetch('/api/attendance/today-summary', { credentials: 'include' })
-  if (!res.ok) return throwApiError(res, 'Khong lay duoc diem danh hom nay')
+export async function getTodayAttendanceSummary(date?: string): Promise<TodayAttendanceSummary> {
+  const url = date ? `/api/attendance/today-summary?date=${date}` : '/api/attendance/today-summary'
+  const res = await fetch(url, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc diem danh theo ngay')
   return TodayAttendanceSummary.parse(await res.json())
 }
 
