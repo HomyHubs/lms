@@ -70,7 +70,7 @@ function makeFakeStore(
     const exam = exams.find((e) => e.id === a.exam_id)
     if (!exam) return undefined
     const { title, level_code, skill, pass_percent } = exam
-    return { ...a, exam_title: title, level_code, skill, pass_percent, student_phone: `phone-${a.student_id}` }
+    return { ...a, exam_title: title, level_code, skill, pass_percent, student_phone: `phone-${a.student_id}`, student_first_name: null, student_last_name: null }
   }
 
   return {

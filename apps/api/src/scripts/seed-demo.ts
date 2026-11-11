@@ -12,6 +12,7 @@ import {
   DEMO_TEACHERS,
   LISTENING,
   READING,
+  staffFullName,
   studentFullName,
   studentSlug,
   type DemoLevel,
@@ -279,7 +280,7 @@ async function main(): Promise<void> {
     }
 
     for (const [i, slug] of DEMO_STAFF.entries()) {
-      const id = await insertUser(db, phone('0912', i + 1), `${slug}@sunshine.demo`, 'staff', passwordHash)
+      const id = await insertUser(db, phone('0912', i + 1), `${slug}@sunshine.demo`, 'staff', passwordHash, splitStudentName(staffFullName(slug)))
       await db.insertInto('user_branches').values({ user_id: id, branch_id: branchIds[i % branchIds.length]! }).execute()
     }
 
@@ -293,7 +294,7 @@ async function main(): Promise<void> {
       for (const [level, weekdays, startsAt] of plan) {
         const teacherSlug = DEMO_TEACHERS[teacherNo]!
         teacherNo += 1
-        const teacherId = await insertUser(db, phone('0911', teacherNo), `${teacherSlug}@sunshine.demo`, 'teacher', passwordHash)
+        const teacherId = await insertUser(db, phone('0911', teacherNo), `${teacherSlug}@sunshine.demo`, 'teacher', passwordHash, splitStudentName(staffFullName(teacherSlug)))
         await db.insertInto('user_branches').values({ user_id: teacherId, branch_id: branchId }).execute()
         const klass = await db
           .insertInto('classes')

@@ -211,6 +211,8 @@ describe('exam history routes', () => {
     graded_at: new Date('2026-11-15T10:00:00Z'),
     student_id: STUDENT_1,
     student_phone: '0900000001',
+    student_first_name: null,
+    student_last_name: null,
   }
   const store: ExamHistoryStore = {
     async listStudentAttempts(studentId) {

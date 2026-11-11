@@ -66,6 +66,37 @@ export function studentFullName(i: number): string {
   return `${f} ${m} ${g}`
 }
 
+/**
+ * Accented Vietnamese form for each ASCII name token used in DEMO_STAFF / DEMO_TEACHERS slugs.
+ * Keeps staff/teacher display names deterministic from the seed data instead of a one-off SQL
+ * backfill. Every token in those slugs must have an entry here (guarded by staffFullName + tests).
+ */
+const STAFF_NAME_TOKENS_VI: Readonly<Record<string, string>> = {
+  // Họ (family)
+  nguyen: 'Nguyễn', tran: 'Trần', le: 'Lê', pham: 'Phạm', hoang: 'Hoàng', vu: 'Vũ',
+  bui: 'Bùi', do: 'Đỗ', ngo: 'Ngô',
+  // Chữ lót + tên (middle / given)
+  thu: 'Thu', ha: 'Hà', minh: 'Minh', quan: 'Quân', thanh: 'Thanh', huong: 'Hương',
+  duc: 'Đức', anh: 'Anh', mai: 'Mai', linh: 'Linh', quoc: 'Quốc', bao: 'Bảo',
+  thi: 'Thị', lan: 'Lan', van: 'Văn', nam: 'Nam', trang: 'Trang',
+}
+
+/**
+ * Accented Vietnamese full name ("Họ giữa Tên") for a staff/teacher slug such as `do.thi.lan`
+ * → "Đỗ Thị Lan". Throws if the slug contains a token without an accented mapping, so new demo
+ * accounts can't silently fall back to a blank name.
+ */
+export function staffFullName(slug: string): string {
+  return slug
+    .split('.')
+    .map((token) => {
+      const vi = STAFF_NAME_TOKENS_VI[token]
+      if (!vi) throw new Error(`staffFullName: thiếu ánh xạ tên có dấu cho token "${token}" (slug "${slug}")`)
+      return vi
+    })
+    .join(' ')
+}
+
 export const DEMO_COURSES: ReadonlyArray<{ level: DemoLevel; name: string }> = [
   { level: 'starter', name: 'Starters - Khóa nền tảng' },
   { level: 'mover', name: 'Movers - Khóa phát triển' },
