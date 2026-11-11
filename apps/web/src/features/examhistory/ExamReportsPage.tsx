@@ -7,7 +7,7 @@ import { useReportFilters } from '@/features/reports/useReports'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { examReportToSheets } from './exam-report-export'
 import { StudentHistory } from './ExamHistoryPage'
-import { formatDateTime, formatDuration, formatPercent, formatScore, submitReasonLabel } from './history-format'
+import { formatDateTime, formatDuration, formatPercent, formatScore, studentName, submitReasonLabel } from './history-format'
 import { ResultBadge } from './HistoryTable'
 import { useExamAttemptReport } from './useExamHistory'
 
@@ -70,7 +70,12 @@ function DetailTable({ rows, onPick }: { rows: readonly ExamAttemptDetail[]; onP
           <tr key={row.attemptId}>
             <td>
               <Button variant="ghost" size="sm" onClick={() => onPick(row)}>
-                {row.studentPhone}
+                <span className="flex flex-col items-start">
+                  <span>{studentName(row)}</span>
+                  {studentName(row) !== row.studentPhone && (
+                    <span className="text-xs text-slate-400">{row.studentPhone}</span>
+                  )}
+                </span>
               </Button>
             </td>
             <td>{row.examTitle}</td>

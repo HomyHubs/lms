@@ -1,6 +1,6 @@
 import type { ExamAttemptReport } from '@lms/shared'
 import type { XlsxSheet } from '@/lib/xlsx-export'
-import { formatDateTime, formatDuration, resultLabel, submitReasonLabel } from './history-format'
+import { formatDateTime, formatDuration, resultLabel, studentName, submitReasonLabel } from './history-format'
 
 export function examReportToSheets(report: ExamAttemptReport): XlsxSheet[] {
   return [
@@ -24,8 +24,9 @@ export function examReportToSheets(report: ExamAttemptReport): XlsxSheet[] {
     {
       name: 'Chi tiet luot thi',
       rows: [
-        ['Học viên', 'Đề thi', 'Lần', 'Bắt đầu', 'Nộp bài', 'Thời gian làm', 'Cách nộp', 'Điểm', 'Tối đa', '%', 'Kết quả'],
+        ['Học viên', 'SĐT', 'Đề thi', 'Lần', 'Bắt đầu', 'Nộp bài', 'Thời gian làm', 'Cách nộp', 'Điểm', 'Tối đa', '%', 'Kết quả'],
         ...report.attempts.map((a) => [
+          studentName(a),
           a.studentPhone,
           a.examTitle,
           a.attemptNumber,

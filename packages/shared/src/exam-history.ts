@@ -92,6 +92,9 @@ export type ExamAttemptSummary = z.infer<typeof ExamAttemptSummary>
 export const ExamAttemptDetail = ExamHistoryRow.extend({
   studentId: z.string().uuid(),
   studentPhone: z.string(),
+  // Ten hoc vien (co the trong voi du lieu cu) de hien thi/xuat thay cho SDT.
+  studentFirstName: z.string().nullable().default(null),
+  studentLastName: z.string().nullable().default(null),
 })
 export type ExamAttemptDetail = z.infer<typeof ExamAttemptDetail>
 

@@ -23,3 +23,9 @@ export function resultLabel(row: ExamHistoryRow): string {
 
 export const submitReasonLabel = (row: ExamHistoryRow): string =>
   row.submitReason ? SUBMIT_REASON_LABELS[row.submitReason] : '—'
+
+/** Ho ten hoc vien (lastName + firstName); fallback SDT khi chua co ten. */
+export function studentName(s: { studentFirstName?: string | null; studentLastName?: string | null; studentPhone: string }): string {
+  const full = [s.studentLastName, s.studentFirstName].filter(Boolean).join(' ').trim()
+  return full === '' ? s.studentPhone : full
+}

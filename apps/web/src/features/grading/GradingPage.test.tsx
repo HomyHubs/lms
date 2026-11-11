@@ -19,6 +19,8 @@ const item: ManualGradingItem = {
   skill: 'writing',
   studentId: '20000000-0000-4000-8000-000000000001',
   studentPhone: '0933000001',
+  studentFirstName: 'An',
+  studentLastName: 'Nguyễn Minh',
   attemptNumber: 1,
   submittedAt: '2026-11-10T03:00:00.000Z',
   maxScore: 5,
@@ -69,6 +71,8 @@ describe('GradingPage', () => {
     vi.stubGlobal('fetch', fetchMock)
     renderPage()
 
+    // Queue hien ho ten hoc vien (lastName + firstName); SDT la dong phu.
+    expect(await screen.findByText('Nguyễn Minh An')).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: 'Chấm' }))
     expect(await screen.findByText('I have two sisters.')).toBeInTheDocument()
     expect(screen.getByText('(Học viên không trả lời)')).toBeInTheDocument()

@@ -32,6 +32,8 @@ export interface HistoryAttemptRow {
   graded_at: Date | null
   student_id: string
   student_phone: string
+  student_first_name: string | null
+  student_last_name: string | null
 }
 
 /** Calendar days (YYYY-MM-DD, Asia/Ho_Chi_Minh) bounding `started_at`. */
@@ -181,6 +183,12 @@ export async function loadExamAttemptReport(
   const rows = scope.branchIds.length === 0 ? [] : await store.listScopedAttempts(scope)
   return {
     byExam: summarizeByExam(rows),
-    attempts: rows.map((row) => ({ ...toHistoryRow(row, now), studentId: row.student_id, studentPhone: row.student_phone })),
+    attempts: rows.map((row) => ({
+      ...toHistoryRow(row, now),
+      studentId: row.student_id,
+      studentPhone: row.student_phone,
+      studentFirstName: row.student_first_name ?? null,
+      studentLastName: row.student_last_name ?? null,
+    })),
   }
 }

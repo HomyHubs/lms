@@ -276,6 +276,9 @@ export const ManualGradingItem = z.object({
   skill: QuestionSkill,
   studentId: z.string().uuid(),
   studentPhone: z.string(),
+  // Ten hoc vien (co the trong voi du lieu cu) de hien thi thay cho SDT.
+  studentFirstName: z.string().nullable().default(null),
+  studentLastName: z.string().nullable().default(null),
   attemptNumber: z.number().int(),
   submittedAt: z.string(),
   maxScore: z.number().int(),

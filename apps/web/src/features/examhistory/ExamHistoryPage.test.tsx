@@ -75,7 +75,7 @@ describe('ExamReportsPage', () => {
           firstAttemptPassRate: 0, finalPassRate: 100, averagePercent: 55, bestPercent: 80,
         },
       ],
-      attempts: [{ ...row(2), studentId: STUDENT_ID, studentPhone: '0933000001' }],
+      attempts: [{ ...row(2), studentId: STUDENT_ID, studentPhone: '0933000001', studentFirstName: 'An', studentLastName: 'Nguyễn Minh' }],
     }
     const fetchMock = vi.fn(async (url: string) => {
       if (url.startsWith('/api/reports/exam-attempts')) return json(report)
@@ -88,7 +88,8 @@ describe('ExamReportsPage', () => {
     expect(await screen.findByText('100%')).toBeInTheDocument()
     expect(screen.getByText('55%')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '0933000001' }))
+    expect(screen.getByText('Nguyễn Minh An')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Nguyễn Minh An/ }))
     expect(await screen.findByText('Lịch sử thi của 0933000001')).toBeInTheDocument()
     await waitFor(() => expect(screen.getAllByText('Lần 1').length).toBe(1))
 

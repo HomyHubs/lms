@@ -14,6 +14,12 @@ const timeLabel = (iso: string): string =>
   new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 const errorText = (error: unknown): string => (error instanceof Error ? error.message : 'Có lỗi xảy ra')
 
+/** Ho ten hoc vien (lastName + firstName); fallback SDT khi chua co ten. */
+function studentName(s: { studentFirstName?: string | null; studentLastName?: string | null; studentPhone: string }): string {
+  const full = [s.studentLastName, s.studentFirstName].filter(Boolean).join(' ').trim()
+  return full === '' ? s.studentPhone : full
+}
+
 function QueueTable(props: {
   items: ManualGradingItem[]
   selected: string | null
@@ -37,7 +43,14 @@ function QueueTable(props: {
           <tr key={item.attemptId}>
             <td>{item.examTitle}</td>
             <td className="capitalize">{item.skill}</td>
-            <td>{item.studentPhone}</td>
+            <td>
+              <div className="flex flex-col">
+                <span>{studentName(item)}</span>
+                {studentName(item) !== item.studentPhone && (
+                  <span className="text-xs text-slate-400">{item.studentPhone}</span>
+                )}
+              </div>
+            </td>
             <td>{item.attemptNumber}</td>
             <td>{timeLabel(item.submittedAt)}</td>
             <td>

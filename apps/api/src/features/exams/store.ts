@@ -102,7 +102,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       .innerJoin('users', 'users.id', 'exam_attempts.student_id')
       .select(JOINED_ATTEMPT_COLUMNS)
       .select(['exams.title as exam_title', 'levels.code as level_code', 'exams.skill', 'exams.pass_percent',
-        'users.phone_number as student_phone'])
+        'users.phone_number as student_phone',
+        'users.first_name as student_first_name', 'users.last_name as student_last_name'])
   }
 
   /** slice-12: attaches image links so they are frozen into the attempt snapshot. */

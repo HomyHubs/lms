@@ -151,6 +151,8 @@ export interface GradingRow extends AttemptRow {
   skill: string
   pass_percent: number
   student_phone: string
+  student_first_name: string | null
+  student_last_name: string | null
 }
 
 /** Ket qua cham duoc ghi 1 lan (DB trigger chan sua sau khi graded_at co gia tri). */
@@ -958,6 +960,8 @@ function toGradingItem(row: GradingRow): ManualGradingItem {
     skill: row.skill as QuestionSkill,
     studentId: row.student_id,
     studentPhone: row.student_phone,
+    studentFirstName: row.student_first_name ?? null,
+    studentLastName: row.student_last_name ?? null,
     attemptNumber: row.attempt_number ?? 1,
     submittedAt: toIso(row.submitted_at ?? row.deadline_at),
     maxScore: snapshot(row).reduce((sum, q) => sum + q.points, 0),

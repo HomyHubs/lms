@@ -35,6 +35,8 @@ export function makeExamHistoryStore(db: AppDb): ExamHistoryStore {
         'a.graded_at',
         'a.student_id',
         'u.phone_number as student_phone',
+        'u.first_name as student_first_name',
+        'u.last_name as student_last_name',
       ])
     if (from) q = q.where('a.started_at', '>=', localDayStart(from))
     if (to) q = q.where('a.started_at', '<', localDayEnd(to))
