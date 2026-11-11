@@ -20,12 +20,13 @@ import {
 } from './demo-data.js'
 
 /**
- * Demo dataset for showing the product: 1 center, 3 branches, 6 classes, 6 teachers, 3 staff,
- * 77 students (15+12+10+18+8+14 across 6 classes), a question bank, graded exam attempts
- * (with retakes) and 6 weeks of attendance.
- * Cầu Giấy: 27 students (lớp 0: 15, lớp 1: 12)
- * Hai Bà Trưng: 28 students (lớp 2: 10, lớp 3: 18)
- * Quận 7: 22 students (lớp 4: 8, lớp 5: 14)
+ * Demo dataset for showing the product: 1 center, 3 branches, 15 classes, 6 teachers, 3 staff,
+ * 122 students across 15 classes (mix of Starter/Mover/Flyer, each class a different size),
+ * a question bank, graded exam attempts (with retakes) and 6 weeks of attendance.
+ * Cầu Giấy: 6 classes, 51 students (10, 8, 9, 6, 11, 7)
+ * Hai Bà Trưng: 5 classes, 38 students (9, 8, 6, 10, 5)
+ * Quận 7: 4 classes, 33 students (12, 7, 6, 8)
+ * Teachers (6) are reused round-robin across the 15 classes (one teacher can teach several branches).
  * Exams go through the real exam service, so scores are graded exactly like production.
  * Skips when the demo center already exists; `--reset` deletes the previous demo dataset first.
  * Run on a dev/demo database only:
@@ -34,15 +35,36 @@ import {
  */
 
 const DAY_MS = 86_400_000
-/** Number of students per class, indexed by classIndex (0..5) across all branches. */
-const CLASS_SIZES = [15, 12, 10, 18, 8, 14]
+/** Sĩ số mỗi lớp (theo thứ tự duyệt CLASS_PLAN, globalClassIndex 0..14), khác nhau cho giống thực tế. */
+const CLASS_SIZES = [10, 8, 9, 6, 11, 7, 9, 8, 6, 10, 5, 12, 7, 6, 8]
 const SESSION_WEEKS = 6
 
-/** Classes per branch index: [level, weekdays (0=Sun), start time]. */
+/** Lớp theo chỉ số cơ sở (branchIndex): [level, weekdays (0=Sun), start time]. Mỗi cơ sở có 4–6 lớp khác nhau. */
 const CLASS_PLAN: ReadonlyArray<ReadonlyArray<[DemoLevel, number[], string]>> = [
-  [['starter', [1, 3], '17:30'], ['mover', [2, 4], '18:00']],
-  [['mover', [1, 4], '17:45'], ['flyer', [3, 5], '19:00']],
-  [['starter', [2, 5], '17:30'], ['flyer', [1, 3], '19:15']],
+  // Cầu Giấy — 6 lớp
+  [
+    ['starter', [1, 3], '17:30'],
+    ['starter', [2, 4], '18:00'],
+    ['mover', [2, 4], '17:45'],
+    ['mover', [3, 5], '19:00'],
+    ['flyer', [1, 5], '19:15'],
+    ['flyer', [4, 6], '08:30'],
+  ],
+  // Hai Bà Trưng — 5 lớp
+  [
+    ['starter', [1, 4], '17:30'],
+    ['mover', [1, 4], '18:00'],
+    ['mover', [2, 5], '19:00'],
+    ['flyer', [3, 5], '19:15'],
+    ['flyer', [6, 0], '09:00'],
+  ],
+  // Quận 7 — 4 lớp
+  [
+    ['starter', [2, 5], '17:30'],
+    ['mover', [3, 6], '18:00'],
+    ['flyer', [1, 3], '19:15'],
+    ['flyer', [4, 6], '08:30'],
+  ],
 ]
 
 const LEVEL_LABEL: Record<DemoLevel, string> = { starter: 'Starters', mover: 'Movers', flyer: 'Flyers' }
@@ -289,33 +311,39 @@ async function main(): Promise<void> {
       await db.insertInto('user_branches').values({ user_id: id, branch_id: branchIds[i % branchIds.length]! }).execute()
     }
 
+    // Tạo teacher MỘT LẦN (6 GV) rồi tái sử dụng round-robin vì số lớp (15) > số GV.
+    const teacherIdBySlug = new Map<string, string>()
+    let teacherPhoneNo = 0
+    for (const slug of DEMO_TEACHERS) {
+      teacherPhoneNo += 1
+      const id = await insertUser(db, phone('0911', teacherPhoneNo), `${slug}@sunshine.demo`, 'teacher', passwordHash, splitStudentName(staffFullName(slug)))
+      teacherIdBySlug.set(slug, id)
+    }
+
     const studentsByLevel: Record<DemoLevel, DemoStudent[]> = { starter: [], mover: [], flyer: [] }
     let studentNo = 0
-    let teacherNo = 0
     let sessionCount = 0
     let recordCount = 0
-    let classIndex = 0
+    let globalClassIndex = 0
     for (const [branchIndex, plan] of CLASS_PLAN.entries()) {
       const branchId = branchIds[branchIndex]!
       for (const [level, weekdays, startsAt] of plan) {
-        const teacherSlug = DEMO_TEACHERS[teacherNo]!
-        teacherNo += 1
-        const teacherId = await insertUser(db, phone('0911', teacherNo), `${teacherSlug}@sunshine.demo`, 'teacher', passwordHash, splitStudentName(staffFullName(teacherSlug)))
-        await db.insertInto('user_branches').values({ user_id: teacherId, branch_id: branchId }).execute()
+        const teacherSlug = DEMO_TEACHERS[globalClassIndex % DEMO_TEACHERS.length]!
+        const teacherId = teacherIdBySlug.get(teacherSlug)!
+        await db.insertInto('user_branches').values({ user_id: teacherId, branch_id: branchId }).onConflict((oc) => oc.doNothing()).execute()
         const klass = await db
           .insertInto('classes')
           .values({
             course_id: courseIds[level],
             branch_id: branchId,
-            name: `${LEVEL_LABEL[level]} ${String.fromCharCode(65 + teacherNo - 1)} - ${DEMO_BRANCHES[branchIndex]!.name.replace('Cơ sở ', '')}`,
+            name: `${LEVEL_LABEL[level]} ${String.fromCharCode(65 + globalClassIndex)} - ${DEMO_BRANCHES[branchIndex]!.name.replace('Cơ sở ', '')}`,
           })
           .returning('id')
           .executeTakeFirstOrThrow()
         await db.insertInto('class_teachers').values({ class_id: klass.id, teacher_id: teacherId }).execute()
 
         const roster: DemoStudent[] = []
-        const studentsInClass = CLASS_SIZES[classIndex] ?? 12
-        classIndex += 1
+        const studentsInClass = CLASS_SIZES[globalClassIndex]!
         for (let k = 0; k < studentsInClass; k += 1) {
           const id = await insertUser(
             db,
@@ -359,6 +387,7 @@ async function main(): Promise<void> {
             .execute()
           recordCount += roster.length
         }
+        globalClassIndex += 1
       }
     }
 
@@ -412,7 +441,7 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      `Seeded demo: ${branchIds.length} branches, ${teacherNo} classes/teachers, ${DEMO_STAFF.length} staff, ` +
+      `Seeded demo: ${branchIds.length} branches, ${globalClassIndex} classes, ${DEMO_TEACHERS.length} teachers, ${DEMO_STAFF.length} staff, ` +
         `${studentNo} students, ${answers.size} questions, ${sessionCount} sessions, ${recordCount} attendance records, ` +
         `${attemptCount} exam attempts.`,
     )
