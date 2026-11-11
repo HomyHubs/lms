@@ -346,9 +346,14 @@ export async function attendanceRoutes(
   // slice-9: bar chart "Diem danh hom nay" — lop co buoi hoc hom nay (gio VN), branch-scoped.
   app.get('/attendance/today-summary', { preHandler: requireAdmin }, async (request) => {
     const scoped = await scopeOf(request)
-    const todayVN = new Date(new Date().toLocaleString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }))
-      .toISOString()
-      .slice(0, 10)
+    // Ngay hom nay theo gio VN, dang 'YYYY-MM-DD'. Dung en-CA de co dinh dang ISO,
+    // tranh new Date(toLocaleString(...)) bi 'Invalid time value' tren mot so moi truong.
+    const todayVN = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
     return buildTodaySummary(store, scoped, todayVN)
   })
 }
