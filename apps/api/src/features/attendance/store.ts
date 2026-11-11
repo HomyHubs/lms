@@ -227,12 +227,41 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .innerJoin('class_sessions', 'class_sessions.id', 'attendance_records.session_id')
         .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
         .innerJoin('users', 'users.id', 'attendance_records.student_id')
-        .select(['attendance_records.student_id', 'users.phone_number', 'attendance_records.status'])
+        .select([
+          'attendance_records.student_id',
+          'users.phone_number',
+          'users.first_name',
+          'users.last_name',
+          'attendance_records.status',
+        ])
         .where('classes.branch_id', 'in', branchIds)
       if (classId) query = query.where('classes.id', '=', classId)
       if (courseId) query = query.where('classes.course_id', '=', courseId)
       if (studentId) query = query.where('attendance_records.student_id', '=', studentId)
       return query.execute()
+    },
+    async listTodaySessions(branchIds) {
+      if (branchIds.length === 0) return []
+      const rows = await db
+        .selectFrom('class_sessions')
+        .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
+        .leftJoin('enrollments', 'enrollments.class_id', 'classes.id')
+        .select([
+          'classes.id as class_id',
+          'classes.name as class_name',
+          'class_sessions.id as session_id',
+          SESSION_TIME.as('starts_at'),
+          db.fn.count('enrollments.student_id').as('enrolled_count'),
+        ])
+        .where('classes.branch_id', 'in', branchIds)
+        .where('class_sessions.cancelled_at', 'is', null)
+        .where(
+          sql<boolean>`to_char(class_sessions.session_date, 'YYYY-MM-DD') = to_char(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')`,
+        )
+        .groupBy(['classes.id', 'classes.name', 'class_sessions.id', 'class_sessions.starts_at'])
+        .orderBy('class_sessions.starts_at', 'asc')
+        .execute()
+      return rows.map((r) => ({ ...r, enrolled_count: Number(r.enrolled_count) }))
     },
   }
 }

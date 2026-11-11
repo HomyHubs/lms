@@ -25,6 +25,7 @@ import {
   useStudentAttendance,
   useTeachers,
   useTeachingClasses,
+  useTodayAttendanceSummary,
 } from './useAttendance'
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
@@ -336,7 +337,7 @@ function RatesSection({ classId, showHistory }: { classId: string; showHistory: 
           <table className="c-table">
             <thead>
               <tr>
-                <th>Học viên (SĐT)</th>
+                <th>Học viên</th>
                 <th>Tỷ lệ</th>
                 <th>Có mặt</th>
                 <th>Đi muộn</th>
@@ -348,7 +349,10 @@ function RatesSection({ classId, showHistory }: { classId: string; showHistory: 
             <tbody>
               {rates.data.students.map((s) => (
                 <tr key={s.studentId}>
-                  <td>{s.phoneNumber}</td>
+                  <td>
+                    {[s.lastName, s.firstName].filter(Boolean).join(' ').trim() || s.phoneNumber}
+                    {(s.firstName || s.lastName) && <div className="text-xs text-slate-400">{s.phoneNumber}</div>}
+                  </td>
                   <td>{formatRate(s.summary)}</td>
                   <td>{s.summary.present}</td>
                   <td>{s.summary.late}</td>
@@ -434,6 +438,63 @@ function TeachersSection({ classId }: { classId: string }): React.ReactElement {
   )
 }
 
+/** Bar chart (admin): các lớp có buổi học hôm nay + tỷ lệ điểm danh theo trạng thái. */
+function TodayBarChart(): React.ReactElement {
+  const today = useTodayAttendanceSummary(true)
+  if (today.isLoading)
+    return (
+      <section className="c-card">
+        <p className="text-sm text-slate-500">Đang tải dữ liệu hôm nay…</p>
+      </section>
+    )
+  if (today.isError)
+    return (
+      <section className="c-card">
+        <p className="text-sm text-danger-600">{(today.error as Error).message}</p>
+      </section>
+    )
+  const classes = today.data?.classes ?? []
+  return (
+    <section className="c-card">
+      <h2 className="c-section-title">Điểm danh hôm nay{today.data?.date ? ` — ${today.data.date}` : ''}</h2>
+      {classes.length === 0 ? (
+        <p className="text-sm text-slate-500">Hôm nay không có lớp nào có buổi học.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {classes.map((c) => {
+            const seg = (n: number): number => (c.total > 0 ? (n / c.total) * 100 : 0)
+            return (
+              <div key={c.classId} className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">
+                    {c.className} <span className="text-xs text-slate-400">{c.startsAt}</span>
+                  </span>
+                  <span className="text-xs text-slate-600">
+                    {c.ratePercent !== null ? `${c.ratePercent}%` : '—'} · Có mặt {c.present} · Muộn {c.late} · Vắng{' '}
+                    {c.absent} · Phép {c.excused}
+                    {c.notMarked > 0 ? ` · Chưa ĐD ${c.notMarked}` : ''}
+                  </span>
+                </div>
+                <div
+                  className="flex h-4 w-full overflow-hidden rounded-full bg-slate-100"
+                  role="img"
+                  aria-label={`Điểm danh ${c.className}: ${c.ratePercent ?? 0}%`}
+                >
+                  {seg(c.present) > 0 && <div className="h-full bg-success-500" style={{ width: `${seg(c.present)}%` }} />}
+                  {seg(c.late) > 0 && <div className="h-full bg-warning-400" style={{ width: `${seg(c.late)}%` }} />}
+                  {seg(c.absent) > 0 && <div className="h-full bg-danger-400" style={{ width: `${seg(c.absent)}%` }} />}
+                  {seg(c.excused) > 0 && <div className="h-full bg-accent-300" style={{ width: `${seg(c.excused)}%` }} />}
+                  {seg(c.notMarked) > 0 && <div className="h-full bg-slate-300" style={{ width: `${seg(c.notMarked)}%` }} />}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function StaffView({ isAdmin }: { isAdmin: boolean }): React.ReactElement {
   const teaching = useTeachingClasses(!isAdmin)
   const adminClasses = useAdminClasses(isAdmin)
@@ -442,6 +503,7 @@ function StaffView({ isAdmin }: { isAdmin: boolean }): React.ReactElement {
 
   return (
     <>
+      {isAdmin && <TodayBarChart />}
       <section className="c-card">
         <label className="flex items-center gap-3 text-sm text-slate-700">
           Lớp

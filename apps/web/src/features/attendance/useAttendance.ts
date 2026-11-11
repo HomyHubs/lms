@@ -8,6 +8,7 @@ import {
   getMyAttendance,
   getSessionAttendance,
   getStudentAttendance,
+  getTodayAttendanceSummary,
   listClassSessions,
   listClassTeachers,
   listClasses,
@@ -122,4 +123,9 @@ export function useStudentAttendance(studentId: string | null) {
 
 export function useMyAttendance(enabled: boolean) {
   return useQuery({ queryKey: ['attendance', 'me'], queryFn: getMyAttendance, enabled })
+}
+
+/** Cac lop co buoi hoc hom nay + ty le diem danh (admin). */
+export function useTodayAttendanceSummary(enabled: boolean) {
+  return useQuery({ queryKey: ['attendance', 'today-summary'], queryFn: getTodayAttendanceSummary, enabled })
 }

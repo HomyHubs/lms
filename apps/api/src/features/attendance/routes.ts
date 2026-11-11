@@ -18,6 +18,7 @@ import {
   aggregateRates,
   assignTeacher,
   buildRoster,
+  buildTodaySummary,
   canMakeUpFor,
   markAttendance,
   summarize,
@@ -340,5 +341,14 @@ export async function attendanceRoutes(
     const rows = await store.listScopedRecords({ classId, courseId, studentId, branchIds })
     const body: AttendanceRates = aggregateRates(rows)
     return body
+  })
+
+  // slice-9: bar chart "Diem danh hom nay" — lop co buoi hoc hom nay (gio VN), branch-scoped.
+  app.get('/attendance/today-summary', { preHandler: requireAdmin }, async (request) => {
+    const scoped = await scopeOf(request)
+    const todayVN = new Date(new Date().toLocaleString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }))
+      .toISOString()
+      .slice(0, 10)
+    return buildTodaySummary(store, scoped, todayVN)
   })
 }

@@ -29,11 +29,11 @@ describe('summarize (attendance rate formula)', () => {
 describe('aggregateRates', () => {
   it('computes per-student summaries sorted by phone plus an overall summary', () => {
     const { overall, students } = aggregateRates([
-      { student_id: 'b', phone_number: '0902', status: 'absent' },
-      { student_id: 'a', phone_number: '0901', status: 'present' },
-      { student_id: 'a', phone_number: '0901', status: 'absent' },
-      { student_id: 'b', phone_number: '0902', status: 'present' },
-      { student_id: 'b', phone_number: '0902', status: 'present' },
+      { student_id: 'b', phone_number: '0902', first_name: null, last_name: null, status: 'absent' },
+      { student_id: 'a', phone_number: '0901', first_name: null, last_name: null, status: 'present' },
+      { student_id: 'a', phone_number: '0901', first_name: null, last_name: null, status: 'absent' },
+      { student_id: 'b', phone_number: '0902', first_name: null, last_name: null, status: 'present' },
+      { student_id: 'b', phone_number: '0902', first_name: null, last_name: null, status: 'present' },
     ])
     expect(students.map((s) => [s.phoneNumber, s.summary.ratePercent])).toEqual([
       ['0901', 50],

@@ -159,6 +159,9 @@ export type AttendanceRatesQuery = z.infer<typeof AttendanceRatesQuery>
 export const StudentAttendanceRate = z.object({
   studentId: z.string().uuid(),
   phoneNumber: z.string(),
+  // Ten hoc vien (co the trong voi du lieu cu) de hien thi thay cho SDT.
+  firstName: z.string().nullable().default(null),
+  lastName: z.string().nullable().default(null),
   summary: AttendanceSummary,
 })
 export type StudentAttendanceRate = z.infer<typeof StudentAttendanceRate>
@@ -168,3 +171,24 @@ export const AttendanceRates = z.object({
   students: z.array(StudentAttendanceRate),
 })
 export type AttendanceRates = z.infer<typeof AttendanceRates>
+
+/** Tom tat diem danh mot lop co buoi hoc hom nay. */
+export const TodayClassSummary = z.object({
+  classId: z.string().uuid(),
+  className: z.string(),
+  startsAt: z.string(),
+  present: z.number().int(),
+  late: z.number().int(),
+  absent: z.number().int(),
+  excused: z.number().int(),
+  notMarked: z.number().int(),
+  total: z.number().int(),
+  ratePercent: z.number().nullable(),
+})
+export type TodayClassSummary = z.infer<typeof TodayClassSummary>
+
+export const TodayAttendanceSummary = z.object({
+  date: z.string(),
+  classes: z.array(TodayClassSummary),
+})
+export type TodayAttendanceSummary = z.infer<typeof TodayAttendanceSummary>

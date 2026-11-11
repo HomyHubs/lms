@@ -170,7 +170,16 @@ function makeFakeStore(): AttendanceStore {
           if (courseId && c.course_id !== courseId) return false
           return !studentId || r.student_id === studentId
         })
-        .map((r) => ({ student_id: r.student_id, phone_number: phone(r.student_id), status: r.status }))
+        .map((r) => ({
+          student_id: r.student_id,
+          phone_number: phone(r.student_id),
+          first_name: null,
+          last_name: null,
+          status: r.status,
+        }))
+    },
+    async listTodaySessions() {
+      return []
     },
   }
 }

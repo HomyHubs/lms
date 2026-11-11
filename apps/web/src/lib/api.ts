@@ -59,6 +59,7 @@ import {
   SessionAttendance,
   StudentAttendance,
   TeachingClassList,
+  TodayAttendanceSummary,
   type AttendanceRatesQuery,
   type ClassSession,
   type ClassTeacher,
@@ -825,6 +826,12 @@ export async function getAttendanceRates(query: AttendanceRatesQuery): Promise<A
   const res = await fetch(`/api/attendance/rates?${params.toString()}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc ty le chuyen can')
   return AttendanceRates.parse(await res.json())
+}
+
+export async function getTodayAttendanceSummary(): Promise<TodayAttendanceSummary> {
+  const res = await fetch('/api/attendance/today-summary', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc diem danh hom nay')
+  return TodayAttendanceSummary.parse(await res.json())
 }
 
 /** slice-7: classification policy per level + admin student report (branch-scoped by the API). */

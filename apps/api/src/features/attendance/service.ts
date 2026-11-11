@@ -6,6 +6,8 @@ import type {
   ClassSession,
   MarkAttendanceRecord,
   StudentAttendanceRate,
+  TodayAttendanceSummary,
+  TodayClassSummary,
 } from '@lms/shared'
 
 /**
@@ -69,7 +71,17 @@ export interface HistoryRow {
 export interface ScopedRecordRow {
   student_id: string
   phone_number: string
+  first_name: string | null
+  last_name: string | null
   status: string
+}
+
+export interface TodaySessionRow {
+  class_id: string
+  class_name: string
+  session_id: string
+  starts_at: string
+  enrolled_count: number
 }
 
 export interface CreateSessionFields {
@@ -124,6 +136,9 @@ export interface AttendanceStore {
 
   listStudentHistory(studentId: string, branchIds?: string[]): Promise<HistoryRow[]>
   listScopedRecords(scope: RecordScope): Promise<ScopedRecordRow[]>
+
+  /** Lớp có buổi học hôm nay (giờ VN), branchIds giới hạn phạm vi. */
+  listTodaySessions(branchIds: string[]): Promise<TodaySessionRow[]>
 }
 
 const STATUSES: readonly AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
@@ -218,16 +233,55 @@ export function aggregateRates(rows: readonly ScopedRecordRow[]): {
   overall: AttendanceSummary
   students: StudentAttendanceRate[]
 } {
-  const perStudent = new Map<string, { phone: string; statuses: string[] }>()
+  const perStudent = new Map<
+    string,
+    { phone: string; firstName: string | null; lastName: string | null; statuses: string[] }
+  >()
   for (const row of rows) {
-    const entry = perStudent.get(row.student_id) ?? { phone: row.phone_number, statuses: [] }
+    const entry =
+      perStudent.get(row.student_id) ??
+      { phone: row.phone_number, firstName: row.first_name, lastName: row.last_name, statuses: [] }
     entry.statuses.push(row.status)
     perStudent.set(row.student_id, entry)
   }
   const students = [...perStudent.entries()]
-    .map(([studentId, v]) => ({ studentId, phoneNumber: v.phone, summary: summarize(v.statuses) }))
+    .map(([studentId, v]) => ({
+      studentId,
+      phoneNumber: v.phone,
+      firstName: v.firstName,
+      lastName: v.lastName,
+      summary: summarize(v.statuses),
+    }))
     .sort((a, b) => a.phoneNumber.localeCompare(b.phoneNumber))
   return { overall: summarize(rows.map((r) => r.status)), students }
+}
+
+/**
+ * Tom tat diem danh cho cac lop co buoi hoc hom nay (dung cho bar chart admin).
+ * Ty le tinh theo ADR 0004: (present + late) / (present + late + absent), lam tron 1 chu so thap phan.
+ */
+export async function buildTodaySummary(
+  store: AttendanceStore,
+  branchIds: string[],
+  todayIso: string,
+): Promise<TodayAttendanceSummary> {
+  const sessions = await store.listTodaySessions(branchIds)
+  const classes: TodayClassSummary[] = []
+  for (const s of sessions) {
+    const records = await store.listRecords(s.session_id)
+    const counts = { present: 0, late: 0, absent: 0, excused: 0 }
+    for (const r of records) {
+      if (r.status === 'present' || r.status === 'late' || r.status === 'absent' || r.status === 'excused')
+        counts[r.status] += 1
+    }
+    const marked = counts.present + counts.late + counts.absent + counts.excused
+    const total = Number(s.enrolled_count)
+    const notMarked = Math.max(0, total - marked)
+    const counted = counts.present + counts.late + counts.absent
+    const ratePercent = counted === 0 ? null : Math.round(((counts.present + counts.late) / counted) * 1000) / 10
+    classes.push({ classId: s.class_id, className: s.class_name, startsAt: s.starts_at, ...counts, notMarked, total, ratePercent })
+  }
+  return { date: todayIso, classes }
 }
 
 export type MarkAttendanceOutcome =
