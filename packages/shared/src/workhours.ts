@@ -32,6 +32,8 @@ export type ShiftSummary = z.infer<typeof ShiftSummary>
 export const TeacherWorkSummary = z.object({
   teacherId: z.string().uuid(),
   phoneNumber: z.string(),
+  firstName: z.string().nullable().default(null),
+  lastName: z.string().nullable().default(null),
   /** Regular (non make-up) sessions planned for this teacher. */
   planned: z.number().int().nonnegative(),
   /** Sessions actually taught (attendance recorded by this teacher, not cancelled). */
@@ -48,6 +50,8 @@ export type TeacherWorkSummary = z.infer<typeof TeacherWorkSummary>
 export const StaffWorkSummary = ShiftSummary.extend({
   userId: z.string().uuid(),
   phoneNumber: z.string(),
+  firstName: z.string().nullable().default(null),
+  lastName: z.string().nullable().default(null),
   role: z.string(),
 })
 export type StaffWorkSummary = z.infer<typeof StaffWorkSummary>

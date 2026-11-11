@@ -15,9 +15,9 @@ const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json:
 const report: WorkHoursReport = {
   month: '2026-11',
   teachers: [
-    { teacherId: TEACHER_ID, phoneNumber: '0911000001', planned: 3, held: 3, missed: 1, makeup: 1, substitute: 0, taughtMinutes: 270 },
+    { teacherId: TEACHER_ID, phoneNumber: '0911000001', firstName: 'Hà', lastName: 'Nguyễn Thu', planned: 3, held: 3, missed: 1, makeup: 1, substitute: 0, taughtMinutes: 270 },
   ],
-  staff: [{ userId: TEACHER_ID, phoneNumber: '0912000001', role: 'staff', workDays: 2, workedMinutes: 960, openShifts: 0 }],
+  staff: [{ userId: TEACHER_ID, phoneNumber: '0912000001', firstName: null, lastName: null, role: 'staff', workDays: 2, workedMinutes: 960, openShifts: 0 }],
   sessions: [
     {
       sessionId: SESSION_ID,
@@ -93,14 +93,16 @@ describe('WorkHoursPage', () => {
     renderPage()
 
     const teachers = await screen.findByRole('region', { name: 'Giáo viên' })
+    expect(teachers.textContent).toContain('Nguyễn Thu Hà')
     expect(teachers.textContent).toContain('0911000001')
     expect(teachers.textContent).toContain('4.5 giờ')
     expect(screen.getByText('Bù')).toBeTruthy()
     await waitFor(() => expect(screen.getByRole('button', { name: /Xuất Excel/ }).hasAttribute('disabled')).toBe(false))
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('month='))).toBe(true)
 
-    const [teacherSheet, , detailSheet] = workHoursToSheets(report)
-    expect(teacherSheet?.rows[1]).toEqual(['2026-11', '0911000001', 3, 3, 1, 1, 0, 4.5])
+    const [teacherSheet, staffSheet, detailSheet] = workHoursToSheets(report)
+    expect(teacherSheet?.rows[1]).toEqual(['2026-11', '0911000001', 'Nguyễn Thu Hà', 3, 3, 1, 1, 0, 4.5])
+    expect(staffSheet?.rows[1]).toEqual(['2026-11', '0912000001', '', 'staff', 2, 16, 0])
     expect(detailSheet?.rows[1]?.slice(6)).toEqual(['Đã dạy', 'Có', ''])
   })
 })

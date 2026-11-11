@@ -35,7 +35,15 @@ export interface WorkSessionRow {
 export interface WorkUserRow {
   id: string
   phone_number: string
+  first_name: string | null
+  last_name: string | null
   role: string
+}
+
+/** Họ tên (last_name + first_name) của một user, null khi chưa có hồ sơ. */
+export interface WorkUserName {
+  firstName: string | null
+  lastName: string | null
 }
 
 export interface ShiftRow {
@@ -105,10 +113,12 @@ export function sessionStatus(row: WorkSessionRow, today: string): WorkSessionSt
   return row.session_date < today ? 'missed' : 'scheduled'
 }
 
-function emptyTeacher(teacherId: string, phoneNumber: string): TeacherWorkSummary {
+function emptyTeacher(teacherId: string, phoneNumber: string, name?: WorkUserName): TeacherWorkSummary {
   return {
     teacherId,
     phoneNumber,
+    firstName: name?.firstName ?? null,
+    lastName: name?.lastName ?? null,
     planned: 0,
     held: 0,
     missed: 0,
@@ -127,12 +137,13 @@ export function summarizeTeachers(
   sessions: readonly WorkSessionRow[],
   phoneById: ReadonlyMap<string, string>,
   today: string,
+  nameById: ReadonlyMap<string, WorkUserName> = new Map(),
 ): TeacherWorkSummary[] {
   const byTeacher = new Map<string, TeacherWorkSummary>()
   const entry = (teacherId: string) => {
     let found = byTeacher.get(teacherId)
     if (!found) {
-      found = emptyTeacher(teacherId, phoneById.get(teacherId) ?? '')
+      found = emptyTeacher(teacherId, phoneById.get(teacherId) ?? '', nameById.get(teacherId))
       byTeacher.set(teacherId, found)
     }
     return found
@@ -239,19 +250,24 @@ export async function loadWorkHoursReport(
     ),
   ])
   const phoneById = new Map([...teachers, ...workers].map((u) => [u.id, u.phone_number]))
+  const nameById = new Map<string, WorkUserName>(
+    [...teachers, ...workers].map((u) => [u.id, { firstName: u.first_name, lastName: u.last_name }]),
+  )
   const shiftsByUser = new Map<string, ShiftRow[]>()
   for (const s of shifts) shiftsByUser.set(s.user_id, [...(shiftsByUser.get(s.user_id) ?? []), s])
   const staff: StaffWorkSummary[] = workers
     .map((w) => ({
       userId: w.id,
       phoneNumber: w.phone_number,
+      firstName: w.first_name,
+      lastName: w.last_name,
       role: w.role,
       ...summarizeShifts(shiftsByUser.get(w.id) ?? []),
     }))
     .sort((a, b) => a.phoneNumber.localeCompare(b.phoneNumber))
   return {
     month,
-    teachers: summarizeTeachers(sessions, phoneById, today),
+    teachers: summarizeTeachers(sessions, phoneById, today, nameById),
     staff,
     sessions: sessions.map((s) => toSessionDetail(s, phoneById, today)),
   }
@@ -266,8 +282,10 @@ export async function loadTeacherSummary(
 ): Promise<TeacherWorkSummary> {
   const sessions = await store.listSessions({ ...monthRange(month), teacherId: teacher.id })
   const phoneById = new Map([[teacher.id, teacher.phone_number]])
-  const mine = summarizeTeachers(sessions, phoneById, localToday(now)).find(
+  const name: WorkUserName = { firstName: teacher.first_name, lastName: teacher.last_name }
+  const nameById = new Map([[teacher.id, name]])
+  const mine = summarizeTeachers(sessions, phoneById, localToday(now), nameById).find(
     (t) => t.teacherId === teacher.id,
   )
-  return mine ?? emptyTeacher(teacher.id, teacher.phone_number)
+  return mine ?? emptyTeacher(teacher.id, teacher.phone_number, name)
 }

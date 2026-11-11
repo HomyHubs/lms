@@ -37,6 +37,8 @@ describe('summarizeTeachers', () => {
       {
         teacherId: T1,
         phoneNumber: '0911000001',
+        firstName: null,
+        lastName: null,
         planned: 3,
         held: 3,
         missed: 1,

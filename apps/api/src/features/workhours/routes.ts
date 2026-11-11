@@ -77,7 +77,8 @@ export async function workHoursRoutes(
       user.role === 'teacher'
         ? await loadTeacherSummary(
             store,
-            { id: user.id, phone_number: user.phoneNumber, role: user.role },
+            // Timesheet riêng của GV không hiển thị tên nên không cần tra cứu hồ sơ ở đây.
+            { id: user.id, phone_number: user.phoneNumber, first_name: null, last_name: null, role: user.role },
             month,
             now(),
           )

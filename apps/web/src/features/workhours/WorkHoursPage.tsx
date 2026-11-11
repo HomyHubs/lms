@@ -30,6 +30,31 @@ const hoursLabel = (minutes: number): string => `${toHours(minutes)} giờ`
 const timeLabel = (iso: string): string =>
   new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 
+/** Họ tên hiển thị (last_name + first_name); fallback về SĐT khi chưa có hồ sơ tên. */
+const personName = (p: { firstName: string | null; lastName: string | null; phoneNumber: string }): string => {
+  const full = [p.lastName, p.firstName].filter(Boolean).join(' ').trim()
+  return full || p.phoneNumber
+}
+
+/** Ô định danh người: tên là dòng chính, SĐT là dòng phụ (ẩn khi tên == SĐT). */
+function PersonCell({
+  firstName,
+  lastName,
+  phoneNumber,
+}: {
+  firstName: string | null
+  lastName: string | null
+  phoneNumber: string
+}): React.ReactElement {
+  const name = personName({ firstName, lastName, phoneNumber })
+  return (
+    <div className="flex flex-col">
+      <span>{name}</span>
+      {name !== phoneNumber && <span className="text-xs text-slate-400">{phoneNumber}</span>}
+    </div>
+  )
+}
+
 function MonthPicker({ month, onChange }: { month: string; onChange: (m: string) => void }): React.ReactElement {
   return (
     <input
@@ -167,7 +192,7 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
             <tbody>
               {report.teachers.map((t) => (
                 <tr key={t.teacherId}>
-                  <td>{t.phoneNumber}</td>
+                  <td><PersonCell firstName={t.firstName} lastName={t.lastName} phoneNumber={t.phoneNumber} /></td>
                   <td>{t.planned}</td>
                   <td className="font-medium">{t.held}</td>
                   <td>{t.missed}</td>
@@ -189,7 +214,7 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
           <table className="c-table">
             <thead>
               <tr>
-                <th>SĐT</th>
+                <th>Nhân viên</th>
                 <th>Vai trò</th>
                 <th>Ngày công</th>
                 <th>Giờ công</th>
@@ -199,7 +224,7 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
             <tbody>
               {report.staff.map((s) => (
                 <tr key={s.userId}>
-                  <td>{s.phoneNumber}</td>
+                  <td><PersonCell firstName={s.firstName} lastName={s.lastName} phoneNumber={s.phoneNumber} /></td>
                   <td>{s.role === 'teacher' ? 'Giáo viên' : 'Nhân viên'}</td>
                   <td className="font-medium">{s.workDays}</td>
                   <td>{hoursLabel(s.workedMinutes)}</td>

@@ -130,7 +130,7 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
       if (userIds.length === 0) return []
       return db
         .selectFrom('users')
-        .select(['id', 'phone_number', 'role'])
+        .select(['id', 'phone_number', 'first_name', 'last_name', 'role'])
         .where('id', 'in', userIds)
         .execute()
     },
@@ -138,7 +138,7 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
       if (branchIds.length === 0) return []
       return db
         .selectFrom('users')
-        .select(['users.id', 'users.phone_number', 'users.role'])
+        .select(['users.id', 'users.phone_number', 'users.first_name', 'users.last_name', 'users.role'])
         .where('users.role', 'in', WORKER_ROLES)
         .where('users.id', 'in', (eb) =>
           eb.selectFrom('user_branches').select('user_id').where('branch_id', 'in', branchIds),

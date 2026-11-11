@@ -6,16 +6,22 @@ export function toHours(minutes: number): number {
   return Math.round((minutes / 60) * 100) / 100
 }
 
+/** Họ tên (last_name + first_name) để xuất; rỗng khi chưa có hồ sơ tên. */
+function fullName(p: { firstName: string | null; lastName: string | null }): string {
+  return [p.lastName, p.firstName].filter(Boolean).join(' ').trim()
+}
+
 /** Flattens the monthly work-hours report into worksheets for payroll (ADR 0007). */
 export function workHoursToSheets(report: WorkHoursReport): XlsxSheet[] {
   return [
     {
       name: 'Giao vien',
       rows: [
-        ['Tháng', 'SĐT giáo viên', 'Buổi theo lịch', 'Buổi thực dạy', 'Buổi nghỉ', 'Dạy bù', 'Dạy thay', 'Giờ dạy'],
+        ['Tháng', 'SĐT giáo viên', 'Họ tên', 'Buổi theo lịch', 'Buổi thực dạy', 'Buổi nghỉ', 'Dạy bù', 'Dạy thay', 'Giờ dạy'],
         ...report.teachers.map((t) => [
           report.month,
           t.phoneNumber,
+          fullName(t),
           t.planned,
           t.held,
           t.missed,
@@ -28,8 +34,8 @@ export function workHoursToSheets(report: WorkHoursReport): XlsxSheet[] {
     {
       name: 'Nhan vien',
       rows: [
-        ['Tháng', 'SĐT', 'Vai trò', 'Ngày công', 'Giờ công', 'Ca chưa check-out'],
-        ...report.staff.map((s) => [report.month, s.phoneNumber, s.role, s.workDays, toHours(s.workedMinutes), s.openShifts]),
+        ['Tháng', 'SĐT', 'Họ tên', 'Vai trò', 'Ngày công', 'Giờ công', 'Ca chưa check-out'],
+        ...report.staff.map((s) => [report.month, s.phoneNumber, fullName(s), s.role, s.workDays, toHours(s.workedMinutes), s.openShifts]),
       ],
     },
     {

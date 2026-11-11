@@ -59,7 +59,17 @@ function makeFakeStore(): WorkHoursStore {
     cancelled_at: null,
     taught_by: TEACHER.id,
   }
-  const workers = [STAFF, TEACHER].map((u) => ({ id: u.id, phone_number: u.phone_number, role: u.role }))
+  const names: Record<string, { first_name: string | null; last_name: string | null }> = {
+    [TEACHER.id]: { first_name: 'Hà', last_name: 'Nguyễn Thu' },
+    [STAFF.id]: { first_name: null, last_name: null },
+  }
+  const workers = [STAFF, TEACHER].map((u) => ({
+    id: u.id,
+    phone_number: u.phone_number,
+    first_name: names[u.id]?.first_name ?? null,
+    last_name: names[u.id]?.last_name ?? null,
+    role: u.role,
+  }))
   return {
     async checkIn(userId) {
       if (shifts.some((s) => s.user_id === userId && !s.check_out_at)) return undefined

@@ -24,6 +24,7 @@ Trên mọi màn trước đây dùng **số điện thoại** làm định danh
 | 2 | Chấm điểm: `ManualGradingItem` + store join + `GradingPage` + test | shared/api/web | Commit `3c4aee6` |
 | 3 | Báo cáo thi: `ExamAttemptDetail` + store join + `ExamReportsPage` + export Excel (cột "Học viên") + test | shared/api/web | Commit `3c4aee6` |
 | 4 | Seed họ tên có dấu cho staff/teacher thay cho SQL one-off (`staffFullName`) | api (seed) | Commit `c703d8b` |
+| 5 | Teacher roster (Ngày công & giờ dạy): tên GV/NV ở 2 bảng + export Excel cột "Họ tên" | shared/api/web | Màn `WorkHoursPage` |
 
 ## Hợp đồng (contract) đã chốt
 
@@ -43,7 +44,7 @@ Xác thực, phân quyền, hạn mức, chuỗi hiển thị đa ngôn ngữ �
 
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
-| — | màn teacher roster (danh sách lớp của giáo viên) | Chưa đồng bộ hiển thị tên (vẫn dùng SĐT) | Slice/Task sau |
+| — | `WorkSessionDetail` (chi tiết buổi dạy) | Vẫn chỉ hiển thị SĐT cho GV theo lịch / GV dạy ở bảng chi tiết buổi; chưa ghép tên (phạm vi roster đã đủ cho nhu cầu hiện tại) | Khi cần |
 | — | DB dev | Tên staff/teacher ban đầu được nạp bằng SQL one-off; nay đã có nguồn chính thức trong seed (`staffFullName`). DB dev hiện tại chỉ đồng bộ lại khi chạy `seed:demo --reset` | Khi reset dataset demo |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
@@ -63,7 +64,8 @@ Xác thực, phân quyền, hạn mức, chuỗi hiển thị đa ngôn ngữ �
 - `e24a0f9` — feat(attendance): hiện họ tên học viên ở màn Điểm danh (fallback SĐT).
 - `3c4aee6` — feat(grading,reports): đồng bộ hiện họ tên học viên ở màn chấm điểm và báo cáo (fallback SĐT).
 - `c703d8b` — feat(seed): seed họ tên có dấu cho staff/teacher thay cho SQL one-off.
+- (commit hiện tại) — feat(workhours): hiện họ tên GV/NV ở màn Ngày công & giờ dạy + export (fallback SĐT).
 
 ## Bàn giao phiên gần nhất
 
-Đã hoàn tất các màn Điểm danh, Chấm điểm, Báo cáo + seed tên staff/teacher. Còn lại (ngoài phạm vi commit hiện tại): màn teacher roster.
+Đã hoàn tất toàn bộ các màn trong phạm vi slice-15: Điểm danh, Chấm điểm, Báo cáo thi, seed tên staff/teacher, và teacher roster (Ngày công & giờ dạy). Nợ còn lại chỉ là tên GV ở bảng "Chi tiết buổi" của màn Ngày công (xem mục Nợ kỹ thuật) — không chặn.
