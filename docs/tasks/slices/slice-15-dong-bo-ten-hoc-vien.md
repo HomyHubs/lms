@@ -3,7 +3,7 @@
 - Cơ chế: Dọc
 - Owner hiện tại: —
 - Nhánh: dev
-- PR: — (commit thẳng trên `dev`, chưa push)
+- PR: — (commit thẳng trên `dev`; đã push tới `origin/dev`)
 - Trạng thái: xem `../MVP-BACKLOG.md` (nguồn trạng thái duy nhất, không ghi trùng ở đây để tránh lệch)
 - Phụ thuộc: slice-5 (chấm điểm), slice-6 (điểm danh), slice-13 (lịch sử thi & báo cáo)
 - Sửa mục gốc: để trống (slice mới, cross-cutting trên UI của slice-5/6/13)
@@ -24,7 +24,9 @@ Trên mọi màn trước đây dùng **số điện thoại** làm định danh
 | 2 | Chấm điểm: `ManualGradingItem` + store join + `GradingPage` + test | shared/api/web | Commit `3c4aee6` |
 | 3 | Báo cáo thi: `ExamAttemptDetail` + store join + `ExamReportsPage` + export Excel (cột "Học viên") + test | shared/api/web | Commit `3c4aee6` |
 | 4 | Seed họ tên có dấu cho staff/teacher thay cho SQL one-off (`staffFullName`) | api (seed) | Commit `c703d8b` |
-| 5 | Teacher roster (Ngày công & giờ dạy): tên GV/NV ở 2 bảng + export Excel cột "Họ tên" | shared/api/web | Màn `WorkHoursPage` |
+| 5 | Teacher roster (Ngày công & giờ dạy): tên GV/NV ở 2 bảng + export Excel cột "Họ tên" | shared/api/web | Màn `WorkHoursPage`, commit `7bbbbec` |
+| 6 | Điểm danh (admin): bar chart các lớp **có buổi học hôm nay** (endpoint `today-summary`) + hiện tên học sinh ở bảng tỷ lệ chuyên cần (thay SĐT) | shared/api/web | Commit `438c25e` |
+| 7 | Sửa lỗi 500 `today-summary` (`Invalid time value` khi tính ngày VN) — dùng `Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })` | api | Commit `f5e4675` |
 
 ## Hợp đồng (contract) đã chốt
 
@@ -59,13 +61,15 @@ Xác thực, phân quyền, hạn mức, chuỗi hiển thị đa ngôn ngữ �
 - `pnpm --filter @lms/api test` và `pnpm --filter @lms/web test` xanh (test roster/grading/exam-report khẳng định tên hiển thị, ví dụ `Nguyễn Minh An`).
 - Mở từng màn: học viên có tên → hiện tên + SĐT phụ; học viên chưa có tên → hiện SĐT.
 
-## Lịch sử commit (trên `dev`, chưa push)
+## Lịch sử commit (trên `dev`, đã push tới `origin/dev`)
 
 - `e24a0f9` — feat(attendance): hiện họ tên học viên ở màn Điểm danh (fallback SĐT).
 - `3c4aee6` — feat(grading,reports): đồng bộ hiện họ tên học viên ở màn chấm điểm và báo cáo (fallback SĐT).
 - `c703d8b` — feat(seed): seed họ tên có dấu cho staff/teacher thay cho SQL one-off.
-- (commit hiện tại) — feat(workhours): hiện họ tên GV/NV ở màn Ngày công & giờ dạy + export (fallback SĐT).
+- `7bbbbec` — feat(workhours): hiện họ tên GV/NV ở màn Ngày công & giờ dạy + export (fallback SĐT).
+- `438c25e` — feat(attendance): bar chart lớp có buổi học hôm nay + hiện tên học sinh ở bảng chuyên cần.
+- `f5e4675` — fix(attendance): sửa lỗi 500 `today-summary` do `Invalid time value` khi tính ngày VN.
 
 ## Bàn giao phiên gần nhất
 
-Đã hoàn tất toàn bộ các màn trong phạm vi slice-15: Điểm danh, Chấm điểm, Báo cáo thi, seed tên staff/teacher, và teacher roster (Ngày công & giờ dạy). Nợ còn lại chỉ là tên GV ở bảng "Chi tiết buổi" của màn Ngày công (xem mục Nợ kỹ thuật) — không chặn.
+Đã hoàn tất toàn bộ các màn trong phạm vi slice-15: Điểm danh (roster + bar chart lớp có buổi học hôm nay + bảng tỷ lệ chuyên cần hiện tên), Chấm điểm, Báo cáo thi, seed tên staff/teacher, và teacher roster (Ngày công & giờ dạy). Đã sửa lỗi 500 ở endpoint `today-summary` (`Invalid time value` khi tính ngày VN) — chuyển sang `Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })`. Toàn bộ commit đã push tới `origin/dev` (mới nhất liên quan: `438c25e`, `f5e4675`). Nợ còn lại chỉ là tên GV ở bảng "Chi tiết buổi" của màn Ngày công (xem mục Nợ kỹ thuật) — không chặn.

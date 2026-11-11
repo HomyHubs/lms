@@ -646,7 +646,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-11a | Bộ đề cố định & thi theo bộ đề | Dọc | Done | 19 | 2026-11-12 |
 | slice-13 | Lịch sử thi & báo cáo thi | Dọc | Done | 20 | 2026-11-13 |
 | slice-14 | Bài thi theo lớp | Dọc | Done | — | 2026-11-10 |
-| slice-15 | Đồng bộ hiển thị họ tên học viên | Dọc | Done | e24a0f9, 3c4aee6, c703d8b | 2026-11-11 |
+| slice-15 | Đồng bộ hiển thị họ tên học viên | Dọc | Done | e24a0f9, 3c4aee6, c703d8b, 7bbbbec, 438c25e, f5e4675 | 2026-11-11 |
 | slice-11b | Import bộ đề từ Word/Excel | Dọc | Done | 21 | 2026-11-14 |
 | slice-12 | Hình ảnh câu hỏi / bộ đề | Dọc | Done | 22 | 2026-11-14 |
 | slice-4.2 | Hoàn thiện thi online | Dọc | Done | 23 | 2026-11-14 |
