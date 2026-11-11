@@ -24,7 +24,7 @@ export function StatCard(props: {
 }): React.ReactElement {
   const Icon = props.icon
   return (
-    <div className="flex items-start justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+    <div className="flex items-start justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div>
         <p className="text-xs font-medium text-slate-500">{props.label}</p>
         <p className="mt-1 text-2xl font-semibold text-slate-900">{props.value}</p>

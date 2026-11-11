@@ -22,10 +22,12 @@ import {
   type ClassBarDatum,
 } from './useDashboardStats'
 
-const BAR_COLOR = '#2563eb'
+// Bảng màu demo: nền xanh dương → tím chủ đạo (xanh dương, trắng, tím), giữ các màu
+// ngữ nghĩa (xanh lá = đạt, đỏ = vắng, vàng = trễ) để biểu đồ vẫn dễ đọc đúng ý nghĩa.
+const BAR_COLOR = '#4f46e5'
 const PASS_COLORS = ['#16a34a', '#dc2626']
-/** Bảng màu xoay vòng cho pie nhiều lát (cơ sở). */
-const SLICE_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#8b5cf6', '#0891b2', '#db2777']
+/** Bảng màu xoay vòng cho pie nhiều lát (cơ sở): ưu tiên xanh dương/tím trước. */
+const SLICE_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#6366f1', '#a855f7', '#0ea5e9', '#db2777']
 /** Đi học (xanh lá) · Đi trễ (vàng) · Vắng (đỏ) · Khác/có phép (xám). */
 const ATTENDANCE_COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#94a3b8']
 
@@ -122,7 +124,7 @@ function AttendancePieChart(): React.ReactElement {
     <>
       <select
         aria-label="Chọn lớp"
-        className="c-input mb-3 max-w-xs"
+        className="c-input mb-3 max-w-xs border-primary-200"
         value={activeClassId ?? ''}
         onChange={(e) => setSelectedClassId(e.target.value)}
       >
@@ -151,9 +153,9 @@ function ClassBarTooltip({ active, payload }: {
   if (!active || !payload || payload.length === 0) return null
   const d = payload[0]!.payload
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-2 text-xs shadow-sm">
-      <p className="font-medium text-slate-800">{d.className}</p>
-      <p className="text-slate-500">{d.branchName}</p>
+    <div className="rounded-lg border border-primary-100 bg-white p-2 text-xs shadow-md">
+      <p className="font-medium text-primary-800">{d.className}</p>
+      <p className="text-accent-600">{d.branchName}</p>
       <p className="text-slate-700">Sĩ số: {d.size}</p>
     </div>
   )
@@ -173,11 +175,11 @@ function ClassSizeByBranchChart({ groups, bars }: {
     <Card>
       <CardTitle>Sĩ số từng lớp theo cơ sở</CardTitle>
       {/* Chú thích màu theo cơ sở */}
-      <div className="mb-2 flex flex-wrap gap-3 text-xs text-slate-600">
+      <div className="mb-2 flex flex-wrap gap-3 text-xs text-slate-700">
         {groups.map((g: BranchClassGroup, i: number) => (
           <span key={g.branchId} className="flex items-center gap-1">
             <span
-              className="inline-block h-3 w-3 rounded-sm"
+              className="inline-block h-3 w-3 rounded-full"
               style={{ backgroundColor: SLICE_COLORS[i % SLICE_COLORS.length] }}
             />
             {g.branchName} ({g.total})

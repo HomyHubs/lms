@@ -37,62 +37,75 @@ export function LoginPage(): React.ReactElement {
   const serverError = loginMutation.isError ? (loginMutation.error as Error).message : null
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-6 p-6">
-      <div className="flex items-center gap-2 text-slate-900">
-        <LogIn className="h-6 w-6" />
-        <h1 className="text-2xl font-semibold">Đăng nhập LMS</h1>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-accent-600 p-6">
+      {/* Lớp nền trang trí mềm mại (xanh dương → tím) cho cảm giác sang trọng. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-accent-400/30 blur-3xl" />
+        <div className="absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-primary-300/30 blur-3xl" />
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="w-full space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
-      >
-        <div className="space-y-1">
-          <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
-            Số điện thoại
-          </label>
-          <input
-            id="phone"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            className="c-input w-full"
-            placeholder="0901234567"
-          />
+      <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-6">
+        <div className="flex items-center gap-2 text-white drop-shadow-sm">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/30 backdrop-blur">
+            <LogIn className="h-6 w-6" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold">Đăng nhập LMS</h1>
+            <p className="text-sm font-normal text-white/80">Hệ thống quản lý học tập</p>
+          </div>
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-            Mật khẩu
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="c-input w-full"
-            placeholder="••••••••"
-          />
-        </div>
+        <form
+          onSubmit={handleSubmit}
+          className="w-full space-y-4 rounded-2xl border border-white/60 bg-white/95 p-7 shadow-2xl shadow-primary-900/20 backdrop-blur"
+        >
+          <div className="space-y-1">
+            <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
+              Số điện thoại
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="c-input w-full"
+              placeholder="0901234567"
+            />
+          </div>
 
-        {(fieldError || serverError) && (
-          <p role="alert" className="text-sm text-danger-600">
-            {fieldError ?? serverError}
-          </p>
-        )}
+          <div className="space-y-1">
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+              Mật khẩu
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="c-input w-full"
+              placeholder="••••••••"
+            />
+          </div>
 
-        <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
-          {loginMutation.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
-        </Button>
+          {(fieldError || serverError) && (
+            <p role="alert" className="text-sm text-danger-600">
+              {fieldError ?? serverError}
+            </p>
+          )}
 
-        <Link to="/forgot-password" className="block text-center text-sm text-slate-500 underline">
-          Quên mật khẩu?
-        </Link>
-      </form>
+          <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+            {loginMutation.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
+          </Button>
+
+          <Link to="/forgot-password" className="block text-center text-sm text-primary-600 underline hover:text-accent-600">
+            Quên mật khẩu?
+          </Link>
+        </form>
+      </div>
     </main>
   )
 }

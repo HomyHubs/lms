@@ -41,7 +41,7 @@ function Hero({ user, subtitle }: { user: PublicUser; subtitle: string }): React
   return (
     <section className="c-hero">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <h1 className="text-2xl font-semibold text-primary-900">
           {greeting()}, {ROLE_LABELS[user.role].toLowerCase()} {user.phoneNumber}!
         </h1>
         <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
@@ -65,7 +65,7 @@ function QuickLinks({ user }: { user: PublicUser }): React.ReactElement {
           <Link
             key={item.path}
             to={item.path}
-            className="flex flex-col items-center gap-2 rounded-lg border border-slate-100 p-3 text-center text-sm text-slate-700 hover:border-primary-200 hover:bg-primary-50"
+            className="flex flex-col items-center gap-2 rounded-xl border border-slate-100 p-3 text-center text-sm text-slate-700 transition-colors hover:border-primary-200 hover:bg-gradient-to-br hover:from-primary-50 hover:to-accent-50 hover:text-primary-700"
           >
             <span className={cn('rounded-lg p-2', TONE_TILE[item.tone])}>
               <item.icon className="h-5 w-5" />
@@ -119,7 +119,7 @@ function TeacherDashboard({ user }: { user: PublicUser }): React.ReactElement {
           <CardTitle>Lớp của tôi</CardTitle>
           <ul className="flex flex-wrap gap-2 text-sm">
             {classes.data.map((c) => (
-              <li key={c.id} className={cn('rounded-lg px-3 py-1.5', TONE_TILE.primary)}>
+              <li key={c.id} className={cn('rounded-full px-3 py-1.5', TONE_TILE.primary)}>
                 {c.name}
               </li>
             ))}
