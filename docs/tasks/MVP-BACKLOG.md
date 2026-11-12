@@ -36,6 +36,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-14 | Bài thi theo lớp | Dọc | Done | — | dev | — | slice-4 | `slices/slice-14-bai-thi-theo-lop.md` |
 | slice-15 | Đồng bộ hiển thị họ tên học viên (thay SĐT làm định danh trên các màn) | Dọc | Done | — | dev | — | slice-5, slice-6, slice-13 | `slices/slice-15-dong-bo-ten-hoc-vien.md` |
 | seed-demo | Dữ liệu demo thực tế hơn: mỗi cơ sở nhiều lớp (4–6) trộn Starter/Mover/Flyer, sĩ số khác nhau (commit `1012ef9`) | — | Done | — | dev | — | slice-6, slice-14 | `apps/api/src/scripts/seed-demo.ts` |
+| postman-setup | Bộ tài nguyên Postman: collection "LMS API" (~95 request, 16 feature folder), environment "LMS Local", OpenAPI spec `lms-api.yaml`; cập nhật `.gitignore` để theo dõi `postman/` nhưng vẫn bỏ qua `postman/globals/` (commit `aa80a74`) | — | Done | — | dev | — | — | `postman/` (collections, environments, specs) |
 
 ## Trạng thái hợp lệ
 
