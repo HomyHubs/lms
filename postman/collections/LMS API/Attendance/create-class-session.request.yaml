@@ -1,0 +1,21 @@
+$kind: http-request
+name: Create class session
+method: POST
+url: '{{base_url}}/classes/:id/sessions'
+order: 6000
+description: Create a new session for a class.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Class id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "date": "2026-01-01",
+      "startTime": "09:00",
+      "endTime": "10:30"
+    }

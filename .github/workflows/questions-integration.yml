@@ -1,0 +1,28 @@
+name: Questions PostgreSQL integration
+on:
+  pull_request:
+    branches: [dev, main]
+permissions:
+  contents: read
+jobs:
+  questions-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: pnpm rebuild esbuild
+      - run: pnpm -r build
+      # Independent of slice4; loopback-only disposable PG18, no local env/secrets.
+      - name: Mandatory isolated question import and CRUD gate
+        working-directory: apps/api
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/questions.integration.mjs | tee "$RUNNER_TEMP/questions-integration.txt"
+          grep -Fx 'QUESTIONS_PG_INTEGRATION_PASS' "$RUNNER_TEMP/questions-integration.txt"

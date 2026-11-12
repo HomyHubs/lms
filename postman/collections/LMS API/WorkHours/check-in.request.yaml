@@ -1,0 +1,8 @@
+$kind: http-request
+name: Check in
+method: POST
+url: '{{base_url}}/timesheet/check-in'
+order: 2000
+description: Record a timesheet check-in.
+body:
+  type: none

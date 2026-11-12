@@ -1,0 +1,6 @@
+$kind: http-request
+name: My exam attempts
+method: GET
+url: '{{base_url}}/me/exam-attempts'
+order: 1000
+description: Return the current user's exam attempts.

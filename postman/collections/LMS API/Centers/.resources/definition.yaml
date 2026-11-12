@@ -1,0 +1,4 @@
+$kind: collection
+name: Centers
+description: Manage centers and branches.
+order: 5000

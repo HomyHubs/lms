@@ -1,8 +1,8 @@
 # Slice/Task slice-0 — Nen tang & Auth (walking skeleton + dang nhap SDT + quen mat khau qua Email)
 
 - Co che: Doc
-- Owner hien tai: ...
-- Nhanh: ...
+- Owner hien tai: An Vo
+- Nhanh: feature/slice-0-nen-tang-auth
 - PR: ...
 - Trang thai: xem `../MVP-BACKLOG.md` (nguon trang thai duy nhat)
 - Phu thuoc: khong co
@@ -40,6 +40,7 @@ Ket noi database phai la thuc, khong mock. Hash mat khau va OTP phai la co che t
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-09-12 | Mo rong pham vi | Gop walking skeleton (slice-0 goc cua template) voi Auth dau tien theo ke hoach trong trang Notion LMS | Ke hoach LMS gop 2 viec nay vao chung mot slice dau | - |
+| 2026-09-14 | Quyet dinh ky thuat | Task 2 dung "Session opaque" (token ngau nhien + bang `sessions`, cookie HttpOnly) thay vi JWT | Theo stack chuan webapp-template ("Xac thuc = Session opaque"); task cho phep "JWT/session" | - |
 
 ## Cach nghiem thu
 

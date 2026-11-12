@@ -1,0 +1,16 @@
+$kind: http-request
+name: Create AI request
+method: POST
+url: '{{base_url}}/ai-requests'
+order: 2000
+description: Create a new AI generation request.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "prompt": "Generate beginner grammar questions",
+      "count": 10
+    }

@@ -1,0 +1,12 @@
+$kind: http-request
+name: Start exam attempt
+method: POST
+url: '{{base_url}}/exams/:id/attempts'
+order: 5000
+description: Start a new attempt for an exam.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam id
+body:
+  type: none

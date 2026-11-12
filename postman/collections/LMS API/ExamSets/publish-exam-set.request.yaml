@@ -1,0 +1,12 @@
+$kind: http-request
+name: Publish exam set
+method: POST
+url: '{{base_url}}/exam-sets/:id/publish'
+order: 8000
+description: Publish an exam set.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam set id
+body:
+  type: none

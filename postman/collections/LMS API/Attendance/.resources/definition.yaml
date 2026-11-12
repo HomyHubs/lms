@@ -1,0 +1,4 @@
+$kind: collection
+name: Attendance
+description: Attendance tracking for classes, sessions and students.
+order: 12000

@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get media by id
+method: GET
+url: '{{base_url}}/media/:id'
+order: 2000
+description: Retrieve a media item by id.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Media id

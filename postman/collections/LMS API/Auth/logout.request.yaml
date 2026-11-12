@@ -1,0 +1,8 @@
+$kind: http-request
+name: Logout
+method: POST
+url: '{{base_url}}/auth/logout'
+order: 2000
+description: End the current session and clear the session cookie.
+body:
+  type: none

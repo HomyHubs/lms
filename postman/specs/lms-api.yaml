@@ -1,0 +1,1841 @@
+openapi: 3.0.3
+info:
+  title: LMS API
+  version: 1.0.0
+  description: >-
+    LMS backend API (Fastify). Covers users, centers, catalog, questions,
+    exams, exam-sets, attendance, AI generation, notifications, reports and
+    work-hours.
+servers:
+  - url: http://localhost:3000
+    description: Local dev
+security:
+  - sessionCookie: []
+tags:
+  - name: Auth
+  - name: Health
+  - name: Users
+  - name: UserBranches
+  - name: Centers
+  - name: Catalog
+  - name: Questions
+  - name: Media
+  - name: Exams
+  - name: ExamSets
+  - name: ExamHistory
+  - name: Attendance
+  - name: AiGeneration
+  - name: Notifications
+  - name: Reports
+  - name: WorkHours
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: lms_session
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: authLogin
+      summary: Log in with phone number and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phoneNumber:
+                  type: string
+                password:
+                  type: string
+              required: [phoneNumber, password]
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: authLogout
+      summary: Log out the current session
+      security: []
+      responses:
+        '204':
+          description: Logged out
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: authMe
+      summary: Get the current authenticated user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      operationId: authForgotPassword
+      summary: Request a password reset code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                channel:
+                  type: string
+              required: [email, channel]
+      responses:
+        '200':
+          description: Reset requested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      operationId: authResetPassword
+      summary: Reset password using an OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                otp:
+                  type: string
+                newPassword:
+                  type: string
+              required: [email, otp, newPassword]
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /users:
+    get:
+      tags: [Users]
+      operationId: listUsers
+      summary: List users
+      responses:
+        '200':
+          description: Array of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Users]
+      operationId: createUser
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phoneNumber:
+                  type: string
+                role:
+                  type: string
+                password:
+                  type: string
+              required: [name, phoneNumber, role, password]
+      responses:
+        '201':
+          description: Created user
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Users]
+      operationId: getUser
+      summary: Get a user by id
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Users]
+      operationId: updateUser
+      summary: Update a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      tags: [Users]
+      operationId: deleteUser
+      summary: Delete a user
+      responses:
+        '204':
+          description: Deleted
+  /users/{id}/branches:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [UserBranches]
+      operationId: listUserBranches
+      summary: List branches assigned to a user
+      responses:
+        '200':
+          description: Array of branches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    put:
+      tags: [UserBranches]
+      operationId: setUserBranches
+      summary: Replace the branches assigned to a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                branchIds:
+                  type: array
+                  items:
+                    type: integer
+              required: [branchIds]
+      responses:
+        '200':
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                type: object
+  /centers:
+    get:
+      tags: [Centers]
+      operationId: listCenters
+      summary: List centers
+      responses:
+        '200':
+          description: Array of centers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Centers]
+      operationId: createCenter
+      summary: Create a center
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required: [name]
+      responses:
+        '201':
+          description: Created center
+          content:
+            application/json:
+              schema:
+                type: object
+  /centers/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Centers]
+      operationId: updateCenter
+      summary: Update a center
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated center
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      tags: [Centers]
+      operationId: deleteCenter
+      summary: Delete a center
+      responses:
+        '204':
+          description: Deleted
+  /branches:
+    get:
+      tags: [Centers]
+      operationId: listBranches
+      summary: List branches
+      responses:
+        '200':
+          description: Array of branches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Centers]
+      operationId: createBranch
+      summary: Create a branch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                centerId:
+                  type: integer
+              required: [name, centerId]
+      responses:
+        '201':
+          description: Created branch
+          content:
+            application/json:
+              schema:
+                type: object
+  /branches/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Centers]
+      operationId: updateBranch
+      summary: Update a branch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated branch
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      tags: [Centers]
+      operationId: deleteBranch
+      summary: Delete a branch
+      responses:
+        '204':
+          description: Deleted
+  /levels:
+    get:
+      tags: [Catalog]
+      operationId: listLevels
+      summary: List levels
+      responses:
+        '200':
+          description: Array of levels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /courses:
+    get:
+      tags: [Catalog]
+      operationId: listCourses
+      summary: List courses
+      responses:
+        '200':
+          description: Array of courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Catalog]
+      operationId: createCourse
+      summary: Create a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                levelId:
+                  type: integer
+              required: [name, levelId]
+      responses:
+        '201':
+          description: Created course
+          content:
+            application/json:
+              schema:
+                type: object
+  /courses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Catalog]
+      operationId: updateCourse
+      summary: Update a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated course
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      tags: [Catalog]
+      operationId: deleteCourse
+      summary: Delete a course
+      responses:
+        '204':
+          description: Deleted
+  /classes:
+    get:
+      tags: [Catalog]
+      operationId: listClasses
+      summary: List classes
+      responses:
+        '200':
+          description: Array of classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Catalog]
+      operationId: createClass
+      summary: Create a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                courseId:
+                  type: integer
+              required: [name, courseId]
+      responses:
+        '201':
+          description: Created class
+          content:
+            application/json:
+              schema:
+                type: object
+  /classes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Catalog]
+      operationId: updateClass
+      summary: Update a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated class
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      tags: [Catalog]
+      operationId: deleteClass
+      summary: Delete a class
+      responses:
+        '204':
+          description: Deleted
+  /classes/{id}/enrollments:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Catalog]
+      operationId: listClassEnrollments
+      summary: List enrollments for a class
+      responses:
+        '200':
+          description: Array of enrollments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /enrollments:
+    post:
+      tags: [Catalog]
+      operationId: createEnrollment
+      summary: Enroll a student in a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                studentId:
+                  type: integer
+              required: [classId, studentId]
+      responses:
+        '201':
+          description: Created enrollment
+          content:
+            application/json:
+              schema:
+                type: object
+  /enrollments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    delete:
+      tags: [Catalog]
+      operationId: deleteEnrollment
+      summary: Delete an enrollment
+      responses:
+        '204':
+          description: Deleted
+  /questions:
+    get:
+      tags: [Questions]
+      operationId: listQuestions
+      summary: List questions
+      responses:
+        '200':
+          description: Array of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Questions]
+      operationId: createQuestion
+      summary: Create a question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                type:
+                  type: string
+                choices:
+                  type: array
+                  items:
+                    type: string
+              required: [prompt, type]
+      responses:
+        '201':
+          description: Created question
+          content:
+            application/json:
+              schema:
+                type: object
+  /questions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Questions]
+      operationId: updateQuestion
+      summary: Update a question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+      responses:
+        '200':
+          description: Updated question
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      tags: [Questions]
+      operationId: deleteQuestion
+      summary: Delete a question
+      responses:
+        '204':
+          description: Deleted
+  /questions/import:
+    post:
+      tags: [Questions]
+      operationId: importQuestions
+      summary: Import questions in bulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+              required: [items]
+      responses:
+        '200':
+          description: Imported
+          content:
+            application/json:
+              schema:
+                type: object
+  /media:
+    post:
+      tags: [Media]
+      operationId: uploadMedia
+      summary: Upload a media file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        '201':
+          description: Uploaded media
+          content:
+            application/json:
+              schema:
+                type: object
+  /media/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Media]
+      operationId: getMedia
+      summary: Get a media item
+      responses:
+        '200':
+          description: Media
+          content:
+            application/json:
+              schema:
+                type: object
+  /questions/{id}/media:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Media]
+      operationId: getQuestionMedia
+      summary: Get media attached to a question
+      responses:
+        '200':
+          description: Media
+          content:
+            application/json:
+              schema:
+                type: object
+    put:
+      tags: [Media]
+      operationId: setQuestionMedia
+      summary: Attach media to a question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mediaId:
+                  type: integer
+              required: [mediaId]
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-policies:
+    get:
+      tags: [Exams]
+      operationId: listExamPolicies
+      summary: List exam policies
+      responses:
+        '200':
+          description: Array of exam policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /exam-policies/{level}:
+    parameters:
+      - name: level
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags: [Exams]
+      operationId: setExamPolicy
+      summary: Set the exam policy for a level
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                durationMinutes:
+                  type: integer
+              required: [durationMinutes]
+      responses:
+        '200':
+          description: Updated policy
+          content:
+            application/json:
+              schema:
+                type: object
+  /exams:
+    get:
+      tags: [Exams]
+      operationId: listExams
+      summary: List exams
+      responses:
+        '200':
+          description: Array of exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Exams]
+      operationId: createExam
+      summary: Create an exam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                examSetId:
+                  type: integer
+                classIds:
+                  type: array
+                  items:
+                    type: integer
+              required: [title, examSetId]
+      responses:
+        '201':
+          description: Created exam
+          content:
+            application/json:
+              schema:
+                type: object
+  /exams/{id}/attempts:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Exams]
+      operationId: createExamAttempt
+      summary: Start an exam attempt
+      responses:
+        '201':
+          description: Created attempt
+          content:
+            application/json:
+              schema:
+                type: object
+  /exams/{id}/attempt:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Exams]
+      operationId: getExamAttempt
+      summary: Get the current exam attempt
+      responses:
+        '200':
+          description: Attempt
+          content:
+            application/json:
+              schema:
+                type: object
+  /exams/{id}/answers:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Exams]
+      operationId: submitExamAnswers
+      summary: Submit answers for an exam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+              required: [answers]
+      responses:
+        '200':
+          description: Answers saved
+          content:
+            application/json:
+              schema:
+                type: object
+  /exams/{id}/submit:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Exams]
+      operationId: submitExam
+      summary: Submit the exam attempt
+      responses:
+        '200':
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                type: object
+  /exams/{id}/history:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Exams]
+      operationId: getExamHistory
+      summary: Get the history for an exam
+      responses:
+        '200':
+          description: Array of history entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /exams/{id}/results:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Exams]
+      operationId: getExamResults
+      summary: Get the results for an exam
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: object
+  /grading/attempts:
+    get:
+      tags: [Exams]
+      operationId: listGradingAttempts
+      summary: List attempts pending grading
+      responses:
+        '200':
+          description: Array of attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /grading/attempts/{attemptId}:
+    parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Exams]
+      operationId: getGradingAttempt
+      summary: Get an attempt for grading
+      responses:
+        '200':
+          description: Attempt
+          content:
+            application/json:
+              schema:
+                type: object
+  /grading/attempts/{attemptId}/grade:
+    parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Exams]
+      operationId: gradeAttempt
+      summary: Grade an attempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                score:
+                  type: number
+              required: [score]
+      responses:
+        '200':
+          description: Graded
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets:
+    get:
+      tags: [ExamSets]
+      operationId: listExamSets
+      summary: List exam sets
+      responses:
+        '200':
+          description: Array of exam sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [ExamSets]
+      operationId: createExamSet
+      summary: Create an exam set
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                level:
+                  type: string
+              required: [name, level]
+      responses:
+        '201':
+          description: Created exam set
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [ExamSets]
+      operationId: getExamSet
+      summary: Get an exam set
+      responses:
+        '200':
+          description: Exam set
+          content:
+            application/json:
+              schema:
+                type: object
+    patch:
+      tags: [ExamSets]
+      operationId: updateExamSet
+      summary: Update an exam set
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated exam set
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      tags: [ExamSets]
+      operationId: deleteExamSet
+      summary: Delete an exam set
+      responses:
+        '204':
+          description: Deleted
+  /exam-sets/{id}/archive:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [ExamSets]
+      operationId: archiveExamSet
+      summary: Archive an exam set
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets/{id}/duplicate:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [ExamSets]
+      operationId: duplicateExamSet
+      summary: Duplicate an exam set
+      responses:
+        '201':
+          description: Duplicated
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets/{id}/publish:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [ExamSets]
+      operationId: publishExamSet
+      summary: Publish an exam set
+      responses:
+        '200':
+          description: Published
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets/{id}/questions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [ExamSets]
+      operationId: addExamSetQuestions
+      summary: Add questions to an exam set
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                questionIds:
+                  type: array
+                  items:
+                    type: integer
+              required: [questionIds]
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets/{id}/items:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    put:
+      tags: [ExamSets]
+      operationId: setExamSetItems
+      summary: Replace the items of an exam set
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+              required: [items]
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets/import/preview:
+    post:
+      tags: [ExamSets]
+      operationId: previewExamSetImport
+      summary: Preview an exam set import from a file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        '200':
+          description: Import preview
+          content:
+            application/json:
+              schema:
+                type: object
+  /exam-sets/import/commit:
+    post:
+      tags: [ExamSets]
+      operationId: commitExamSetImport
+      summary: Commit a previously previewed exam set import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+              required: [token]
+      responses:
+        '200':
+          description: Imported
+          content:
+            application/json:
+              schema:
+                type: object
+  /me/exam-attempts:
+    get:
+      tags: [ExamHistory]
+      operationId: listMyExamAttempts
+      summary: List the current user's exam attempts
+      responses:
+        '200':
+          description: Array of attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /students/{id}/exam-attempts:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [ExamHistory]
+      operationId: listStudentExamAttempts
+      summary: List a student's exam attempts
+      responses:
+        '200':
+          description: Array of attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reports/exam-attempts:
+    get:
+      tags: [ExamHistory]
+      operationId: reportExamAttempts
+      summary: Report on exam attempts
+      responses:
+        '200':
+          description: Array of attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /attendance/classes:
+    get:
+      tags: [Attendance]
+      operationId: listAttendanceClasses
+      summary: List classes for attendance
+      responses:
+        '200':
+          description: Array of classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /attendance/rates:
+    get:
+      tags: [Attendance]
+      operationId: getAttendanceRates
+      summary: Get attendance rates
+      responses:
+        '200':
+          description: Attendance rates
+          content:
+            application/json:
+              schema:
+                type: object
+  /attendance/students/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Attendance]
+      operationId: getStudentAttendance
+      summary: Get attendance for a student
+      responses:
+        '200':
+          description: Attendance
+          content:
+            application/json:
+              schema:
+                type: object
+  /attendance/today-summary:
+    get:
+      tags: [Attendance]
+      operationId: getAttendanceTodaySummary
+      summary: Get today's attendance summary
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                type: object
+  /classes/{id}/sessions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Attendance]
+      operationId: listClassSessions
+      summary: List sessions for a class
+      responses:
+        '200':
+          description: Array of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Attendance]
+      operationId: createClassSession
+      summary: Create a session for a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                startTime:
+                  type: string
+                endTime:
+                  type: string
+              required: [date, startTime, endTime]
+      responses:
+        '201':
+          description: Created session
+          content:
+            application/json:
+              schema:
+                type: object
+  /classes/{id}/teachers:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Attendance]
+      operationId: listClassTeachers
+      summary: List teachers for a class
+      responses:
+        '200':
+          description: Array of teachers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [Attendance]
+      operationId: addClassTeacher
+      summary: Add a teacher to a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                teacherId:
+                  type: integer
+              required: [teacherId]
+      responses:
+        '201':
+          description: Added teacher
+          content:
+            application/json:
+              schema:
+                type: object
+  /sessions/{id}/attendance:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Attendance]
+      operationId: getSessionAttendance
+      summary: Get attendance for a session
+      responses:
+        '200':
+          description: Attendance
+          content:
+            application/json:
+              schema:
+                type: object
+    put:
+      tags: [Attendance]
+      operationId: setSessionAttendance
+      summary: Record attendance for a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                records:
+                  type: array
+                  items:
+                    type: object
+              required: [records]
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+  /sessions/{id}/cancel:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Attendance]
+      operationId: cancelSession
+      summary: Cancel a session
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+  /me/attendance:
+    get:
+      tags: [Attendance]
+      operationId: getMyAttendance
+      summary: Get the current user's attendance
+      responses:
+        '200':
+          description: Attendance
+          content:
+            application/json:
+              schema:
+                type: object
+  /ai-requests:
+    get:
+      tags: [AiGeneration]
+      operationId: listAiRequests
+      summary: List AI generation requests
+      responses:
+        '200':
+          description: Array of AI requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [AiGeneration]
+      operationId: createAiRequest
+      summary: Create an AI generation request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                count:
+                  type: integer
+              required: [prompt, count]
+      responses:
+        '201':
+          description: Created AI request
+          content:
+            application/json:
+              schema:
+                type: object
+  /ai-requests/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [AiGeneration]
+      operationId: getAiRequest
+      summary: Get an AI generation request
+      responses:
+        '200':
+          description: AI request
+          content:
+            application/json:
+              schema:
+                type: object
+  /ai-requests/{id}/results:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [AiGeneration]
+      operationId: postAiRequestResults
+      summary: Store results for an AI generation request
+      responses:
+        '200':
+          description: Results stored
+          content:
+            application/json:
+              schema:
+                type: object
+  /ai-requests/{id}/save:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [AiGeneration]
+      operationId: saveAiRequest
+      summary: Save the generated questions from an AI request
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      summary: List notifications
+      responses:
+        '200':
+          description: Array of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /notifications/{id}/read:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Notifications]
+      operationId: markNotificationRead
+      summary: Mark a notification as read
+      responses:
+        '200':
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                type: object
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      operationId: markAllNotificationsRead
+      summary: Mark all notifications as read
+      responses:
+        '200':
+          description: Marked all read
+          content:
+            application/json:
+              schema:
+                type: object
+  /notifications/run:
+    post:
+      tags: [Notifications]
+      operationId: runNotifications
+      summary: Trigger notification processing
+      responses:
+        '200':
+          description: Triggered
+          content:
+            application/json:
+              schema:
+                type: object
+  /reports/students:
+    get:
+      tags: [Reports]
+      operationId: reportStudents
+      summary: Student report
+      responses:
+        '200':
+          description: Array of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reports/classification-policies:
+    get:
+      tags: [Reports]
+      operationId: reportClassificationPolicies
+      summary: Classification policies report
+      responses:
+        '200':
+          description: Array of policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /me/timesheet:
+    get:
+      tags: [WorkHours]
+      operationId: getMyTimesheet
+      summary: Get the current user's timesheet
+      responses:
+        '200':
+          description: Timesheet
+          content:
+            application/json:
+              schema:
+                type: object
+  /timesheet/check-in:
+    post:
+      tags: [WorkHours]
+      operationId: timesheetCheckIn
+      summary: Check in
+      responses:
+        '200':
+          description: Checked in
+          content:
+            application/json:
+              schema:
+                type: object
+  /timesheet/check-out:
+    post:
+      tags: [WorkHours]
+      operationId: timesheetCheckOut
+      summary: Check out
+      responses:
+        '200':
+          description: Checked out
+          content:
+            application/json:
+              schema:
+                type: object
+  /reports/work-hours:
+    get:
+      tags: [WorkHours]
+      operationId: reportWorkHours
+      summary: Work hours report
+      responses:
+        '200':
+          description: Work hours report
+          content:
+            application/json:
+              schema:
+                type: object

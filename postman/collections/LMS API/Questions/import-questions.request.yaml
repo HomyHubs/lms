@@ -1,0 +1,15 @@
+$kind: http-request
+name: Import questions
+method: POST
+url: '{{base_url}}/questions/import'
+order: 5000
+description: Bulk import questions.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "items": []
+    }

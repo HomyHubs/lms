@@ -171,6 +171,6 @@ pnpm -r test
 
 ## 8. Trạng thái profile hiện tại (điền khi chốt)
 
-- Loại ứng dụng: ...
-- Profile UI đã chọn: [ ] A (MUI) — [ ] B (Tailwind + shadcn/ui)
-- Stack thực tế khác với khuyến nghị ở đâu (nếu có): ...
+- Loại ứng dụng: Web app FE+BE (LMS đa cơ sở)
+- Profile UI đã chọn: [ ] A (MUI) — [x] B (Tailwind + shadcn/ui) — chốt tại slice-0
+- Stack thực tế khác với khuyến nghị ở đâu (nếu có): không (bám sát template)

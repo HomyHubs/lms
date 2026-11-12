@@ -1,0 +1,1 @@
+# dbmate loads DATABASE_URL from the repo-root .env by default; keep secrets out.

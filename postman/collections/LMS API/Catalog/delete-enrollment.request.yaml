@@ -1,0 +1,10 @@
+$kind: http-request
+name: Delete enrollment
+method: DELETE
+url: '{{base_url}}/enrollments/:id'
+order: 12000
+description: Remove an enrollment by id.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Enrollment id

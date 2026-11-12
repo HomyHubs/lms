@@ -1,0 +1,12 @@
+$kind: http-request
+name: Submit exam
+method: POST
+url: '{{base_url}}/exams/:id/submit'
+order: 8000
+description: Submit and finalize the current exam attempt.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam id
+body:
+  type: none

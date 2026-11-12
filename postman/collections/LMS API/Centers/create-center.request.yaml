@@ -1,0 +1,15 @@
+$kind: http-request
+name: Create center
+method: POST
+url: '{{base_url}}/centers'
+order: 2000
+description: Create a new center.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Downtown Center"
+    }

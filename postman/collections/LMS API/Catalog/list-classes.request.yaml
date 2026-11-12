@@ -1,0 +1,6 @@
+$kind: http-request
+name: List classes
+method: GET
+url: '{{base_url}}/classes'
+order: 6000
+description: Return a list of all classes.

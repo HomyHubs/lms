@@ -21,25 +21,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Khong dat `version:` o day — de action doc phien ban tu `packageManager`
+      # trong package.json (pnpm@11.24.0), tranh xung dot ERR_PNPM_BAD_PM_VERSION.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: "npm"
+          node-version: 24
+          cache: 'pnpm'
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      # Nếu repo dùng profile công nghệ riêng (ví dụ `make check` hoặc
-      # `pnpm -r check`), thay 3 dòng dưới bằng đúng lệnh của profile đó,
-      # y nguyên với cổng gác cục bộ ở AGENTS.md mục 7.
+      - name: Build
+        run: pnpm -r build
+
+      # Cổng gác thực tế của repo (AGENTS.md mục 7): pnpm -r lint && typecheck && test.
       - name: Lint
-        run: npm run lint
+        run: pnpm -r lint
 
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm -r typecheck
 
       - name: Test
-        run: npm test
+        run: pnpm -r test
 
       - name: Cảnh báo nếu FAIL
         if: failure()

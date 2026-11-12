@@ -1,0 +1,6 @@
+$kind: http-request
+name: Students report
+method: GET
+url: '{{base_url}}/reports/students'
+order: 1000
+description: Return an aggregated students report.

@@ -1,0 +1,10 @@
+$kind: http-request
+name: Student attendance
+method: GET
+url: '{{base_url}}/attendance/students/:id'
+order: 3000
+description: Return attendance for a specific student.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Student id

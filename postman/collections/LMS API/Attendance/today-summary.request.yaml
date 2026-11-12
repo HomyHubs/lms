@@ -1,0 +1,6 @@
+$kind: http-request
+name: Today attendance summary
+method: GET
+url: '{{base_url}}/attendance/today-summary'
+order: 4000
+description: Return a summary of today's attendance.

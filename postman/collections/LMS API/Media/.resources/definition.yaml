@@ -1,0 +1,4 @@
+$kind: collection
+name: Media
+description: Media uploads and question media associations.
+order: 8000

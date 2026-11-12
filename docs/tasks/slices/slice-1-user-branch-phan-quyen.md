@@ -1,10 +1,10 @@
 # Slice/Task slice-1 — Quan ly nguoi dung, co so (Branch) & phan quyen
 
 - Co che: Doc
-- Owner hien tai: ...
-- Nhanh: ...
-- PR: ...
-- Trang thai: xem `../MVP-BACKLOG.md`
+- Owner hien tai: —
+- Nhanh: feature/slice-1-user-branch-phan-quyen
+- PR: 3
+- Trang thai: Done — da merge vao `dev`
 - Phu thuoc: slice-0
 - Sua muc goc: de trong
 
@@ -38,6 +38,7 @@ Phan quyen theo role va theo Branch phai la thuc — khong duoc de mo (moi user 
 
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
+| 2026-11-10 | Sua | Them role 'superadmin' (cao nhat, vuot moi branch-scope, la role duy nhat quan ly tai khoan admin/superadmin va duy nhat duoc export danh sach hoc vien); admin thuong KHONG con export duoc | Yeu cau product: tach quyen quan tri cap cao + chong ro ri danh sach hoc vien | — |
 
 ## Cach nghiem thu
 
@@ -45,4 +46,5 @@ Tao 2 Branch, gan Admin A chi vao Branch 1, Admin B vao ca 2 Branch; xac nhan Ad
 
 ## Ban giao phien gan nhat
 
-Dien theo mau `../../ai-workflow/templates/session-handoff.md` khi dung giua chung.
+- Da merge vao `dev` qua PR #3, commit `7e6dfc4`.
+- Khong con Owner; trang thai chinh thuc: Done.

@@ -1,0 +1,8 @@
+$kind: http-request
+name: Run notifications
+method: POST
+url: '{{base_url}}/notifications/run'
+order: 4000
+description: Trigger the notification processing job.
+body:
+  type: none

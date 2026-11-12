@@ -1,0 +1,6 @@
+$kind: http-request
+name: Exam attempts report
+method: GET
+url: '{{base_url}}/reports/exam-attempts'
+order: 3000
+description: Return an aggregated report of exam attempts.

@@ -1,0 +1,4 @@
+$kind: collection
+name: Catalog
+description: Levels, courses, classes and enrollments.
+order: 6000

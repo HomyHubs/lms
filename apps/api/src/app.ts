@@ -1,0 +1,186 @@
+import cookie from '@fastify/cookie'
+import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
+import rateLimit from '@fastify/rate-limit'
+import Fastify, { type FastifyInstance } from 'fastify'
+import type { AppConfig } from './platform/config.js'
+import type { AppDb } from './platform/db.js'
+import {
+  authRoutes,
+  makeAuthStore,
+  makeEmailSender,
+  makeOtpDispatcher,
+  makePasswordResetStore,
+} from './features/auth/index.js'
+import { healthRoutes } from './features/health/index.js'
+import { makeUsersStore, usersRoutes } from './features/users/index.js'
+import { makeRbac } from './features/access/index.js'
+import { centersRoutes, makeCentersStore } from './features/centers/index.js'
+import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
+import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranches/index.js'
+import { makeQuestionsStore, questionsRoutes } from './features/questions/index.js'
+import { examsRoutes, makeExamsStore } from './features/exams/index.js'
+import { examSetsRoutes, makeExamSetsStore } from './features/examsets/index.js'
+import { makeLocalMediaStorage, makeMediaStore, mediaRoutes } from './features/media/index.js'
+import { examHistoryRoutes, makeExamHistoryStore } from './features/examhistory/index.js'
+import { attendanceRoutes, makeAttendanceStore } from './features/attendance/index.js'
+import { aiGenerationRoutes, makeAiGenerationStore } from './features/aigeneration/index.js'
+import { makeReportsStore, reportsRoutes } from './features/reports/index.js'
+import { makeWorkHoursStore, workHoursRoutes } from './features/workhours/index.js'
+import {
+  makeNotificationSender,
+  makeNotificationsStore,
+  makeReminderRunner,
+  notificationsRoutes,
+} from './features/notifications/index.js'
+
+export interface BuildAppDeps {
+  config: AppConfig
+  db: AppDb
+}
+
+/**
+ * Dung Fastify app voi bao mat HTTP co ban (helmet, cors, rate-limit) theo webapp-template.
+ * Dang ky cac feature route. Health-check noi thong FE-BE-DB thuc.
+ */
+export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: {
+      level: config.NODE_ENV === 'test' ? 'silent' : 'info',
+      redact: {
+        paths: [
+          'req.headers.authorization',
+          'req.headers.cookie',
+          'res.headers["set-cookie"]',
+          'req.body',
+          'body',
+          'email',
+          'phone',
+          'phoneNumber',
+          'phone_number',
+          'chatId',
+          '*.phone',
+          '*.phoneNumber',
+          '*.phone_number',
+          '*.chatId',
+          'recipient',
+          'otp',
+          'password',
+          'newPassword',
+          '*.email',
+          '*.recipient',
+          '*.otp',
+          '*.password',
+          '*.newPassword',
+        ],
+        censor: '[REDACTED]',
+      },
+    },
+  })
+
+  await app.register(helmet)
+  await app.register(cors, { origin: true, credentials: true })
+  await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
+  await app.register(cookie)
+
+  // Auth store dung chung cho authRoutes (dang nhap) va usersRoutes (RBAC guard).
+  const authStore = makeAuthStore(db)
+  // RBAC guard that dung chung cho cac feature quan tri (slice-1 Task 2+).
+  const rbac = makeRbac(authStore)
+
+  // Slice-2 (revised): OTP chi con kenh Email. Dispatcher giu lai nhu mot seam mong de de mo rong.
+  const otpDispatcher = makeOtpDispatcher(makeEmailSender(app.log), app.log)
+
+  await healthRoutes(app, db)
+  await authRoutes(app, {
+    store: authStore,
+    config,
+    resetStore: makePasswordResetStore(db),
+    otpDispatcher,
+  })
+  // slice-1 Task 1: quan ly nguoi dung + RBAC theo role (chi Admin CRUD user).
+  await usersRoutes(app, { authStore, usersStore: makeUsersStore(db) })
+  // slice-1 Task 2: quan ly Center + Branch (chi Admin).
+  await centersRoutes(app, { rbac, centersStore: makeCentersStore(db) })
+  // slice-1 Task 4: gan Branch cho User; cung dong vai tro "pham vi Branch" (branch-scoped)
+  // cho cac feature du lieu theo Branch (vi du: Class trong catalog).
+  const userBranchesStore = makeUserBranchesStore(db)
+  // slice-1 Task 3: chuong trinh hoc — Level/Course/Class/Enrollment; Class + Enrollment
+  // duoc loc theo Branch da gan cho nguoi goi (slice-1 Task 4).
+  await catalogRoutes(app, {
+    rbac,
+    catalogStore: makeCatalogStore(db),
+    branchScope: userBranchesStore,
+  })
+  // slice-1 Task 4: Admin gan/thay tap Branch cua tung User.
+  await userBranchesRoutes(app, { rbac, userBranchesStore })
+
+  // slice-3: Ngan hang cau hoi theo cap do (Starter/Mover/Flyer) + import. Admin + Teacher.
+  await questionsRoutes(app, { rbac, questionsStore: makeQuestionsStore(db) })
+
+  // slice-4: Tao de & Thi online. Admin/Teacher tao de; Student lam/nop bai (de an dap an).
+  await examsRoutes(app, { rbac, examsStore: makeExamsStore(db), branchScope: userBranchesStore })
+  // slice-12: question images (ADR 0013); students only read images frozen into their own attempts.
+  const mediaStore = makeMediaStore(db)
+  const mediaStorage = makeLocalMediaStorage(config.MEDIA_DIR)
+  // slice-11a: fixed exam sets (draft -> published -> archived), Admin/Teacher only.
+  // slice-12.2: Word import stores embedded images through the same media storage.
+  await examSetsRoutes(app, {
+    rbac,
+    examSetsStore: makeExamSetsStore(db),
+    media: { store: mediaStore, storage: mediaStorage },
+  })
+  await mediaRoutes(app, { rbac, mediaStore, mediaStorage })
+  // slice-13: exam history (student + branch-scoped managers) and exam attempt report.
+  await examHistoryRoutes(app, {
+    rbac,
+    examHistoryStore: makeExamHistoryStore(db),
+    branchScope: userBranchesStore,
+  })
+
+  // slice-6: Attendance. Only the assigned class teacher marks; admin reads within branch scope.
+  await attendanceRoutes(app, {
+    rbac,
+    attendanceStore: makeAttendanceStore(db),
+    branchScope: userBranchesStore,
+  })
+
+  // slice-4.5: AI prompt generation + reverse import with a review queue (no AI provider call).
+  await aiGenerationRoutes(app, { rbac, aiGenerationStore: makeAiGenerationStore(db) })
+
+  // slice-7: classification (exam + attendance, per-level weights) + admin dashboard, branch-scoped.
+  await reportsRoutes(app, {
+    rbac,
+    reportsStore: makeReportsStore(db),
+    branchScope: userBranchesStore,
+  })
+
+  // slice-8: staff check-in/out + teaching hours from real attendance, monthly admin report.
+  await workHoursRoutes(app, {
+    rbac,
+    workHoursStore: makeWorkHoursStore(db),
+    branchScope: userBranchesStore,
+  })
+
+  // slice-9b: retake + teaching reminders (in-app bell + outbox to WhatsApp/Telegram/console).
+  const notificationsStore = makeNotificationsStore(db)
+  const reminderRunner = makeReminderRunner(notificationsStore, makeNotificationSender(app.log))
+  await notificationsRoutes(app, { rbac, notificationsStore, reminderRunner })
+  if (config.NODE_ENV !== 'test' && config.NOTIFY_INTERVAL_MINUTES > 0) {
+    let timer: NodeJS.Timeout | undefined
+    const runOnce = (): void => {
+      reminderRunner
+        .run(new Date())
+        .then((result) => app.log.info(result, 'Reminder scan finished'))
+        .catch((err: unknown) => app.log.error({ err }, 'Reminder scan failed'))
+    }
+    app.addHook('onReady', async () => {
+      runOnce()
+      timer = setInterval(runOnce, config.NOTIFY_INTERVAL_MINUTES * 60_000)
+      timer.unref()
+    })
+    app.addHook('onClose', async () => clearInterval(timer))
+  }
+
+  return app
+}

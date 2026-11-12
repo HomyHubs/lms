@@ -1,0 +1,4 @@
+$kind: collection
+name: UserBranches
+description: Manage the branches assigned to a user.
+order: 4000

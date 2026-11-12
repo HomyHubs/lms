@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get AI request by id
+method: GET
+url: '{{base_url}}/ai-requests/:id'
+order: 3000
+description: Return a single AI generation request by id.
+pathVariables:
+  - key: id
+    value: '1'
+    description: AI request id

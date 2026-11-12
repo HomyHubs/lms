@@ -1,0 +1,16 @@
+$kind: http-request
+name: Create exam set
+method: POST
+url: '{{base_url}}/exam-sets'
+order: 2000
+description: Create a new exam set.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "A1 Final Set",
+      "level": "A1"
+    }

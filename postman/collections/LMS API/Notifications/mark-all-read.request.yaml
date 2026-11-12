@@ -1,0 +1,8 @@
+$kind: http-request
+name: Mark all notifications read
+method: POST
+url: '{{base_url}}/notifications/read-all'
+order: 3000
+description: Mark all notifications as read.
+body:
+  type: none

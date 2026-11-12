@@ -1,0 +1,6 @@
+$kind: http-request
+name: List attendance classes
+method: GET
+url: '{{base_url}}/attendance/classes'
+order: 1000
+description: Return classes with attendance data.

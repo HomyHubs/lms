@@ -1,0 +1,4 @@
+$kind: collection
+name: WorkHours
+description: Timesheet and work hours tracking.
+order: 16000

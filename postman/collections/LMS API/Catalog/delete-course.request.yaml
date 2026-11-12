@@ -1,0 +1,10 @@
+$kind: http-request
+name: Delete course
+method: DELETE
+url: '{{base_url}}/courses/:id'
+order: 5000
+description: Delete a course by id.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Course id

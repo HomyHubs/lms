@@ -1,0 +1,12 @@
+$kind: http-request
+name: Get AI request results
+method: POST
+url: '{{base_url}}/ai-requests/:id/results'
+order: 4000
+description: Fetch or trigger results for an AI generation request.
+pathVariables:
+  - key: id
+    value: '1'
+    description: AI request id
+body:
+  type: none

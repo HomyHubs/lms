@@ -1,0 +1,19 @@
+$kind: http-request
+name: Submit exam answers
+method: POST
+url: '{{base_url}}/exams/:id/answers'
+order: 7000
+description: Submit answers for the current exam attempt.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "answers": []
+    }

@@ -1,0 +1,6 @@
+$kind: http-request
+name: List questions
+method: GET
+url: '{{base_url}}/questions'
+order: 1000
+description: Return a list of all questions.

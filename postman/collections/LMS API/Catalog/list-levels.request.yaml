@@ -1,0 +1,6 @@
+$kind: http-request
+name: List levels
+method: GET
+url: '{{base_url}}/levels'
+order: 1000
+description: Return a list of all levels.

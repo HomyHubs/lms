@@ -1,0 +1,30 @@
+import { z } from 'zod'
+
+const EnvSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3000),
+  HOST: z.string().default('0.0.0.0'),
+  DATABASE_URL: z.string().default('postgres://lms:lms@localhost:5432/lms?sslmode=disable'),
+  /** Thoi song phien (opaque session) tinh bang giay. Mac dinh 7 ngay. */
+  SESSION_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 60 * 24 * 7),
+  /** Task 3: TTL cua OTP dat lai mat khau (giay). Ngan — mac dinh 10 phut. */
+  PASSWORD_RESET_OTP_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10 * 60),
+  /** slice-9b: reminder scan interval in minutes; 0 disables the scheduler (admin can still run it). */
+  NOTIFY_INTERVAL_MINUTES: z.coerce.number().int().nonnegative().default(15),
+  /** slice-12: directory of the local media storage driver (ADR 0013). */
+  MEDIA_DIR: z.string().min(1).default('./data/media'),
+})
+
+export type AppConfig = z.infer<typeof EnvSchema>
+
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  return EnvSchema.parse(env)
+}

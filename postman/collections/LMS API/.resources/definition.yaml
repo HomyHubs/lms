@@ -1,0 +1,21 @@
+$kind: collection
+name: LMS API
+description: >-
+  Fastify LMS backend API. Authentication is cookie-based (session cookie
+  'lms_session' set by POST /auth/login). Postman's cookie jar handles the
+  session automatically after login, so no Authorization headers are required.
+auth:
+  type: noauth
+variables:
+  - key: base_url
+    value: 'http://localhost:3000'
+    description: Base URL of the LMS API
+  - key: phone_number
+    value: '0900000000'
+    description: Phone number used for login
+  - key: password
+    value: 'password123'
+    description: Password used for login
+  - key: import_token
+    value: ''
+    description: Token returned by an import preview, used to commit the import

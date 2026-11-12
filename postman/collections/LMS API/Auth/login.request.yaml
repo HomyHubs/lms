@@ -1,0 +1,16 @@
+$kind: http-request
+name: Login
+method: POST
+url: '{{base_url}}/auth/login'
+order: 1000
+description: Authenticate with phone number and password. Sets the 'lms_session' cookie.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "phoneNumber": "{{phone_number}}",
+      "password": "{{password}}"
+    }

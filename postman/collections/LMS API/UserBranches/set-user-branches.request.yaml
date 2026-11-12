@@ -1,0 +1,19 @@
+$kind: http-request
+name: Set user branches
+method: PUT
+url: '{{base_url}}/users/:id/branches'
+order: 2000
+description: Replace the set of branches assigned to a user.
+pathVariables:
+  - key: id
+    value: '1'
+    description: User id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "branchIds": [1, 2]
+    }

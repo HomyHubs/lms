@@ -1,0 +1,19 @@
+$kind: http-request
+name: Update class
+method: PATCH
+url: '{{base_url}}/classes/:id'
+order: 8000
+description: Update a class's attributes.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Class id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Morning Class A"
+    }

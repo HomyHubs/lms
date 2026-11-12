@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pattern classes shared by every page; catalogue in docs/design/ui-reference.md. */
+@layer components {
+  .c-card {
+    @apply flex break-inside-avoid flex-col gap-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm;
+  }
+  .c-section-title {
+    @apply flex items-center gap-2 font-semibold text-primary-900;
+  }
+  .c-hero {
+    @apply flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-primary-100/60 bg-gradient-to-r from-primary-50 via-white to-accent-50 p-6 shadow-sm;
+  }
+  .c-input {
+    @apply rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100;
+  }
+  .c-table {
+    @apply w-full text-left text-sm;
+  }
+  .c-table thead tr {
+    @apply text-slate-500;
+  }
+  .c-table th {
+    @apply py-1.5 pr-3 font-medium;
+  }
+  .c-table td {
+    @apply py-1.5 pr-3;
+  }
+  .c-table tbody tr {
+    @apply border-t border-slate-100;
+  }
+}

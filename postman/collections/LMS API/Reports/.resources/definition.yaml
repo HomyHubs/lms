@@ -1,0 +1,4 @@
+$kind: collection
+name: Reports
+description: Reporting endpoints.
+order: 15000

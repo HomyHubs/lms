@@ -1,0 +1,12 @@
+$kind: http-request
+name: Cancel session
+method: POST
+url: '{{base_url}}/sessions/:id/cancel'
+order: 11000
+description: Cancel a scheduled session.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Session id
+body:
+  type: none

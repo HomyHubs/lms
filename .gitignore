@@ -1,0 +1,30 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.vite/
+
+# Anh cau hoi luu cuc bo (MEDIA_DIR, slice-12)
+data/media/
+
+# Python (script phu tro cuc bo, khong thuoc monorepo)
+__pycache__/
+*.pyc
+github_app_auth*.py
+
+# Cong cu AI cuc bo
+.claude/
+.workbuddy-ai/
+.agent-worktrees/
+
+# Postman local workspace
+# Theo doi collections/environments/specs qua git; bo qua globals (chua secret) va cau hinh noi bo.
+.postman/
+postman/globals/
+

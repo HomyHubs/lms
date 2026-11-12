@@ -1,0 +1,19 @@
+$kind: http-request
+name: Set exam policy for level
+method: PUT
+url: '{{base_url}}/exam-policies/:level'
+order: 2000
+description: Set the exam policy for a given level.
+pathVariables:
+  - key: level
+    value: 'A1'
+    description: Level code
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "durationMinutes": 60
+    }

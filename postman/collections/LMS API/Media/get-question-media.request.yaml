@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get question media
+method: GET
+url: '{{base_url}}/questions/:id/media'
+order: 3000
+description: Return the media associated with a question.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Question id
