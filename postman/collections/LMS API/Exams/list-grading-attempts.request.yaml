@@ -1,0 +1,6 @@
+$kind: http-request
+name: List grading attempts
+method: GET
+url: '{{base_url}}/grading/attempts'
+order: 11000
+description: Return attempts awaiting grading.

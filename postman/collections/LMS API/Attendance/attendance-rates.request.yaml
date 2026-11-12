@@ -1,0 +1,6 @@
+$kind: http-request
+name: Attendance rates
+method: GET
+url: '{{base_url}}/attendance/rates'
+order: 2000
+description: Return attendance rate statistics.

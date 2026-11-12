@@ -1,0 +1,19 @@
+$kind: http-request
+name: Update user
+method: PATCH
+url: '{{base_url}}/users/:id'
+order: 4000
+description: Update a user's attributes.
+pathVariables:
+  - key: id
+    value: '1'
+    description: User id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "John Doe"
+    }

@@ -1,0 +1,4 @@
+$kind: collection
+name: Users
+description: User management endpoints.
+order: 3000

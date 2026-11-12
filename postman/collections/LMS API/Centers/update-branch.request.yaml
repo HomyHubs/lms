@@ -1,0 +1,19 @@
+$kind: http-request
+name: Update branch
+method: PATCH
+url: '{{base_url}}/branches/:id'
+order: 7000
+description: Update a branch's attributes.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Branch id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "North Branch"
+    }

@@ -1,0 +1,6 @@
+$kind: http-request
+name: Work hours report
+method: GET
+url: '{{base_url}}/reports/work-hours'
+order: 4000
+description: Return an aggregated work hours report.

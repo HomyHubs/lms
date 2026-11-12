@@ -1,0 +1,4 @@
+$kind: collection
+name: ExamHistory
+description: Exam attempt history and reports.
+order: 11000

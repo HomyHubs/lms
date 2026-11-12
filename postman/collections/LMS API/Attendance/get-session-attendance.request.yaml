@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get session attendance
+method: GET
+url: '{{base_url}}/sessions/:id/attendance'
+order: 9000
+description: Return the attendance records for a session.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Session id

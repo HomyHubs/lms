@@ -1,0 +1,6 @@
+$kind: http-request
+name: List AI requests
+method: GET
+url: '{{base_url}}/ai-requests'
+order: 1000
+description: Return a list of AI generation requests.

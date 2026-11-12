@@ -1,0 +1,4 @@
+$kind: collection
+name: AiGeneration
+description: AI-assisted question generation requests.
+order: 13000

@@ -1,0 +1,10 @@
+$kind: http-request
+name: List class teachers
+method: GET
+url: '{{base_url}}/classes/:id/teachers'
+order: 7000
+description: Return the teachers assigned to a class.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Class id

@@ -1,0 +1,12 @@
+$kind: http-request
+name: Import preview
+method: POST
+url: '{{base_url}}/exam-sets/import/preview'
+order: 11000
+description: Upload a file to preview an exam set import (multipart file upload).
+body:
+  type: formdata
+  content:
+    - key: file
+      type: file
+      src: ''

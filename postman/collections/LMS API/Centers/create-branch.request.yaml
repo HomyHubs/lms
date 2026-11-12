@@ -1,0 +1,16 @@
+$kind: http-request
+name: Create branch
+method: POST
+url: '{{base_url}}/branches'
+order: 6000
+description: Create a new branch under a center.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "North Branch",
+      "centerId": 1
+    }

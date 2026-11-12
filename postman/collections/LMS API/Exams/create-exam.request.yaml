@@ -1,0 +1,17 @@
+$kind: http-request
+name: Create exam
+method: POST
+url: '{{base_url}}/exams'
+order: 4000
+description: Create a new exam from an exam set assigned to classes.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Midterm Exam",
+      "examSetId": 1,
+      "classIds": [1, 2]
+    }

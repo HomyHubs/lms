@@ -1,0 +1,12 @@
+$kind: http-request
+name: Upload media
+method: POST
+url: '{{base_url}}/media'
+order: 1000
+description: Upload a media file (multipart form data).
+body:
+  type: formdata
+  content:
+    - key: file
+      type: file
+      src: ''

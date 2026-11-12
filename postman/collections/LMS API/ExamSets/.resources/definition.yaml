@@ -1,0 +1,4 @@
+$kind: collection
+name: ExamSets
+description: Manage exam sets, their items, lifecycle and import.
+order: 10000

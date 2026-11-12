@@ -1,0 +1,19 @@
+$kind: http-request
+name: Grade attempt
+method: POST
+url: '{{base_url}}/grading/attempts/:attemptId/grade'
+order: 13000
+description: Submit a grade for an attempt.
+pathVariables:
+  - key: attemptId
+    value: '1'
+    description: Attempt id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "score": 10
+    }

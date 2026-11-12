@@ -1,0 +1,17 @@
+$kind: http-request
+name: Create question
+method: POST
+url: '{{base_url}}/questions'
+order: 2000
+description: Create a new question.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "prompt": "What is the capital of France?",
+      "type": "multiple_choice",
+      "choices": ["Paris", "London", "Berlin", "Madrid"]
+    }

@@ -1,0 +1,15 @@
+$kind: http-request
+name: Import commit
+method: POST
+url: '{{base_url}}/exam-sets/import/commit'
+order: 12000
+description: Commit a previously previewed exam set import using its token.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "token": "{{import_token}}"
+    }

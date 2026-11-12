@@ -1,0 +1,6 @@
+$kind: http-request
+name: Classification policies
+method: GET
+url: '{{base_url}}/reports/classification-policies'
+order: 2000
+description: Return the classification policies used in reports.

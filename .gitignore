@@ -23,6 +23,8 @@ github_app_auth*.py
 .workbuddy-ai/
 .agent-worktrees/
 
-# Postman local workspace (cong cu sinh ra, khong thuoc source)
+# Postman local workspace
+# Theo doi collections/environments/specs qua git; bo qua globals (chua secret) va cau hinh noi bo.
 .postman/
-postman/
+postman/globals/
+

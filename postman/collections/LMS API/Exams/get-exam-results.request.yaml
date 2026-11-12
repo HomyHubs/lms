@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get exam results
+method: GET
+url: '{{base_url}}/exams/:id/results'
+order: 10000
+description: Return the results for an exam.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam id

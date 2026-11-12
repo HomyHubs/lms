@@ -1,0 +1,10 @@
+$kind: http-request
+name: Delete class
+method: DELETE
+url: '{{base_url}}/classes/:id'
+order: 9000
+description: Delete a class by id.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Class id

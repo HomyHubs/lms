@@ -1,0 +1,6 @@
+$kind: http-request
+name: List courses
+method: GET
+url: '{{base_url}}/courses'
+order: 2000
+description: Return a list of all courses.

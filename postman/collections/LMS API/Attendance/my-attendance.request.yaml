@@ -1,0 +1,6 @@
+$kind: http-request
+name: My attendance
+method: GET
+url: '{{base_url}}/me/attendance'
+order: 12000
+description: Return the current user's attendance.

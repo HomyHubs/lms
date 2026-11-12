@@ -1,0 +1,19 @@
+$kind: http-request
+name: Update center
+method: PATCH
+url: '{{base_url}}/centers/:id'
+order: 3000
+description: Update a center's attributes.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Center id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Downtown Center"
+    }

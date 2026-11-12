@@ -1,0 +1,6 @@
+$kind: http-request
+name: List notifications
+method: GET
+url: '{{base_url}}/notifications'
+order: 1000
+description: Return the current user's notifications.

@@ -1,0 +1,6 @@
+$kind: http-request
+name: List exam policies
+method: GET
+url: '{{base_url}}/exam-policies'
+order: 1000
+description: Return the exam policies for all levels.

@@ -1,0 +1,19 @@
+$kind: http-request
+name: Update question
+method: PATCH
+url: '{{base_url}}/questions/:id'
+order: 3000
+description: Update a question's attributes.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Question id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "prompt": "What is the capital of France?"
+    }

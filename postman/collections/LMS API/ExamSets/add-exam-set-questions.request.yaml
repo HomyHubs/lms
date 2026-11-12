@@ -1,0 +1,19 @@
+$kind: http-request
+name: Add questions to exam set
+method: POST
+url: '{{base_url}}/exam-sets/:id/questions'
+order: 9000
+description: Add questions to an exam set.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam set id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "questionIds": [1]
+    }

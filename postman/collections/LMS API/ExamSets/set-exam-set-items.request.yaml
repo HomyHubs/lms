@@ -1,0 +1,19 @@
+$kind: http-request
+name: Set exam set items
+method: PUT
+url: '{{base_url}}/exam-sets/:id/items'
+order: 10000
+description: Replace the ordered items of an exam set.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam set id
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "items": []
+    }

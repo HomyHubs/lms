@@ -1,0 +1,10 @@
+$kind: http-request
+name: Delete center
+method: DELETE
+url: '{{base_url}}/centers/:id'
+order: 4000
+description: Delete a center by id.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Center id

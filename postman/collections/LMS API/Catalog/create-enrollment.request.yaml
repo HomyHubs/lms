@@ -1,0 +1,16 @@
+$kind: http-request
+name: Create enrollment
+method: POST
+url: '{{base_url}}/enrollments'
+order: 11000
+description: Enroll a student into a class.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "classId": 1,
+      "studentId": 1
+    }

@@ -1,0 +1,4 @@
+$kind: collection
+name: Exams
+description: Exam policies, exams, attempts, answers and grading.
+order: 9000

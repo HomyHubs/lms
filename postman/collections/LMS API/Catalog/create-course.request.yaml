@@ -1,0 +1,16 @@
+$kind: http-request
+name: Create course
+method: POST
+url: '{{base_url}}/courses'
+order: 3000
+description: Create a new course under a level.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Beginner English",
+      "levelId": 1
+    }

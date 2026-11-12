@@ -1,0 +1,6 @@
+$kind: http-request
+name: List exam sets
+method: GET
+url: '{{base_url}}/exam-sets'
+order: 1000
+description: Return a list of all exam sets.

@@ -1,0 +1,10 @@
+$kind: http-request
+name: Delete exam set
+method: DELETE
+url: '{{base_url}}/exam-sets/:id'
+order: 5000
+description: Delete an exam set by id.
+pathVariables:
+  - key: id
+    value: '1'
+    description: Exam set id

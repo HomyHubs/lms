@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get grading attempt
+method: GET
+url: '{{base_url}}/grading/attempts/:attemptId'
+order: 12000
+description: Return a single attempt for grading.
+pathVariables:
+  - key: attemptId
+    value: '1'
+    description: Attempt id
