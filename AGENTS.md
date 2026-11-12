@@ -655,6 +655,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-12.3 | Ảnh ở màn chấm tay | Dọc | Done | 26 | 2026-11-14 |
 | slice-12.2 | Ảnh nhúng Word tự gắn khi import | Dọc | Done | 27 | 2026-11-14 |
 | slice-11c | Mẫu Excel trắc nghiệm + hình từ link Google | Dọc | Done | 28 | 2026-11-14 |
+| postman-setup | Bộ tài nguyên Postman (collection LMS API, env LMS Local, OpenAPI spec) | — | Done | aa80a74, e9716ce | 2026-11-12 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
