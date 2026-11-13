@@ -240,7 +240,9 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       if (studentId) query = query.where('attendance_records.student_id', '=', studentId)
       return query.execute()
     },
-    async listSessionsOnDate(branchIds, dateIso) {
+    // TODO(slice-16): `_dateIso` hiện bị bỏ qua — câu lệnh dưới hardcode "hôm nay" theo giờ
+    // Asia/Ho_Chi_Minh. Nếu cần truy vấn theo ngày tùy chọn, thay NOW() bằng tham số này.
+    async listSessionsOnDate(branchIds, _dateIso) {
       if (branchIds.length === 0) return []
       const rows = await db
         .selectFrom('class_sessions')
