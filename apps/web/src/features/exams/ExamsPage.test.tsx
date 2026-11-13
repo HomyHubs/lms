@@ -258,9 +258,15 @@ describe('ExamsPage', () => {
       }),
     )
     renderPage()
-    await screen.findByText('Starter Reading')
+    // Các lookup phụ thuộc fetch (danh sách đề, rồi UI làm bài sau khi tải attempt) có thể
+    // vượt 1000ms mặc định của findBy khi chạy test song song -> nới timeout chống flaky.
+    await screen.findByText('Starter Reading', undefined, { timeout: 5000 })
     fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
-    const flag = await screen.findByRole('button', { name: 'Đánh dấu xem lại câu 1' })
+    const flag = await screen.findByRole(
+      'button',
+      { name: 'Đánh dấu xem lại câu 1' },
+      { timeout: 5000 },
+    )
     expect(flag).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(flag)
     expect(flag).toHaveAttribute('aria-pressed', 'true')

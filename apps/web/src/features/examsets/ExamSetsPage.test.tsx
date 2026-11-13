@@ -69,16 +69,28 @@ describe('ExamSetsPage', () => {
   it('adds a bank question, reorders, publishes and then locks editing', async () => {
     const { puts } = fakeBackend()
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Thêm: Question 2' }))
-    await waitFor(() => expect(puts).toEqual([[Q1.id, Q2.id]]))
-    fireEvent.click(await screen.findByRole('button', { name: 'Lên câu 2' }))
-    await waitFor(() => expect(puts[1]).toEqual([Q2.id, Q1.id]))
+    // Mở bộ đề kích hoạt tải song song (chi tiết bộ đề + ngân hàng câu hỏi); nút "Thêm"
+    // chỉ render sau khi query ngân hàng xong. Dưới tải test song song, 1000ms mặc định của
+    // findBy có thể hụt -> cho timeout rộng hơn cho các lookup phụ thuộc fetch (chống flaky).
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }, { timeout: 5000 }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Thêm: Question 2' }, { timeout: 5000 }),
+    )
+    await waitFor(() => expect(puts).toEqual([[Q1.id, Q2.id]]), { timeout: 5000 })
+    fireEvent.click(await screen.findByRole('button', { name: 'Lên câu 2' }, { timeout: 5000 }))
+    await waitFor(() => expect(puts[1]).toEqual([Q2.id, Q1.id]), { timeout: 5000 })
     const items = within(screen.getByRole('list', { name: 'Câu hỏi trong bộ đề' }))
-    await waitFor(() => expect(items.getAllByText(/^Câu \d\./).map((n) => n.textContent)).toEqual(['Câu 1. Question 2', 'Câu 2. Question 1']))
+    await waitFor(
+      () =>
+        expect(items.getAllByText(/^Câu \d\./).map((n) => n.textContent)).toEqual([
+          'Câu 1. Question 2',
+          'Câu 2. Question 1',
+        ]),
+      { timeout: 5000 },
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Phát hành' }))
-    expect(await screen.findByText(/không thể sửa/)).toBeTruthy()
+    expect(await screen.findByText(/không thể sửa/, undefined, { timeout: 5000 })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Lên câu 2' })).toBeNull()
     expect(screen.queryByRole('form', { name: 'Soạn câu hỏi' })).toBeNull()
   })
