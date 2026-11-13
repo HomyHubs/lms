@@ -35,13 +35,15 @@ test.describe('Questions — client-side list filters', () => {
       }
     })
 
-    // Apply a level filter -> only the matching row remains visible.
-    await page.getByLabel('Lọc cấp độ', { exact: true }).selectOption('flyer')
-    await expect(rowByText(page, flyer)).toBeVisible()
-    await expect(rowByText(page, starter)).toHaveCount(0)
+    // slice-18: each level now has its own panel; filtering is per-column INSIDE a
+    // panel. The flyer row lives in the Flyer panel (skill=speaking); narrowing that
+    // panel's skill filter to 'reading' hides it. The Starter panel is independent.
+    await page.getByLabel('Lọc kỹ năng Flyer', { exact: true }).selectOption('reading')
+    await expect(rowByText(page, flyer)).toHaveCount(0)
+    await expect(rowByText(page, starter)).toBeVisible()
 
-    // Clearing restores the full loaded list.
-    await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click()
+    // Resetting the panel filter restores the flyer row.
+    await page.getByLabel('Lọc kỹ năng Flyer', { exact: true }).selectOption('')
     await expect(rowByText(page, starter)).toBeVisible()
     await expect(rowByText(page, flyer)).toBeVisible()
 
