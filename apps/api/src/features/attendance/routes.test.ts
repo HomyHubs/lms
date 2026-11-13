@@ -181,6 +181,12 @@ function makeFakeStore(): AttendanceStore {
     async listSessionsOnDate() {
       return []
     },
+    async listBranchClassRecords(branchId) {
+      return records
+        .map((r) => ({ klass: classOf(r.session_id), status: r.status }))
+        .filter((r) => r.klass?.branch_id === branchId)
+        .map((r) => ({ class_id: r.klass!.id, class_name: r.klass!.name, status: r.status }))
+    },
   }
 }
 

@@ -3,6 +3,7 @@ import type {
   AttendanceRosterEntry,
   AttendanceStatus,
   AttendanceSummary,
+  BranchClassRate,
   ClassSession,
   MarkAttendanceRecord,
   StudentAttendanceRate,
@@ -84,6 +85,13 @@ export interface TodaySessionRow {
   enrolled_count: number
 }
 
+/** One attendance record for a class in a branch (slice-16 branch rates). */
+export interface BranchClassRecordRow {
+  class_id: string
+  class_name: string
+  status: string
+}
+
 export interface CreateSessionFields {
   classId: string
   sessionDate: string
@@ -139,6 +147,9 @@ export interface AttendanceStore {
 
   /** Lớp có buổi học trong một ngày (YYYY-MM-DD), branchIds giới hạn phạm vi. */
   listSessionsOnDate(branchIds: string[], dateIso: string): Promise<TodaySessionRow[]>
+
+  /** All attendance records of a branch, grouped-able by class (slice-16 branch rates). */
+  listBranchClassRecords(branchId: string): Promise<BranchClassRecordRow[]>
 }
 
 const STATUSES: readonly AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
@@ -254,6 +265,37 @@ export function aggregateRates(rows: readonly ScopedRecordRow[]): {
     }))
     .sort((a, b) => a.phoneNumber.localeCompare(b.phoneNumber))
   return { overall: summarize(rows.map((r) => r.status)), students }
+}
+
+/**
+ * slice-16: branch attendance rates. Groups branch records by class, computes per-class counts
+ * (present/late/absent/excused) + total + ratePercent (ADR 0004: (present + late) /
+ * (present + late + absent) * 100, 1 decimal, excused excluded, null when denominator is 0),
+ * sorts classes by className, and computes `overall` with the shared `summarize` helper.
+ */
+export function aggregateBranchRates(
+  branchId: string,
+  rows: readonly BranchClassRecordRow[],
+): { branchId: string; overall: AttendanceSummary; classes: BranchClassRate[] } {
+  const perClass = new Map<string, { className: string; statuses: string[] }>()
+  for (const row of rows) {
+    const entry = perClass.get(row.class_id) ?? { className: row.class_name, statuses: [] }
+    entry.statuses.push(row.status)
+    perClass.set(row.class_id, entry)
+  }
+  const classes: BranchClassRate[] = [...perClass.entries()]
+    .map(([classId, v]) => {
+      const counts = { present: 0, late: 0, absent: 0, excused: 0 }
+      for (const s of v.statuses) {
+        if (s === 'present' || s === 'late' || s === 'absent' || s === 'excused') counts[s] += 1
+      }
+      const counted = counts.present + counts.late + counts.absent
+      const ratePercent =
+        counted === 0 ? null : Math.round(((counts.present + counts.late) / counted) * 1000) / 10
+      return { classId, className: v.className, ...counts, total: v.statuses.length, ratePercent }
+    })
+    .sort((a, b) => a.className.localeCompare(b.className))
+  return { branchId, overall: summarize(rows.map((r) => r.status)), classes }
 }
 
 /**
