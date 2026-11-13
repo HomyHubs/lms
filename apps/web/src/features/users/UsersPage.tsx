@@ -1,11 +1,30 @@
 import { useState, type FormEvent } from 'react'
-import { Trash2, UserPlus, Users } from 'lucide-react'
-import { CreateUserRequest, type Gender, type UserRole } from '@lms/shared'
+import { ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
+import {
+  CreateUserRequest,
+  DEFAULT_QUESTION_EDIT_PERMISSIONS,
+  type Gender,
+  type QuestionEditPermissions,
+  type UserRole,
+} from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
+import {
+  useQuestionEditPermissions,
+  useUpdateQuestionEditPermissions,
+} from '@/features/settings/useSettings'
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from './useUsers'
 
 const ROLES: UserRole[] = ['admin', 'teacher', 'student', 'staff']
+
+/** slice-19: thu tu + nhan hien thi cac role trong bang cau hinh quyen sua cau hoi. */
+const QUESTION_EDIT_ROLES: { role: keyof QuestionEditPermissions; label: string }[] = [
+  { role: 'superadmin', label: 'Quản trị cấp cao (superadmin)' },
+  { role: 'admin', label: 'Quản trị (admin)' },
+  { role: 'staff', label: 'Nhân viên (staff)' },
+  { role: 'teacher', label: 'Giáo viên (teacher)' },
+  { role: 'student', label: 'Học viên (student)' },
+]
 
 /** Nhan giới tính hiển thị tiếng Việt. */
 const GENDER_LABEL: Record<Gender, string> = { male: 'Nam', female: 'Nữ', other: 'Khác' }
@@ -19,6 +38,15 @@ export function UsersPage(): React.ReactElement {
   const createMutation = useCreateUser()
   const updateMutation = useUpdateUser()
   const deleteMutation = useDeleteUser()
+
+  // slice-19 (ADR 0015): cau hinh quyen sua cau hoi theo role (toan he thong).
+  const permsQuery = useQuestionEditPermissions()
+  const updatePerms = useUpdateQuestionEditPermissions()
+  const perms = permsQuery.data ?? DEFAULT_QUESTION_EDIT_PERMISSIONS
+
+  function togglePerm(target: keyof QuestionEditPermissions): void {
+    updatePerms.mutate({ ...perms, [target]: !perms[target] })
+  }
 
   const [phoneNumber, setPhoneNumber] = useState('')
   const [password, setPassword] = useState('')
@@ -237,6 +265,44 @@ export function UsersPage(): React.ReactElement {
             </tbody>
           </table>
         )}
+      </section>
+
+      {/* slice-19 (ADR 0015): bat/tat quyen SUA cau hoi theo tung role (toan he thong). */}
+      <section className="c-card" aria-label="Quyền sửa câu hỏi theo vai trò">
+        <h2 className="c-section-title">
+          <ShieldCheck className="h-5 w-5" /> Quyền sửa câu hỏi theo vai trò
+        </h2>
+        <p className="text-sm text-slate-500">
+          Bật/tắt quyền thêm, sửa, xoá và nhập câu hỏi cho từng vai trò. Máy chủ luôn thực thi;
+          thay đổi áp dụng toàn hệ thống.
+        </p>
+        {permsQuery.isError && (
+          <p role="alert" className="text-sm text-danger-600">
+            Không tải được cấu hình quyền sửa câu hỏi.
+          </p>
+        )}
+        {updatePerms.isError && (
+          <p role="alert" className="text-sm text-danger-600">
+            Lưu cấu hình thất bại, vui lòng thử lại.
+          </p>
+        )}
+        <ul className="divide-y divide-slate-200">
+          {QUESTION_EDIT_ROLES.map(({ role: r, label }) => (
+            <li key={r} className="flex items-center justify-between py-2">
+              <span className="text-sm">{label}</span>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label={`Cho phép ${label} sửa câu hỏi`}
+                  checked={perms[r]}
+                  disabled={permsQuery.isLoading || updatePerms.isPending}
+                  onChange={() => togglePerm(r)}
+                />
+                <span>{perms[r] ? 'Được sửa' : 'Không được sửa'}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
       </section>
     </>
   )

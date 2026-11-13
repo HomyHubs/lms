@@ -22,6 +22,7 @@ import {
   LoginResponse,
   MeResponse,
   OkResponse,
+  QuestionEditPermissions,
   QuestionList,
   QuestionResponse,
   UserBranchesResponse,
@@ -469,6 +470,29 @@ export async function importQuestions(
   })
   if (!res.ok) return throwApiError(res, 'Import that bai: du lieu sai dinh dang')
   return ImportQuestionsResult.parse(await res.json())
+}
+
+/**
+ * slice-19: settings quyen sua cau hoi theo role (toan he thong). GET cho moi role da dang nhap
+ * (BE merge mac dinh cho role thieu); PUT chi Admin/Superadmin (BE thuc thi RBAC + validate Zod).
+ */
+export async function getQuestionEditPermissions(): Promise<QuestionEditPermissions> {
+  const res = await fetch('/api/settings/question-edit-permissions', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc cau hinh quyen sua cau hoi')
+  return QuestionEditPermissions.parse(await res.json())
+}
+
+export async function setQuestionEditPermissions(
+  permissions: QuestionEditPermissions,
+): Promise<QuestionEditPermissions> {
+  const res = await fetch('/api/settings/question-edit-permissions', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(permissions),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong luu duoc cau hinh quyen sua cau hoi')
+  return QuestionEditPermissions.parse(await res.json())
 }
 
 /** Tach CSV thanh cac dong (mang o), ho tro o co dau ngoac kep "" (chua dau phay / xuong dong). */

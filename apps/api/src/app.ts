@@ -19,6 +19,7 @@ import { centersRoutes, makeCentersStore } from './features/centers/index.js'
 import { catalogRoutes, makeCatalogStore } from './features/catalog/index.js'
 import { makeUserBranchesStore, userBranchesRoutes } from './features/userbranches/index.js'
 import { makeQuestionsStore, questionsRoutes } from './features/questions/index.js'
+import { makeSettingsStore, settingsRoutes } from './features/settings/index.js'
 import { examsRoutes, makeExamsStore } from './features/exams/index.js'
 import { examSetsRoutes, makeExamSetsStore } from './features/examsets/index.js'
 import { makeLocalMediaStorage, makeMediaStore, mediaRoutes } from './features/media/index.js'
@@ -115,8 +116,14 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   // slice-1 Task 4: Admin gan/thay tap Branch cua tung User.
   await userBranchesRoutes(app, { rbac, userBranchesStore })
 
+  // slice-19 (ADR 0015): system-wide question-edit permissions by role.
+  // One store instance is shared: settings routes read/write it, questions routes enforce it.
+  const settingsStore = makeSettingsStore(db)
+  await settingsRoutes(app, { rbac, settingsStore })
+
   // slice-3: Ngan hang cau hoi theo cap do (Starter/Mover/Flyer) + import. Admin + Teacher.
-  await questionsRoutes(app, { rbac, questionsStore: makeQuestionsStore(db) })
+  // slice-19: write routes (POST/PATCH/DELETE/import) are gated by the per-role settings.
+  await questionsRoutes(app, { rbac, questionsStore: makeQuestionsStore(db), settingsStore })
 
   // slice-4: Tao de & Thi online. Admin/Teacher tao de; Student lam/nop bai (de an dap an).
   await examsRoutes(app, { rbac, examsStore: makeExamsStore(db), branchScope: userBranchesStore })

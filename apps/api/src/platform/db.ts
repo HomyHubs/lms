@@ -355,6 +355,12 @@ export interface ExamAttemptMediaTable {
   media_id: string
 }
 
+/** Table `question_edit_permissions` — slice-19 (ADR 0015): per-role toggle for editing questions. */
+export interface QuestionEditPermissionsTable {
+  role: string
+  can_edit: boolean
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -385,6 +391,7 @@ export interface Database {
   media_assets: MediaAssetsTable
   question_media: QuestionMediaTable
   exam_attempt_media: ExamAttemptMediaTable
+  question_edit_permissions: QuestionEditPermissionsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {
