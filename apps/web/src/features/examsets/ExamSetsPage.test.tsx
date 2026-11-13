@@ -132,3 +132,101 @@ describe('ExamSetsPage', () => {
     expect(screen.queryByRole('form', { name: 'Import bộ đề từ file' })).toBeNull()
   })
 })
+
+// slice-21 (4.4): tìm/lọc + bulk-add trong BankPicker và xem trước bộ đề (ẩn đáp án).
+const SET_ID_2 = '50000000-0000-4000-8000-000000000002'
+
+function variedQuestion(n: number, over: Partial<Question> = {}): Question {
+  return {
+    id: `31000000-0000-4000-8000-00000000000${n}`, levelId: LEVEL_ID, levelCode: 'starter', skill: 'reading',
+    questionType: 'multiple_choice', difficulty: 'easy', questionText: `Bank question ${n}`,
+    options: ['alpha', 'beta'], correctAnswer: 'SECRET-ANSWER', points: 1, explanation: 'SECRET-EXPLANATION',
+    sourceReference: null, source: 'manual', createdAt: T, ...over,
+  }
+}
+const IN_SET = variedQuestion(1, { questionText: 'Cau trong bo de' })
+const BANK_APPLE = variedQuestion(2, { questionText: 'Apple fruit', questionType: 'multiple_choice', difficulty: 'easy' })
+const BANK_BANANA = variedQuestion(3, { questionText: 'Banana fruit', questionType: 'true_false', difficulty: 'hard', options: null })
+const BANK_CHERRY = variedQuestion(4, { questionText: 'Cherry fruit', questionType: 'multiple_choice', difficulty: 'medium' })
+
+function linkBackend() {
+  const set: ExamSetDetail = { id: SET_ID_2, title: 'Bo Link', levelId: LEVEL_ID, levelCode: 'starter', skill: 'reading',
+    description: null, status: 'draft', itemCount: 1, createdBy: USER, createdAt: T, updatedAt: T, publishedAt: null,
+    items: [IN_SET] }
+  const bank = [IN_SET, BANK_APPLE, BANK_BANANA, BANK_CHERRY]
+  const puts: string[][] = []
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    if (url === '/api/exams') return json({ exams: [] })
+    if (url === '/api/questions') return json({ questions: bank })
+    if (url.startsWith('/api/exam-sets?') || url === '/api/exam-sets') return json({ examSets: [{ ...set, items: undefined }] })
+    if (url === `/api/exam-sets/${SET_ID_2}/items` && init?.method === 'PUT') {
+      const ids = (JSON.parse(String(init.body)) as { questionIds: string[] }).questionIds
+      puts.push(ids)
+      set.items = ids.map((id) => bank.find((q) => q.id === id)!)
+      set.itemCount = ids.length
+      return json({ examSet: set })
+    }
+    if (url === `/api/exam-sets/${SET_ID_2}`) return json({ examSet: set })
+    return json({ error: `unexpected ${url}` }, 500)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return { puts }
+}
+
+describe('ExamSetsPage slice-21 lien ket cau hoi', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('tim theo noi dung thu hep ngan hang cau hoi', async () => {
+    linkBackend()
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }, { timeout: 5000 }))
+    expect(await screen.findByLabelText('Thêm: Apple fruit', undefined, { timeout: 5000 })).toBeTruthy()
+    expect(screen.getByLabelText('Thêm: Banana fruit')).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('Tìm câu hỏi'), { target: { value: 'apple' } })
+    expect(screen.getByLabelText('Thêm: Apple fruit')).toBeTruthy()
+    expect(screen.queryByLabelText('Thêm: Banana fruit')).toBeNull()
+  })
+
+  it('loc theo loai cau va do kho', async () => {
+    linkBackend()
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }, { timeout: 5000 }))
+    await screen.findByLabelText('Thêm: Apple fruit', undefined, { timeout: 5000 })
+
+    fireEvent.change(screen.getByLabelText('Lọc loại câu hỏi'), { target: { value: 'true_false' } })
+    expect(screen.getByLabelText('Thêm: Banana fruit')).toBeTruthy()
+    expect(screen.queryByLabelText('Thêm: Apple fruit')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Lọc loại câu hỏi'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Lọc độ khó'), { target: { value: 'medium' } })
+    expect(screen.getByLabelText('Thêm: Cherry fruit')).toBeTruthy()
+    expect(screen.queryByLabelText('Thêm: Apple fruit')).toBeNull()
+  })
+
+  it('chon nhieu cau roi them mot lan goi PUT items dung thu tu', async () => {
+    const { puts } = linkBackend()
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }, { timeout: 5000 }))
+    await screen.findByLabelText('Chọn: Apple fruit', undefined, { timeout: 5000 })
+
+    fireEvent.click(screen.getByLabelText('Chọn: Apple fruit'))
+    fireEvent.click(screen.getByLabelText('Chọn: Cherry fruit'))
+    fireEvent.click(screen.getByRole('button', { name: /Thêm 2 câu đã chọn/ }))
+
+    await waitFor(() => expect(puts).toEqual([[IN_SET.id, BANK_APPLE.id, BANK_CHERRY.id]]), { timeout: 5000 })
+  })
+
+  it('xem truoc bo de hien cau theo thu tu va khong lo dap an', async () => {
+    linkBackend()
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }, { timeout: 5000 }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Xem trước bộ đề' }, { timeout: 5000 }))
+
+    const dialog = within(await screen.findByRole('dialog', { name: /Xem trước bộ đề/ }, { timeout: 5000 }))
+    expect(dialog.getByText('Câu 1. Cau trong bo de')).toBeTruthy()
+    expect(dialog.queryByText(/SECRET-ANSWER/)).toBeNull()
+    expect(dialog.queryByText(/SECRET-EXPLANATION/)).toBeNull()
+  })
+})
