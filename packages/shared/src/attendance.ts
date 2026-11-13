@@ -144,16 +144,24 @@ export const StudentAttendance = z.object({
 })
 export type StudentAttendance = z.infer<typeof StudentAttendance>
 
-/** GET /attendance/rates?classId=|courseId=|studentId= — at least one filter is required. */
+/** GET /attendance/rates?classId=|courseId=|studentId=|branchId= — at least one filter is required. */
 export const AttendanceRatesQuery = z
   .object({
     classId: z.string().uuid().optional(),
     courseId: z.string().uuid().optional(),
     studentId: z.string().uuid().optional(),
+    branchId: z.string().uuid().optional(),
   })
-  .refine((v) => v.classId !== undefined || v.courseId !== undefined || v.studentId !== undefined, {
-    message: 'Can it nhat mot bo loc: classId, courseId hoac studentId',
-  })
+  .refine(
+    (v) =>
+      v.classId !== undefined ||
+      v.courseId !== undefined ||
+      v.studentId !== undefined ||
+      v.branchId !== undefined,
+    {
+      message: 'Can it nhat mot bo loc: classId, courseId, studentId hoac branchId',
+    },
+  )
 export type AttendanceRatesQuery = z.infer<typeof AttendanceRatesQuery>
 
 export const StudentAttendanceRate = z.object({
@@ -192,3 +200,29 @@ export const TodayAttendanceSummary = z.object({
   classes: z.array(TodayClassSummary),
 })
 export type TodayAttendanceSummary = z.infer<typeof TodayAttendanceSummary>
+
+/**
+ * slice-16: attendance rates for a whole branch, broken down per class.
+ * `ratePercent` follows ADR 0004: (present + late) / (present + late + absent) * 100,
+ * rounded to 1 decimal, excused excluded; null when the denominator is 0.
+ */
+export const BranchClassRate = z.object({
+  classId: z.string().uuid(),
+  className: z.string(),
+  startsAt: z.string().optional(),
+  present: z.number().int().nonnegative(),
+  late: z.number().int().nonnegative(),
+  absent: z.number().int().nonnegative(),
+  excused: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  ratePercent: z.number().min(0).max(100).nullable(),
+})
+export type BranchClassRate = z.infer<typeof BranchClassRate>
+
+/** GET /attendance/rates?branchId= — overall branch rate + per-class breakdown. */
+export const BranchAttendanceRates = z.object({
+  branchId: z.string().uuid(),
+  overall: AttendanceSummary,
+  classes: z.array(BranchClassRate),
+})
+export type BranchAttendanceRates = z.infer<typeof BranchAttendanceRates>

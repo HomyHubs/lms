@@ -13,6 +13,7 @@ import { ExamReportsPage } from '@/features/examhistory/ExamReportsPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
 import { ExamSetsPage } from '@/features/examsets/ExamSetsPage'
 import { GradingPage } from '@/features/grading/GradingPage'
+import { BranchAttendancePage } from '@/features/home/BranchAttendancePage'
 import { HomePage } from '@/features/home/HomePage'
 import { QuestionsPage } from '@/features/questions/QuestionsPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
@@ -58,6 +59,15 @@ export function App(): React.ReactElement {
             element={<RequireAuth role={[...item.roles]}>{PAGES[item.path]}</RequireAuth>}
           />
         ))}
+        {/* slice-16: branch attendance detail (non-nav route, opened from the Dashboard card) */}
+        <Route
+          path="/attendance/branch/:branchId"
+          element={
+            <RequireAuth role={['admin']}>
+              <BranchAttendancePage />
+            </RequireAuth>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

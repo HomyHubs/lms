@@ -263,5 +263,18 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .execute()
       return rows.map((r) => ({ ...r, enrolled_count: Number(r.enrolled_count) }))
     },
+    async listBranchClassRecords(branchId) {
+      return db
+        .selectFrom('attendance_records')
+        .innerJoin('class_sessions', 'class_sessions.id', 'attendance_records.session_id')
+        .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
+        .select([
+          'classes.id as class_id',
+          'classes.name as class_name',
+          'attendance_records.status',
+        ])
+        .where('classes.branch_id', '=', branchId)
+        .execute()
+    },
   }
 }

@@ -53,6 +53,7 @@ import {
   type UpdateQuestionRequest,
   type UpdateUserRequest,
   AttendanceRates,
+  BranchAttendanceRates,
   ClassSessionList,
   ClassSessionResponse,
   ClassTeacherList,
@@ -826,6 +827,15 @@ export async function getAttendanceRates(query: AttendanceRatesQuery): Promise<A
   const res = await fetch(`/api/attendance/rates?${params.toString()}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc ty le chuyen can')
   return AttendanceRates.parse(await res.json())
+}
+
+/** slice-16: overall + per-class attendance rates for a branch (admin-only on the backend). */
+export async function getBranchAttendanceRates(branchId: string): Promise<BranchAttendanceRates> {
+  const res = await fetch(`/api/attendance/rates?branchId=${encodeURIComponent(branchId)}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc ty le chuyen can')
+  return BranchAttendanceRates.parse(await res.json())
 }
 
 export async function getTodayAttendanceSummary(date?: string): Promise<TodayAttendanceSummary> {

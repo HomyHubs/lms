@@ -5,6 +5,7 @@ import {
   CreateClassSessionRequest,
   MarkAttendanceRequest,
   type AttendanceRates,
+  type BranchAttendanceRates,
   type ClassSessionList,
   type ClassSessionResponse,
   type ClassTeacherList,
@@ -15,6 +16,7 @@ import {
 import { getSessionUser, type Rbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
 import {
+  aggregateBranchRates,
   aggregateRates,
   assignTeacher,
   buildRoster,
@@ -314,10 +316,28 @@ export async function attendanceRoutes(
     const parsed = AttendanceRatesQuery.safeParse(request.query)
     if (!parsed.success) {
       reply.code(400)
-      return { error: 'Can it nhat mot bo loc hop le: classId, courseId hoac studentId' }
+      return { error: 'Can it nhat mot bo loc hop le: classId, courseId, studentId hoac branchId' }
     }
-    const { classId, courseId, studentId } = parsed.data
+    const { classId, courseId, studentId, branchId } = parsed.data
     const user = getSessionUser(request)
+
+    // Branch rates (slice-16): handled before the classId/courseId/studentId path so the two
+    // paths don't interfere. Admin only within branch scope; teachers may not query by branch.
+    if (branchId !== undefined) {
+      if (user.role !== 'admin') {
+        reply.code(403)
+        return { error: 'Giao vien chi xem ty le chuyen can theo lop minh phu trach' }
+      }
+      const scoped = await scopeOf(request)
+      if (!scoped.includes(branchId)) {
+        reply.code(404)
+        return { error: 'Khong tim thay co so' }
+      }
+      const rows = await store.listBranchClassRecords(branchId)
+      const body: BranchAttendanceRates = aggregateBranchRates(branchId, rows)
+      return body
+    }
+
     let branchIds: string[]
     if (user.role === 'admin') {
       branchIds = await scopeOf(request)
