@@ -73,43 +73,70 @@ export function BlueprintForm({ onCreated }: { onCreated: () => void }): React.R
     finally { setBusy(false) }
   }
   return (
-    <form aria-label="Tạo đề thi" onSubmit={(event) => void create(event)} className="grid gap-3 rounded-lg border p-5">
+    // slice-20 (4.1): bố cục lại theo nhóm trường + lưới nhiều cột. Giữ nguyên name/validation/logic.
+    <form aria-label="Tạo đề thi" onSubmit={(event) => void create(event)} className="grid gap-5 rounded-lg border p-5">
       <h2 className="text-lg font-medium">Tạo đề thi</h2>
-      <label>Tên đề<input name="title" required maxLength={200} className="ml-2 border p-2" /></label>
-      <label>Cấp độ<select name="level" value={level} onChange={(e) => setLevel(e.target.value as LevelCode)}
-        className="ml-2 border p-2">
-        <option value="starter">Starter</option><option value="mover">Mover</option><option value="flyer">Flyer</option>
-      </select></label>
-      <label>Kỹ năng<select name="skill" defaultValue="reading" className="ml-2 border p-2">
-        <option value="reading">Reading</option><option value="listening">Listening</option>
-        <option value="writing">Writing</option><option value="speaking">Speaking</option>
-      </select></label>
-      <label>Cách ra đề<select name="mode" value={mode} onChange={(e) => setMode(e.target.value as ExamMode)}
-        className="ml-2 border p-2">
-        <option value="random">Ngẫu nhiên từ ngân hàng</option>
-        <option value="fixed_set">Bộ đề cố định</option>
-      </select></label>
-      {mode === 'random' ? (
-        <label>Số câu<input name="questionCount" type="number" defaultValue={10} min={1} max={200} required className="ml-2 border p-2" /></label>
-      ) : (
-        <fieldset className="grid gap-2 rounded border p-3 text-sm">
-          <legend className="px-1 font-medium">Bộ đề đã phát hành (cùng cấp độ & kỹ năng)</legend>
-          {sets === null && <p>Đang tải bộ đề…</p>}
-          {sets?.length === 0 && <p>Chưa có bộ đề đã phát hành — tạo ở trang “Bộ đề”.</p>}
-          {sets?.map((set) => (
-            <label key={set.id}>
-              <input type="checkbox" name="examSetIds" value={set.id} className="mr-2" />
-              {set.title} · {set.levelCode}/{set.skill} · {set.itemCount} câu
-            </label>
-          ))}
-          <label><input type="checkbox" name="shuffleQuestions" className="mr-2" />Trộn thứ tự câu</label>
-          <label><input type="checkbox" name="shuffleOptions" className="mr-2" />Trộn đáp án trắc nghiệm</label>
-          <label>Khi thi lại<select name="retakeStrategy" defaultValue="same_set_shuffled" className="ml-2 border p-1">
-            <option value="same_set_shuffled">Cùng bộ, trộn lại</option>
-            <option value="alternate_sets">Đổi sang bộ khác (theo thứ tự chọn)</option>
+
+      <fieldset className="grid gap-3">
+        <legend className="mb-1 text-sm font-medium text-slate-700">Thông tin chung</legend>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="grid gap-1 text-sm">Tên đề
+            <input name="title" required maxLength={200} className="border p-2" /></label>
+          <label className="grid gap-1 text-sm">Cấp độ
+            <select name="level" value={level} onChange={(e) => setLevel(e.target.value as LevelCode)} className="border p-2">
+              <option value="starter">Starter</option><option value="mover">Mover</option><option value="flyer">Flyer</option>
+            </select></label>
+          <label className="grid gap-1 text-sm">Kỹ năng
+            <select name="skill" defaultValue="reading" className="border p-2">
+              <option value="reading">Reading</option><option value="listening">Listening</option>
+              <option value="writing">Writing</option><option value="speaking">Speaking</option>
+            </select></label>
+          <label className="grid gap-1 text-sm">Thời lượng (phút)
+            <input name="durationMinutes" type="number" defaultValue={30} min={1} max={600} required className="border p-2" /></label>
+        </div>
+      </fieldset>
+
+      <fieldset className="grid gap-3">
+        <legend className="mb-1 text-sm font-medium text-slate-700">Lịch mở / đóng</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">Mở lúc (giờ địa phương)
+            <input name="opensAt" type="datetime-local" required className="border p-2" /></label>
+          <label className="grid gap-1 text-sm">Đóng lúc (giờ địa phương)
+            <input name="closesAt" type="datetime-local" required className="border p-2" /></label>
+        </div>
+      </fieldset>
+
+      <fieldset className="grid gap-3">
+        <legend className="mb-1 text-sm font-medium text-slate-700">Nguồn câu hỏi</legend>
+        <label className="grid gap-1 text-sm sm:max-w-xs">Cách ra đề
+          <select name="mode" value={mode} onChange={(e) => setMode(e.target.value as ExamMode)} className="border p-2">
+            <option value="random">Ngẫu nhiên từ ngân hàng</option>
+            <option value="fixed_set">Bộ đề cố định</option>
           </select></label>
-        </fieldset>
-      )}
+        {mode === 'random' ? (
+          <label className="grid gap-1 text-sm sm:max-w-xs">Số câu
+            <input name="questionCount" type="number" defaultValue={10} min={1} max={200} required className="border p-2" /></label>
+        ) : (
+          <fieldset className="grid gap-2 rounded border p-3 text-sm">
+            <legend className="px-1 font-medium">Bộ đề đã phát hành (cùng cấp độ & kỹ năng)</legend>
+            {sets === null && <p>Đang tải bộ đề…</p>}
+            {sets?.length === 0 && <p>Chưa có bộ đề đã phát hành — tạo ở trang “Bộ đề”.</p>}
+            {sets?.map((set) => (
+              <label key={set.id}>
+                <input type="checkbox" name="examSetIds" value={set.id} className="mr-2" />
+                {set.title} · {set.levelCode}/{set.skill} · {set.itemCount} câu
+              </label>
+            ))}
+            <label><input type="checkbox" name="shuffleQuestions" className="mr-2" />Trộn thứ tự câu</label>
+            <label><input type="checkbox" name="shuffleOptions" className="mr-2" />Trộn đáp án trắc nghiệm</label>
+            <label>Khi thi lại<select name="retakeStrategy" defaultValue="same_set_shuffled" className="ml-2 border p-1">
+              <option value="same_set_shuffled">Cùng bộ, trộn lại</option>
+              <option value="alternate_sets">Đổi sang bộ khác (theo thứ tự chọn)</option>
+            </select></label>
+          </fieldset>
+        )}
+      </fieldset>
+
       <fieldset className="grid gap-2 rounded border p-3 text-sm">
         <legend className="px-1 font-medium">Lớp áp dụng (tùy chọn — để trống = toàn cấp độ)</legend>
         {levelClasses.length === 0 && <p>Chưa có lớp nào thuộc cấp độ này.</p>}
@@ -127,11 +154,11 @@ export function BlueprintForm({ onCreated }: { onCreated: () => void }): React.R
           </label>
         ))}
       </fieldset>
-      <label>Thời lượng (phút)<input name="durationMinutes" type="number" defaultValue={30} min={1} max={600} required className="ml-2 border p-2" /></label>
-      <label>Mở lúc (giờ địa phương)<input name="opensAt" type="datetime-local" required className="ml-2 border p-2" /></label>
-      <label>Đóng lúc (giờ địa phương)<input name="closesAt" type="datetime-local" required className="ml-2 border p-2" /></label>
-      <Button type="submit" disabled={busy}>{busy ? 'Đang tạo…' : 'Tạo đề'}</Button>
-      {message && <p role="status">{message}</p>}
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={busy}>{busy ? 'Đang tạo…' : 'Tạo đề'}</Button>
+        {message && <p role="status">{message}</p>}
+      </div>
     </form>
   )
 }
