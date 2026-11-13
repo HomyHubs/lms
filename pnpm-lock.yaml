@@ -121,12 +121,18 @@ importers:
         specifier: 2.5.3
         version: 2.5.3
     devDependencies:
+      '@axe-core/playwright':
+        specifier: 4.14.0
+        version: 4.14.0(playwright-core@1.65.0)
       '@lms/config-eslint':
         specifier: workspace:*
         version: link:../../packages/config-eslint
       '@lms/config-ts':
         specifier: workspace:*
         version: link:../../packages/config-ts
+      '@playwright/test':
+        specifier: 1.65.0
+        version: 1.65.0
       '@testing-library/jest-dom':
         specifier: 6.5.0
         version: 6.5.0
@@ -151,6 +157,9 @@ importers:
       jsdom:
         specifier: 25.0.1
         version: 25.0.1(supports-color@7.2.0)
+      pg:
+        specifier: 8.13.0
+        version: 8.13.0
       postcss:
         specifier: 8.4.47
         version: 8.4.47
@@ -228,6 +237,12 @@ packages:
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
+
+  '@axe-core/playwright@4.14.0':
+    resolution: {integrity: sha512-SGUhG5PIHd2eMdpgBF2PyQLOhX+qyDR2PT4cmoS4Qk2ak+jX/rrSvst9l0PGv5WTHolKpUMvVmoHpr4cZgf1RQ==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      playwright-core: '>= 1.0.0'
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -751,6 +766,11 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
+  '@playwright/test@1.65.0':
+    resolution: {integrity: sha512-iGURLGuKDLakSEl7Pgfv8h7f+XLT+V861Wfhz0zlEl5nyFuKUopdkFBPKqTllTUp06aOwPuH8iuUEb3yp3MpbQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   '@rollup/rollup-android-arm-eabi@4.63.2':
     resolution: {integrity: sha512-Xa6RDoWa+hNiX6PgsljlH6W75RaONx3y6PVlbLhkEWW+GaPQ3dP5gwbL/erAzQHWwkvW5UxdD5l87Qx2FAQ/4A==}
     cpu: [arm]
@@ -1169,6 +1189,10 @@ packages:
 
   avvio@9.3.0:
     resolution: {integrity: sha512-g2tQ7LE7oOSqDfwEm3M+ZCMTJc7KiZCdJ4UwyZJb5ckTKyYu50OYmvv0mCFXPuYXoM4zkSt8zM9XQ9KCvxA74A==}
+
+  axe-core@4.14.0:
+    resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
+    engines: {node: '>=4'}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -2031,6 +2055,16 @@ packages:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
 
+  playwright-core@1.65.0:
+    resolution: {integrity: sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.65.0:
+    resolution: {integrity: sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   postcss-import@15.1.0:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
     engines: {node: '>=14.0.0'}
@@ -2677,6 +2711,11 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
 
+  '@axe-core/playwright@4.14.0(playwright-core@1.65.0)':
+    dependencies:
+      axe-core: 4.14.0
+      playwright-core: 1.65.0
+
   '@babel/code-frame@7.29.7':
     dependencies:
       '@babel/helper-validator-identifier': 7.29.7
@@ -3087,6 +3126,10 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.3
 
+  '@playwright/test@1.65.0':
+    dependencies:
+      playwright: 1.65.0
+
   '@rollup/rollup-android-arm-eabi@4.63.2':
     optional: true
 
@@ -3486,6 +3529,8 @@ snapshots:
     dependencies:
       '@fastify/error': 4.2.0
       fastq: 1.20.3
+
+  axe-core@4.14.0: {}
 
   balanced-match@1.0.2: {}
 
@@ -4362,6 +4407,12 @@ snapshots:
       thread-stream: 3.2.0
 
   pirates@4.0.7: {}
+
+  playwright-core@1.65.0: {}
+
+  playwright@1.65.0:
+    dependencies:
+      playwright-core: 1.65.0
 
   postcss-import@15.1.0(postcss@8.4.47):
     dependencies:

@@ -94,16 +94,27 @@ describe('question UI with real hooks/client/parser', () => {
     })
     expect(screen.queryByRole('button', { name: 'Lưu thay đổi' })).not.toBeInTheDocument()
   })
-  it('combines filters and resets the displayed list', async () => {
+  it('filters within a level panel and resets the displayed list', async () => {
+    // slice-18: mỗi cấp độ là một panel riêng (Starter/Mover/Flyer); lọc theo cột
+    // nằm trong từng panel. 'First question' (starter) ở panel Starter, 'Second
+    // question' (mover) ở panel Mover.
     setup()
     await screen.findByText('First question')
-    fireEvent.change(screen.getByLabelText('Lọc cấp độ'), { target: { value: 'mover' } })
-    expect(screen.queryByText('First question')).not.toBeInTheDocument()
     expect(screen.getByText('Second question')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Lọc độ khó'), { target: { value: 'easy' } })
+    // Lọc độ khó trong panel Starter: chỉ còn câu 'easy' (First question) trong panel đó;
+    // chọn 'hard' sẽ ẩn First question khỏi panel Starter.
+    fireEvent.change(screen.getByLabelText('Lọc độ khó Starter'), { target: { value: 'hard' } })
+    expect(screen.queryByText('First question')).not.toBeInTheDocument()
+    // Panel Mover không bị ảnh hưởng bởi bộ lọc của panel Starter.
+    expect(screen.getByText('Second question')).toBeInTheDocument()
+    // Lọc văn bản trong panel Mover ẩn nốt Second question.
+    fireEvent.change(screen.getByLabelText('Lọc câu hỏi Mover'), { target: { value: 'zzz' } })
     expect(screen.queryByText('Second question')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Xóa bộ lọc' }))
+    // Xóa bộ lọc (đặt lại select/input) khôi phục danh sách hiển thị của mỗi panel.
+    fireEvent.change(screen.getByLabelText('Lọc độ khó Starter'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Lọc câu hỏi Mover'), { target: { value: '' } })
     expect(screen.getByText('First question')).toBeInTheDocument()
+    expect(screen.getByText('Second question')).toBeInTheDocument()
   })
   it('prevents invalid edits and lets the user cancel without a PATCH', async () => {
     const fetchMock = setup()

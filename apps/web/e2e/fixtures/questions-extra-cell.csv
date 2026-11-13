@@ -1,0 +1,2 @@
+level,skill,question_type,difficulty,question_text,options,correct_answer,points,explanation,source_reference
+starter,reading,fill_blank,easy,Row with an extra trailing cell,,answer,1,Because,Book A,EXTRA

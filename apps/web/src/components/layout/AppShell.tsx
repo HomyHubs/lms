@@ -17,7 +17,13 @@ function HealthChip(): React.ReactElement {
   return (
     <span
       title={health.data ? `Latency ${health.data.db.latencyMs ?? '—'} ms` : undefined}
-      className={cn('hidden rounded-full px-2.5 py-1 text-xs font-medium sm:inline', TONE_TILE[up ? 'success' : 'danger'])}
+      className={cn(
+        'hidden rounded-full px-2.5 py-1 text-xs font-medium sm:inline',
+        TONE_TILE[up ? 'success' : 'danger'],
+        // Darker text for this small badge so it meets WCAG 2 AA contrast on the
+        // tinted -50 background (success/danger -600 on -50 is only ~3.6:1).
+        up ? 'text-success-700' : 'text-danger-700',
+      )}
     >
       DB: {label}
     </span>

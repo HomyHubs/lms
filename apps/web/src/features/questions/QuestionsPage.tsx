@@ -1,7 +1,8 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { ImagePlus, ListChecks, Trash2, Upload } from 'lucide-react'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { FileDown, ImagePlus, ListChecks, Upload } from 'lucide-react'
 import {
   CreateQuestionRequest,
+  IMPORT_COLUMNS,
   LEVEL_CODES,
   QUESTION_DIFFICULTIES,
   QUESTION_SKILLS,
@@ -11,8 +12,12 @@ import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { ApiError, parseQuestionsCsv } from '@/lib/api'
 import { checkImportFile, parseQuestionsXlsx } from '@/lib/question-import'
+import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { QuestionImages } from '@/features/media/QuestionImages'
+import { useSession } from '@/features/auth/useAuth'
 import type { Question } from '@lms/shared'
+import { LevelPanel } from './LevelPanel'
+import { readPanelState, writePanelState, type PanelState } from './panel-state'
 import { useUpdateQuestion } from './useQuestions'
 import {
   useCreateQuestion,
@@ -20,6 +25,40 @@ import {
   useImportQuestions,
   useQuestions,
 } from './useQuestions'
+
+/** Mẫu Excel: hàng tiêu đề = IMPORT_COLUMNS + 1–2 hàng ví dụ cho user điền theo. */
+const TEMPLATE_EXAMPLE_ROWS: ReadonlyArray<ReadonlyArray<string>> = [
+  [
+    'starter',
+    'reading',
+    'multiple_choice',
+    'easy',
+    'What color is the sky?',
+    'blue|green|red',
+    'blue',
+    '1',
+    'Bầu trời màu xanh.',
+    'Unit 1',
+  ],
+  [
+    'mover',
+    'listening',
+    'fill_blank',
+    'medium',
+    'The cat is ___ the table.',
+    '',
+    'on',
+    '2',
+    '',
+    '',
+  ],
+]
+
+function downloadTemplate(): void {
+  const rows = [IMPORT_COLUMNS as readonly string[], ...TEMPLATE_EXAMPLE_ROWS]
+  const bytes = buildXlsx([{ name: 'MauCauHoi', rows }])
+  downloadFile(bytes, 'mau-cau-hoi.xlsx', XLSX_MIME)
+}
 
 /**
  * Trang Ngan hang cau hoi (slice-3) — Admin/Teacher (route guard theo role, BE thuc thi RBAC that).
@@ -43,20 +82,35 @@ export function QuestionsPage(): React.ReactElement {
   const [formError, setFormError] = useState<string | null>(null)
   const updateQuestion = useUpdateQuestion()
   const [editingId, setEditingId] = useState<string | null>(null)
-  const editingQuestion = questions.data?.find((q) => q.id === editingId)
+  const questionList = questions.data
+  const editingQuestion = questionList?.find((q) => q.id === editingId)
   const [explanation, setExplanation] = useState('')
   const [sourceReference, setSourceReference] = useState('')
-  const [filters, setFilters] = useState({
-    levelCode: '',
-    skill: '',
-    difficulty: '',
-    questionType: '',
-  })
-  const visibleQuestions = questions.data?.filter((q) =>
-    Object.entries(filters).every(
-      ([key, value]) => !value || q[key as keyof typeof filters] === value,
-    ),
-  )
+
+  // slice-18: nhóm câu hỏi đã tải theo cấp độ (lọc chi tiết nằm trong từng panel).
+  const byLevel = (code: string): Question[] =>
+    questionList?.filter((q) => q.levelCode === code) ?? []
+
+  // slice-18: panel theo cấp độ + nhớ trạng thái đóng/mở theo user (localStorage).
+  const { user } = useSession()
+  const userId = user?.id
+  const [panelState, setPanelState] = useState<PanelState>(() => readPanelState(userId))
+  const [panelStateUser, setPanelStateUser] = useState<string | undefined>(userId)
+  // Khi phiên đổi (đăng nhập lại / user khác) nạp lại trạng thái của đúng user đó.
+  if (userId !== panelStateUser) {
+    setPanelStateUser(userId)
+    setPanelState(readPanelState(userId))
+  }
+  function togglePanel(levelCode: string): void {
+    setPanelState((old) => {
+      const next = { ...old, [levelCode]: !old[levelCode] }
+      writePanelState(userId, next)
+      return next
+    })
+  }
+
+  // slice-18: cuộn lên form khi bấm "Sửa".
+  const formRef = useRef<HTMLElement | null>(null)
 
   function clearForm(): void {
     setEditingId(null)
@@ -82,6 +136,7 @@ export function QuestionsPage(): React.ReactElement {
     setExplanation(q.explanation ?? '')
     setSourceReference(q.sourceReference ?? '')
     setFormError(null)
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const [importError, setImportError] = useState<string | null>(null)
@@ -160,42 +215,8 @@ export function QuestionsPage(): React.ReactElement {
   return (
     <>
       <PageHeader icon={ListChecks} title="Ngân hàng câu hỏi" />
-      <fieldset className="c-card flex-row flex-wrap items-end">
-        <legend className="sr-only">Lọc danh sách đã tải</legend>
-        {(
-          [
-            ['levelCode', 'Lọc cấp độ', LEVEL_CODES],
-            ['skill', 'Lọc kỹ năng', QUESTION_SKILLS],
-            ['difficulty', 'Lọc độ khó', QUESTION_DIFFICULTIES],
-            ['questionType', 'Lọc loại câu hỏi', QUESTION_TYPES],
-          ] as const
-        ).map(([key, label, values]) => (
-          <label key={key} className="flex flex-col gap-1 text-sm text-slate-600">
-            {label}
-            <select
-              className="c-input"
-              aria-label={label}
-              value={filters[key]}
-              onChange={(e) => setFilters((old) => ({ ...old, [key]: e.target.value }))}
-            >
-              <option value="">Tất cả</option>
-              {values.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
-        <Button
-          variant="outline"
-          onClick={() => setFilters({ levelCode: '', skill: '', difficulty: '', questionType: '' })}
-        >
-          Xóa bộ lọc
-        </Button>
-      </fieldset>
 
-      <section className="c-card">
+      <section ref={formRef} className="c-card">
         <h2 className="c-section-title">
           <ListChecks className="h-5 w-5" /> Thêm câu hỏi
         </h2>
@@ -331,6 +352,9 @@ export function QuestionsPage(): React.ReactElement {
           points, explanation, source_reference. Lựa chọn phân tách bằng |. Sai field/enum sẽ báo
           lỗi và không lưu.
         </p>
+        <Button type="button" variant="outline" size="sm" onClick={downloadTemplate}>
+          <FileDown className="mr-1 h-4 w-4" /> Tải mẫu Excel
+        </Button>
         <input
           aria-label="Chọn file CSV"
           type="file"
@@ -347,59 +371,20 @@ export function QuestionsPage(): React.ReactElement {
         )}
       </section>
 
-      <section className="c-card">
-        <h2 className="c-section-title">Danh sách câu hỏi</h2>
-        {questions.data && (
-          <table className="c-table">
-            <thead>
-              <tr>
-                <th>Cấp độ</th>
-                <th>Kỹ năng</th>
-                <th>Loại</th>
-                <th>Độ khó</th>
-                <th>Câu hỏi</th>
-                <th>Điểm</th>
-                <th className="text-right">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleQuestions?.map((q) => (
-                <tr key={q.id}>
-                  <td>{q.levelCode}</td>
-                  <td>{q.skill}</td>
-                  <td>{q.questionType}</td>
-                  <td>{q.difficulty}</td>
-                  <td>
-                    {q.questionText}
-                    {q.source === 'ai_generated' && (
-                      <span className="ml-2 rounded bg-accent-100 px-1.5 text-xs text-accent-700">AI</span>
-                    )}
-                  </td>
-                  <td>{q.points}</td>
-                  <td className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => editQuestion(q)}
-                      disabled={updateQuestion.isPending}
-                    >
-                      Sửa
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteQuestion.mutate(q.id)}
-                      disabled={deleteQuestion.isPending}
-                    >
-                      <Trash2 className="mr-1 h-4 w-4" /> Xoá
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      {questionList &&
+        LEVEL_CODES.map((code) => (
+          <LevelPanel
+            key={code}
+            levelCode={code}
+            questions={byLevel(code)}
+            collapsed={panelState[code] ?? false}
+            onToggle={() => togglePanel(code)}
+            onEdit={editQuestion}
+            onDelete={(id) => deleteQuestion.mutate(id)}
+            editDisabled={updateQuestion.isPending}
+            deleteDisabled={deleteQuestion.isPending}
+          />
+        ))}
     </>
   )
 }

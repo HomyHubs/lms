@@ -1,0 +1,46 @@
+name: Questions browser E2E + axe
+on:
+  pull_request:
+    branches: [dev, main]
+permissions:
+  contents: read
+jobs:
+  questions-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: pnpm rebuild esbuild
+      - run: pnpm -r build
+      # Chromium + OS deps for Playwright (pinned via the installed @playwright/test).
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+      # Real stack: global-setup boots disposable PostgreSQL 18 (Docker is present
+      # on ubuntu-latest), applies db/migrations, seeds admin, starts the built API;
+      # Vite dev server proxies /api -> API. No local env/secrets are read.
+      - name: Mandatory Questions E2E and axe gate
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run test:e2e:ci | tee "$RUNNER_TEMP/questions-e2e.txt"
+          # Fail if Playwright reported any failed/flaky spec even on a zero exit.
+          if grep -Eiq '([1-9][0-9]* failed)|([1-9][0-9]* flaky)' "$RUNNER_TEMP/questions-e2e.txt"; then
+            echo "E2E reported failed/flaky specs" >&2
+            exit 1
+          fi
+          grep -Eq '[1-9][0-9]* passed' "$RUNNER_TEMP/questions-e2e.txt"
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

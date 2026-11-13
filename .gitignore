@@ -23,6 +23,13 @@ github_app_auth*.py
 .workbuddy-ai/
 .agent-worktrees/
 
+# Playwright E2E (apps/web/e2e) — generated artifacts, not source
+apps/web/e2e/.auth/
+apps/web/e2e/fixtures/generated/
+apps/web/e2e/support/.stack-state.json
+apps/web/playwright-report/
+apps/web/test-results/
+
 # Postman local workspace
 # Theo doi collections/environments/specs qua git; bo qua globals (chua secret) va cau hinh noi bo.
 .postman/
