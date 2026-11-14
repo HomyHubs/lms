@@ -37,6 +37,7 @@ export const AdminUser = z.object({
   address: z.string().nullable(),
   parentPhone: z.string().nullable(),
   // Tuoi tinh tu dong o backend (nam hien tai - birthYear); KHONG luu DB.
+  // slice-26: CHI co y nghia / duoc tinh cho role hoc vien; role khac luon null.
   age: z.number().int().nullable(),
   // ISO-8601 timestamp (created_at) — chuoi de truyen JSON gon.
   createdAt: z.string(),

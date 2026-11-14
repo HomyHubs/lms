@@ -206,7 +206,6 @@ export function UsersPage(): React.ReactElement {
           <table className="c-table">
             <thead>
               <tr>
-                <th>Số điện thoại</th>
                 <th>Họ tên</th>
                 <th>Năm sinh</th>
                 <th>Tuổi</th>
@@ -220,14 +219,20 @@ export function UsersPage(): React.ReactElement {
             <tbody>
               {usersQuery.data.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.phoneNumber}</td>
+                  {/* slice-26: ho ten to, SDT nho ngay duoi (bo cot SDT rieng). */}
                   <td>
-                    {u.lastName || u.firstName
-                      ? [u.lastName, u.firstName].filter(Boolean).join(' ')
-                      : '—'}
+                    <div className="flex flex-col">
+                      <span>
+                        {u.lastName || u.firstName
+                          ? [u.lastName, u.firstName].filter(Boolean).join(' ')
+                          : '—'}
+                      </span>
+                      <span className="text-xs text-slate-400">{u.phoneNumber}</span>
+                    </div>
                   </td>
                   <td>{u.birthYear ?? '—'}</td>
-                  <td>{u.age ?? '—'}</td>
+                  {/* slice-26: tuoi chi co y nghia voi hoc vien; role khac de trong. */}
+                  <td>{u.role === 'student' ? (u.age ?? '—') : '—'}</td>
                   <td>{u.gender ? GENDER_LABEL[u.gender] : '—'}</td>
                   <td>{u.parentPhone ?? '—'}</td>
                   <td>{u.email ?? '—'}</td>

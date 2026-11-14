@@ -117,6 +117,29 @@ describe('createUser', () => {
     expect(outcome.user.age).toBe(new Date().getFullYear() - 2015)
   })
 
+  // slice-26: tuoi CHI tinh cho hoc vien; role khac co birthYear van tra age null.
+  it('derives age only for students; other roles get null age even with birthYear', async () => {
+    const store = makeFakeStore()
+    const student = await createUser(store, {
+      phoneNumber: '0907777777',
+      password: 'secret12',
+      role: 'student',
+      birthYear: 2010,
+    })
+    const teacher = await createUser(store, {
+      phoneNumber: '0906666666',
+      password: 'secret12',
+      role: 'teacher',
+      birthYear: 1990,
+    })
+    expect(student.ok && teacher.ok).toBe(true)
+    if (!student.ok || !teacher.ok) return
+    expect(student.user.age).toBe(new Date().getFullYear() - 2010)
+    // Giao vien van luu birthYear nhung khong co tuoi (null).
+    expect(teacher.user.birthYear).toBe(1990)
+    expect(teacher.user.age).toBeNull()
+  })
+
   it('leaves profile fields null and age null when not provided', async () => {
     const store = makeFakeStore()
     const outcome = await createUser(store, {

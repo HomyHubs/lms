@@ -75,8 +75,11 @@ function toAdminUser(row: UserRow): AdminUser {
     gender: row.gender as Gender | null,
     address: row.address,
     parentPhone: row.parent_phone,
-    // Tuoi tinh tu dong: nam hien tai - birthYear; null khi thieu birthYear.
-    age: birthYear != null ? new Date().getFullYear() - birthYear : null,
+    // slice-26: tuoi CHI tinh cho role hoc vien; role khac (admin/teacher/staff) khong co y nghia
+    // nghiep vu nen de null. null khi thieu birthYear.
+    // TODO(slice-26): tuoi tinh tu birth_year nen sai lech toi +-1 so voi tuoi that;
+    // muon chinh xac can them cot birth_date (migration + slice sau).
+    age: row.role === 'student' && birthYear != null ? new Date().getFullYear() - birthYear : null,
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
   }
 }
