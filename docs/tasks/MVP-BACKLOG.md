@@ -52,7 +52,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-27 | Trung tâm cơ sở: cho sửa thông tin cơ sở (mục 10) | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-27-trung-tam-co-so-edit.md` |
 | slice-28 | Chương trình học: tạo lớp chọn cơ sở, chặn xóa lớp có học viên, sơ đồ lộ trình cấp độ (mục 11) | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-28-chuong-trinh-hoc.md` |
 | slice-29 | Ghi danh & Quản lý (đổi tên từ Gán cơ sở): 2 panel — HV/GV gán theo lớp, quản lý gán theo cơ sở (mục 12) | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-29-ghi-danh-quan-ly.md` |
-| slice-30 | Menu Học viên (mới): tìm & hồ sơ chi tiết học viên — điểm, giờ học, chuyên cần, thi, học lực (số + chart theo panel) (mục 13) | Dọc | Chưa bắt đầu | — | — | — | slice-13, slice-5, slice-6 | `slices/slice-30-menu-hoc-vien.md` |
+| slice-30 | Menu Học viên (mới): tìm & hồ sơ chi tiết học viên — điểm, giờ học, chuyên cần, thi, học lực (số + chart theo panel) (mục 13) | Dọc | Đang làm | Hoang Hoang HA | feature/slice-30-menu-hoc-vien | — | slice-13, slice-5, slice-6 | `slices/slice-30-menu-hoc-vien.md` |
 
 ## Trạng thái hợp lệ
 
