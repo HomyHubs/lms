@@ -354,3 +354,31 @@ export const GradeImportResult = z.object({
   errors: z.array(GradeImportError),
 })
 export type GradeImportResult = z.infer<typeof GradeImportResult>
+
+/**
+ * slice-22: mot dong trong ban XEM TRUOC (preview) nhap diem — KHONG ghi DB.
+ * `willApply=true` nghia la dong nay se duoc ghi diem khi commit; nguoc lai `reason` neu ly do bo qua.
+ * `studentName`/`score`/`maxScore` chi co khi khop duoc hoc vien + luot cho cham.
+ */
+export const GradeImportPreviewRow = z.object({
+  row: z.number().int(),
+  studentCode: z.string(),
+  studentName: z.string().nullable(),
+  score: z.number().nullable(),
+  maxScore: z.number().int().nullable(),
+  passed: z.boolean().nullable(),
+  willApply: z.boolean(),
+  reason: GradeImportSkipReason.nullable(),
+})
+export type GradeImportPreviewRow = z.infer<typeof GradeImportPreviewRow>
+
+/**
+ * slice-22: ban xem truoc nhap diem (buoc 1 cua preview -> commit). `rows` la ket qua suy ra neu
+ * commit; `errors` la loi dinh dang file; `applicable` = so dong se duoc ghi. Preview KHONG ghi gi.
+ */
+export const GradeImportPreview = z.object({
+  rows: z.array(GradeImportPreviewRow),
+  errors: z.array(GradeImportError),
+  applicable: z.number().int(),
+})
+export type GradeImportPreview = z.infer<typeof GradeImportPreview>
