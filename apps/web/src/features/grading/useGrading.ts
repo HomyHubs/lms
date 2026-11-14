@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { GradeAttemptRequest } from '@lms/shared'
-import { getGradingAttempt, gradeAttempt, importGrades, listGradingQueue } from '@/lib/api'
+import { getGradingAttempt, gradeAttempt, importGrades, listGradingQueue, previewGradeImport } from '@/lib/api'
 
 /** slice-9a manual grading hooks. The backend enforces RBAC (Admin/Teacher); these only fetch/cache. */
 
@@ -34,5 +34,15 @@ export function useImportGrades() {
     mutationFn: ({ examId, file }: { examId: string; file: File }) =>
       importGrades(file, { examId, fileName: file.name }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['grading'] }),
+  })
+}
+
+/**
+ * slice-22: XEM TRUOC bang diem truoc khi dua vao lop. Khong ghi DB; tra ve tung dong se ap/bo qua.
+ */
+export function usePreviewGrades() {
+  return useMutation({
+    mutationFn: ({ examId, file }: { examId: string; file: File }) =>
+      previewGradeImport(file, { examId, fileName: file.name }),
   })
 }

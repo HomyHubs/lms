@@ -12,6 +12,7 @@ import {
   type ExamAttemptHistory,
   type ExamList,
   type ExamResponse,
+  type GradeImportPreview,
   type GradeImportResult,
   type GradingPolicyList,
   type ManualGradingAttemptResponse,
@@ -33,6 +34,7 @@ import {
   listExams,
   listGradingPolicies,
   listOpenExams,
+  previewImportGrades,
   updateGradingPolicy,
   startAttempt,
   submitAttempt,
@@ -162,9 +164,68 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
     return { attempt: outcome.attempt } satisfies ManualGradingAttemptResponse
   })
 
+  // slice-22: XEM TRUOC nhap diem (preview, buoc 1). Chay dung logic khop nhu commit nhung KHONG ghi
+  // DB; tra ve tung dong se ap/bo qua (kem ly do) + loi dinh dang. FE dung de xac nhan truoc khi commit.
+  app.post(
+    '/grading/import/preview',
+    { preHandler: requireGradeImporter, bodyLimit: GRADE_IMPORT_MAX_BYTES },
+    async (request, reply) => {
+      const query = GradeImportQuery.safeParse(request.query)
+      if (!query.success) {
+        return reply
+          .code(400)
+          .send({ error: query.error.issues[0]?.message ?? 'Thong tin import khong hop le' })
+      }
+      if (!Buffer.isBuffer(request.body)) {
+        return reply.code(415).send({ error: 'Gui file voi Content-Type application/octet-stream' })
+      }
+
+      let parsed: ReturnType<typeof parseGradeImport>
+      try {
+        parsed = parseGradeImport(query.data.fileName, request.body)
+      } catch (err) {
+        if (err instanceof ImportFileError) {
+          return reply.code(400).send({ error: err.message, code: 'invalid_file' })
+        }
+        throw err
+      }
+
+      const user = getSessionUser(request)
+      let allowedPhones: ReadonlySet<string> | undefined
+      if (user.role !== 'superadmin') {
+        const branchIds = await branchScope.branchIdsForUser(user.id)
+        allowedPhones = new Set(await examsStore.listStudentPhonesInBranches(branchIds))
+      }
+
+      const outcome = await previewImportGrades(
+        examsStore,
+        query.data.examId,
+        parsed.rows,
+        new Date(),
+        allowedPhones,
+      )
+      if (!outcome.ok) {
+        const map = {
+          exam_not_found: { status: 404, error: 'Khong tim thay ky thi' },
+          not_manual: { status: 409, error: 'Ky thi nay khong cham tay (Speaking/Writing)' },
+        } as const
+        const m = map[outcome.reason]
+        return reply.code(m.status).send({ error: m.error, code: outcome.reason })
+      }
+
+      const body: GradeImportPreview = {
+        rows: outcome.rows,
+        errors: parsed.errors,
+        applicable: outcome.applicable,
+      }
+      return body
+    },
+  )
+
   // slice-9a (revised): nhap bang diem Speaking/Writing tu file Excel/CSV theo ma hoc vien (= SDT).
   // Thay cho cham tay tung cau: Staff/Admin tai file da co diem; superadmin vuot branch-scope.
   // File gui duoi dang raw body (application/octet-stream); ten file + examId o query param.
+  // slice-22: la buoc COMMIT cua luong preview -> commit (ghi diem that).
   app.post(
     '/grading/import',
     { preHandler: requireGradeImporter, bodyLimit: GRADE_IMPORT_MAX_BYTES },
