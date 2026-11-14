@@ -1,14 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ClipboardList, Clock3, Flag, Send } from 'lucide-react'
-import type { ExamAttemptView } from '@lms/shared'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ClipboardList, Clock3, Download, Eye, Flag, Send } from 'lucide-react'
+import { LEVEL_CODES, QUESTION_SKILLS, type Exam, type ExamAttemptView } from '@lms/shared'
 import { ApiError, getExamAttempt, saveExamAnswers } from '@/lib/api'
 import { useSession } from '@/features/auth/useAuth'
 import { ExamImage } from '@/features/media/ExamImage'
 import { BlueprintForm } from './BlueprintForm'
+import { ExamPreview } from './ExamPreview'
+import { downloadExamImportTemplate } from './exam-import-template'
 import { clearDraft, readDraft, sameAnswers, writeDraft } from './exam-draft'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { useExams, useStartExamAttempt, useSubmitExamAttempt } from './useExams'
+
+// slice-20 (4.2): bộ lọc danh sách đề (lọc phía client vì listExams không nhận tham số lọc).
+type LevelFilter = 'all' | (typeof LEVEL_CODES)[number]
+type SkillFilter = 'all' | (typeof QUESTION_SKILLS)[number]
+type ModeFilter = 'all' | 'random' | 'fixed_set'
+
+const LEVEL_LABEL: Record<(typeof LEVEL_CODES)[number], string> = {
+  starter: 'Starter', mover: 'Mover', flyer: 'Flyer',
+}
+const SKILL_LABEL: Record<(typeof QUESTION_SKILLS)[number], string> = {
+  listening: 'Listening', speaking: 'Speaking', reading: 'Reading', writing: 'Writing',
+}
+
+function matchesFilter(exam: Exam, level: LevelFilter, skill: SkillFilter, mode: ModeFilter, search: string): boolean {
+  if (level !== 'all' && exam.levelCode !== level) return false
+  if (skill !== 'all' && exam.skill !== skill) return false
+  if (mode !== 'all' && exam.mode !== mode) return false
+  const term = search.trim().toLowerCase()
+  if (term && !exam.title.toLowerCase().includes(term)) return false
+  return true
+}
 
 function formatRemaining(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
@@ -84,6 +107,12 @@ export function ExamsPage(): React.ReactElement {
   const [checkpointMessage, setCheckpointMessage] = useState('')
   const [opening, setOpening] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  // slice-20 (4.2/4.3): bộ lọc danh sách đề + đề đang xem trước.
+  const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
+  const [skillFilter, setSkillFilter] = useState<SkillFilter>('all')
+  const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
+  const [search, setSearch] = useState('')
+  const [previewExam, setPreviewExam] = useState<Exam | null>(null)
   const start = useStartExamAttempt()
   const submit = useSubmitExamAttempt()
   const [attempt, setAttempt] = useState<ExamAttemptView | null>(null)
@@ -165,6 +194,13 @@ export function ExamsPage(): React.ReactElement {
   }, [attempt, flushSaves])
 
   const inProgress = attempt !== null && attempt.status !== 'submitted'
+  // slice-20 (4.2): lọc danh sách đề phía client. Khai báo trước early-return để hook chạy ổn định mọi lần render.
+  const filtered = useMemo(
+    () => (exams.data ?? []).filter((exam) => matchesFilter(exam, levelFilter, skillFilter, modeFilter, search)),
+    [exams.data, levelFilter, skillFilter, modeFilter, search],
+  )
+  const examCount = exams.data?.length ?? 0
+
   useEffect(() => {
     if (!inProgress) return
     const warn = (event: BeforeUnloadEvent) => event.preventDefault()
@@ -393,25 +429,71 @@ export function ExamsPage(): React.ReactElement {
 
   return (
     <>
-      <PageHeader icon={ClipboardList} title="Bài thi đang mở" />
+      <PageHeader
+        icon={ClipboardList}
+        title="Bài thi đang mở"
+        actions={manager ? (
+          <Button type="button" variant="outline" onClick={downloadExamImportTemplate}>
+            <Download className="mr-2 h-4 w-4" /> Tải mẫu Excel
+          </Button>
+        ) : undefined}
+      />
       {manager && <BlueprintForm onCreated={() => void exams.refetch()} />}
+      {previewExam && <ExamPreview exam={previewExam} onClose={() => setPreviewExam(null)} />}
       {exams.isLoading && <p>Đang tải danh sách đề…</p>}
       {exams.isError && <p role="alert">Không tải được danh sách đề thi.</p>}
-      {exams.data?.length === 0 && <p>Hiện không có đề thi nào đang mở.</p>}
+      {!exams.isLoading && examCount === 0 && <p>Hiện không có đề thi nào đang mở.</p>}
+
+      {examCount > 0 && (
+        <div role="search" aria-label="Lọc danh sách đề" className="flex flex-wrap items-end gap-3 text-sm">
+          <label className="grid gap-1">Cấp độ
+            <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as LevelFilter)} className="border p-2">
+              <option value="all">Tất cả</option>
+              {LEVEL_CODES.map((code) => <option key={code} value={code}>{LEVEL_LABEL[code]}</option>)}
+            </select></label>
+          <label className="grid gap-1">Kỹ năng
+            <select value={skillFilter} onChange={(e) => setSkillFilter(e.target.value as SkillFilter)} className="border p-2">
+              <option value="all">Tất cả</option>
+              {QUESTION_SKILLS.map((skill) => <option key={skill} value={skill}>{SKILL_LABEL[skill]}</option>)}
+            </select></label>
+          <label className="grid gap-1">Cách ra đề
+            <select value={modeFilter} onChange={(e) => setModeFilter(e.target.value as ModeFilter)} className="border p-2">
+              <option value="all">Tất cả</option>
+              <option value="random">Ngẫu nhiên từ ngân hàng</option>
+              <option value="fixed_set">Bộ đề cố định</option>
+            </select></label>
+          <label className="grid flex-1 gap-1">Tìm theo tên đề
+            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nhập tên đề…" className="border p-2" /></label>
+        </div>
+      )}
+      {examCount > 0 && (
+        <p className="text-sm text-slate-500">Hiển thị {filtered.length}/{examCount} đề</p>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
-        {exams.data?.map((exam) => (
+        {filtered.map((exam) => (
           <article key={exam.id} className="c-card">
             <h2 className="text-lg font-medium text-slate-900">{exam.title}</h2>
             <p className="mt-1 text-sm text-slate-500">
               {exam.levelCode} · {exam.skill} · {exam.questionCount} câu · {exam.durationMinutes} phút
             </p>
             <p className="mt-1 text-xs text-slate-500">Đóng lúc {formatTime(exam.closesAt)}</p>
-            <Button className="mt-4" onClick={() => void open(exam.id)} disabled={start.isPending || opening}>
-              Vào thi
-            </Button>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button onClick={() => void open(exam.id)} disabled={start.isPending || opening}>
+                Vào thi
+              </Button>
+              {manager && (
+                <Button type="button" variant="outline" aria-label={`Xem trước đề ${exam.title}`}
+                  onClick={() => setPreviewExam(exam)}>
+                  <Eye className="mr-2 h-4 w-4" /> Xem trước
+                </Button>
+              )}
+            </div>
           </article>
         ))}
       </div>
+      {examCount > 0 && filtered.length === 0 && <p>Không có đề nào khớp bộ lọc.</p>}
       {message && <p role="alert">{message}</p>}
     </>
   )
