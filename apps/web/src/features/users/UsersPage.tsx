@@ -206,6 +206,8 @@ export function UsersPage(): React.ReactElement {
           <table className="c-table">
             <thead>
               <tr>
+                {/* slice-23: cot ma hoc vien (chi doc). slice-26: bo cot SDT rieng (SDT nho duoi ho ten). */}
+                <th>Mã học viên</th>
                 <th>Họ tên</th>
                 <th>Năm sinh</th>
                 <th>Tuổi</th>
@@ -219,6 +221,8 @@ export function UsersPage(): React.ReactElement {
             <tbody>
               {usersQuery.data.map((u) => (
                 <tr key={u.id}>
+                  {/* slice-23: ma hoc vien (chi doc) — chi hien khi co gia tri (hoc vien moi co ma). */}
+                  <td>{u.studentCode ?? '—'}</td>
                   {/* slice-26: ho ten to, SDT nho ngay duoi (bo cot SDT rieng). */}
                   <td>
                     <div className="flex flex-col">

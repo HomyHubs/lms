@@ -248,6 +248,10 @@ function makeFakeExamsStore(
     async listStudentPhonesInBranches() {
       return []
     },
+    async listStudentCodesInBranches() {
+      // slice-23: khong gioi han theo co so trong store gia lap (route test khong test import diem).
+      return []
+    },
     async listClassRefsForLevel(levelId) {
       return seed.classRefs?.[levelId] ?? []
     },

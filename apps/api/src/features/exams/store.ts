@@ -103,6 +103,8 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       .select(JOINED_ATTEMPT_COLUMNS)
       .select(['exams.title as exam_title', 'levels.code as level_code', 'exams.skill', 'exams.pass_percent',
         'users.phone_number as student_phone',
+        // slice-23: kem ma hoc vien de import diem khop theo ma (SDT chi la fallback).
+        'users.student_code as student_code',
         'users.first_name as student_first_name', 'users.last_name as student_last_name'])
   }
 
@@ -380,6 +382,23 @@ export function makeExamsStore(db: AppDb): ExamsStore {
         .distinct()
         .execute()
       return rows.map((r) => r.phone)
+    },
+
+    async listStudentCodesInBranches(branchIds): Promise<string[]> {
+      // slice-23: ma hoc vien cua hoc vien ghi danh lop thuoc cac co so da cho — dung cho branch-scope
+      // khi khop import diem theo student_code (mirror listStudentPhonesInBranches, chi lay role='student').
+      if (branchIds.length === 0) return []
+      const rows = await db
+        .selectFrom('enrollments')
+        .innerJoin('classes', 'classes.id', 'enrollments.class_id')
+        .innerJoin('users', 'users.id', 'enrollments.student_id')
+        .where('classes.branch_id', 'in', branchIds)
+        .where('users.role', '=', 'student')
+        .where('users.student_code', 'is not', null)
+        .select('users.student_code as code')
+        .distinct()
+        .execute()
+      return rows.map((r) => r.code).filter((c): c is string => c !== null)
     },
 
     async listClassRefsForLevel(levelId): Promise<{ id: string; branchId: string }[]> {
