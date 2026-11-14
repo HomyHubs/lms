@@ -4,6 +4,7 @@ import {
   type ExamAttemptReport,
   type ExamAttemptSummary,
   type ExamHistoryPage,
+  type ExamPassFailGroup,
   type ExamHistoryQuery,
   type ExamHistoryRow,
   type ExamMode,
@@ -34,6 +35,10 @@ export interface HistoryAttemptRow {
   student_phone: string
   student_first_name: string | null
   student_last_name: string | null
+  branch_id: string
+  branch_name: string
+  class_id: string
+  class_name: string
 }
 
 /** Calendar days (YYYY-MM-DD, Asia/Ho_Chi_Minh) bounding `started_at`. */
@@ -64,8 +69,10 @@ export interface ExamHistoryStore {
   /** Newest first by (started_at, id). */
   listStudentAttempts: (studentId: string, filter: HistoryFilter, limit: number) => Promise<HistoryAttemptRow[]>
   isStudentInBranches: (studentId: string, branchIds: string[]) => Promise<boolean>
-  /** Attempts of students enrolled in a class of the scope. */
+  /** Attempts of students enrolled in a class of the scope. Capped at REPORT_ROW_LIMIT for aggregation. */
   listScopedAttempts: (scope: ReportScope) => Promise<HistoryAttemptRow[]>
+  /** One page (newest first by (started_at, id)) of scoped attempts for the detail table; slice-24. */
+  listScopedAttemptsPage: (scope: ReportScope, before: HistoryCursor | undefined, limit: number) => Promise<HistoryAttemptRow[]>
 }
 
 const round1 = (value: number): number => Math.round(value * 10) / 10
@@ -175,20 +182,66 @@ export function summarizeByExam(rows: readonly HistoryAttemptRow[]): ExamAttempt
     .sort((a, b) => a.examTitle.localeCompare(b.examTitle, 'vi'))
 }
 
+/** Pass/fail counts for one group key (branch/class/level) over graded attempts only — slice-24. */
+function groupPassFail(
+  rows: readonly HistoryAttemptRow[],
+  keyOf: (row: HistoryAttemptRow) => { key: string; label: string },
+): ExamPassFailGroup[] {
+  const groups = new Map<string, { label: string; passed: number; failed: number }>()
+  for (const row of rows) {
+    if (row.graded_at === null || row.passed === null) continue
+    const { key, label } = keyOf(row)
+    const g = groups.get(key) ?? { label, passed: 0, failed: 0 }
+    if (row.passed) g.passed += 1
+    else g.failed += 1
+    groups.set(key, g)
+  }
+  return [...groups.entries()]
+    .map(([key, g]) => {
+      const total = g.passed + g.failed
+      return { key, label: g.label, passed: g.passed, failed: g.failed, total, passRate: rateOf(g.passed, total) }
+    })
+    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, 'vi'))
+}
+
+/**
+ * Admin/teacher exam report (slice-13 + slice-24): per-exam summary and pass/fail breakdown by
+ * branch/class/level are computed over the scoped set (capped at REPORT_ROW_LIMIT), while the
+ * detail `attempts` list is a 50-row cursor page. `cursor` decodes to the "before" bound.
+ */
+export type ExamAttemptReportOutcome = { ok: true; report: ExamAttemptReport } | { ok: false; reason: 'bad_cursor' }
+
 export async function loadExamAttemptReport(
   store: ExamHistoryStore,
   scope: ReportScope,
+  query: { cursor?: string },
   now: Date,
-): Promise<ExamAttemptReport> {
-  const rows = scope.branchIds.length === 0 ? [] : await store.listScopedAttempts(scope)
+): Promise<ExamAttemptReportOutcome> {
+  const before = query.cursor === undefined ? undefined : decodeCursor(query.cursor)
+  if (before === null) return { ok: false, reason: 'bad_cursor' }
+  if (scope.branchIds.length === 0) {
+    return { ok: true, report: { byExam: [], byBranch: [], byClass: [], byLevel: [], attempts: [], nextCursor: null } }
+  }
+
+  const all = await store.listScopedAttempts(scope)
+  const pageRows = await store.listScopedAttemptsPage(scope, before, HISTORY_PAGE_SIZE + 1)
+  const page = pageRows.slice(0, HISTORY_PAGE_SIZE)
+  const last = page.at(-1)
   return {
-    byExam: summarizeByExam(rows),
-    attempts: rows.map((row) => ({
-      ...toHistoryRow(row, now),
-      studentId: row.student_id,
-      studentPhone: row.student_phone,
-      studentFirstName: row.student_first_name ?? null,
-      studentLastName: row.student_last_name ?? null,
-    })),
+    ok: true,
+    report: {
+      byExam: summarizeByExam(all),
+      byBranch: groupPassFail(all, (r) => ({ key: r.branch_id, label: r.branch_name })),
+      byClass: groupPassFail(all, (r) => ({ key: r.class_id, label: r.class_name })),
+      byLevel: groupPassFail(all, (r) => ({ key: r.level_code, label: r.level_code })),
+      attempts: page.map((row) => ({
+        ...toHistoryRow(row, now),
+        studentId: row.student_id,
+        studentPhone: row.student_phone,
+        studentFirstName: row.student_first_name ?? null,
+        studentLastName: row.student_last_name ?? null,
+      })),
+      nextCursor: pageRows.length > HISTORY_PAGE_SIZE && last ? encodeCursor(last) : null,
+    },
   }
 }

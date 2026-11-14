@@ -229,6 +229,9 @@ export function ReportsPage(): React.ReactElement {
 
   // Tìm theo tên hoặc mã HS (SĐT) — lọc phía client trên bảng xếp hạng.
   const [search, setSearch] = useState('')
+  // slice-24 (8.1): phân trang phía client bảng xếp hạng, chọn 20/50 dòng/trang; thứ hạng vẫn tính toàn cục ở server.
+  const [pageSize, setPageSize] = useState<20 | 50>(20)
+  const [page, setPage] = useState(1)
   const rankingRows = useMemo(() => {
     const rows = data?.ranking ?? []
     const term = search.trim().toLowerCase()
@@ -237,6 +240,11 @@ export function ReportsPage(): React.ReactElement {
       (r) => (r.studentName ?? '').toLowerCase().includes(term) || r.phoneNumber.toLowerCase().includes(term),
     )
   }, [data, search])
+  // Về trang 1 khi đổi bộ lọc, tìm kiếm hoặc cỡ trang để không rơi vào trang trống.
+  useEffect(() => setPage(1), [search, pageSize, query])
+  const pageCount = Math.max(1, Math.ceil(rankingRows.length / pageSize))
+  const safePage = Math.min(page, pageCount)
+  const pagedRanking = rankingRows.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const classificationPie = data
     ? [
@@ -358,15 +366,50 @@ export function ReportsPage(): React.ReactElement {
           <section className="c-card" aria-label="Xếp hạng">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-medium text-slate-800">Xếp hạng học viên</h2>
-              <input
-                aria-label="Tìm theo tên hoặc mã học sinh"
-                className="c-input w-64 max-w-full print:hidden"
-                placeholder="Tìm theo tên hoặc mã HS (SĐT)…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                <input
+                  aria-label="Tìm theo tên hoặc mã học sinh"
+                  className="c-input w-64 max-w-full"
+                  placeholder="Tìm theo tên hoặc mã HS (SĐT)…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <select
+                  aria-label="Số dòng mỗi trang"
+                  className="c-input"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value) as 20 | 50)}
+                >
+                  <option value={20}>20 / trang</option>
+                  <option value={50}>50 / trang</option>
+                </select>
+              </div>
             </div>
-            <RankingTable rows={rankingRows} />
+            <RankingTable rows={pagedRanking} />
+            {rankingRows.length > 0 && (
+              <div className="mt-2 flex items-center justify-between gap-2 text-sm text-slate-600 print:hidden">
+                <span>
+                  Hiển thị {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, rankingRows.length)} /{' '}
+                  {rankingRows.length} học viên
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={safePage <= 1}>
+                    Trang trước
+                  </Button>
+                  <span>
+                    Trang {safePage}/{pageCount}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={safePage >= pageCount}
+                  >
+                    Trang sau
+                  </Button>
+                </div>
+              </div>
+            )}
           </section>
         </>
       )}

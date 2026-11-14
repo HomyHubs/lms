@@ -213,6 +213,21 @@ describe('exam history routes', () => {
     student_phone: '0900000001',
     student_first_name: null,
     student_last_name: null,
+    branch_id: BRANCH_1,
+    branch_name: 'Co so 1',
+    class_id: CLASS_1,
+    class_name: 'Starter A',
+  }
+  // A failed attempt by the same student in the same branch/class/level (slice-24 aggregation).
+  const rowFailed: HistoryAttemptRow = {
+    ...row,
+    id: '90000000-0000-0000-0000-000000000003',
+    attempt_number: 1,
+    started_at: new Date('2026-10-15T17:30:00Z'),
+    submitted_at: new Date('2026-10-15T18:00:00Z'),
+    graded_at: new Date('2026-10-15T18:00:00Z'),
+    score: 4,
+    passed: false,
   }
   const store: ExamHistoryStore = {
     async listStudentAttempts(studentId) {
@@ -221,8 +236,14 @@ describe('exam history routes', () => {
     async isStudentInBranches(studentId, branchIds) {
       return studentId === STUDENT_1 && branchIds.includes(BRANCH_1)
     },
-    async listScopedAttempts() {
-      return [row]
+    async listScopedAttempts(scope) {
+      return scope.branchIds.includes(BRANCH_1) ? [row, rowFailed] : []
+    },
+    async listScopedAttemptsPage(scope, before, limit) {
+      if (!scope.branchIds.includes(BRANCH_1)) return []
+      const ordered = [row, rowFailed] // already newest-first
+      const start = before ? ordered.findIndex((r) => r.id === before.id) + 1 : 0
+      return ordered.slice(start, start + limit)
     },
   }
 
@@ -253,5 +274,36 @@ describe('exam history routes', () => {
     expect((await student('/me/exam-attempts')).json<ExamHistoryPage>().attempts).toHaveLength(1)
     expect((await student('/me/exam-attempts?cursor=bad')).statusCode).toBe(400)
     expect((await student(`/students/${STUDENT_1}/exam-attempts`)).statusCode).toBe(403)
+  })
+
+  it('reports pass/fail by branch/class/level and paginates the detail (slice-24)', async () => {
+    const admin = await client(ADMIN_B1)
+    const res = await admin('/reports/exam-attempts')
+    expect(res.statusCode).toBe(200)
+    const body = res.json<import('@lms/shared').ExamAttemptReport>()
+    // One passed + one failed attempt, same branch/class/level.
+    expect(body.byBranch).toEqual([
+      expect.objectContaining({ key: BRANCH_1, label: 'Co so 1', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(body.byClass).toEqual([
+      expect.objectContaining({ key: CLASS_1, label: 'Starter A', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(body.byLevel).toEqual([
+      expect.objectContaining({ key: 'starter', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    // Both attempts fit in one 50-row page → no next cursor, newest first.
+    expect(body.attempts.map((a) => a.attemptId)).toEqual([
+      '90000000-0000-0000-0000-000000000001',
+      '90000000-0000-0000-0000-000000000003',
+    ])
+    expect(body.nextCursor).toBeNull()
+    // A branch outside the admin's scope → 404.
+    expect((await admin(`/reports/exam-attempts?branchId=${BRANCH_2}`)).statusCode).toBe(404)
+    // Bad cursor → 400.
+    expect((await admin('/reports/exam-attempts?cursor=bad')).statusCode).toBe(400)
+    // A teacher with no branches sees empty aggregations, not an error.
+    const teacher = await client(TEACHER)
+    const empty = (await teacher('/reports/exam-attempts')).json<import('@lms/shared').ExamAttemptReport>()
+    expect(empty).toMatchObject({ byBranch: [], byClass: [], byLevel: [], attempts: [], nextCursor: null })
   })
 })

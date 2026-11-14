@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ClipboardCheck, FileSpreadsheet } from 'lucide-react'
-import type { ExamAttemptDetail, ExamAttemptReport, ExamAttemptReportQuery } from '@lms/shared'
+import type { ExamAttemptDetail, ExamAttemptReport, ExamAttemptReportQuery, ExamPassFailGroup } from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { useReportFilters } from '@/features/reports/useReports'
@@ -94,15 +94,52 @@ function DetailTable({ rows, onPick }: { rows: readonly ExamAttemptDetail[]; onP
   )
 }
 
+/**
+ * Pass/fail ratio per group (branch / class / level) — slice-24 (6.1b). Plain CSS stacked bar so it
+ * prints and needs no chart dependency (ADR 0006); shows both % (tỉ lệ đạt) and counts.
+ */
+function PassFailPanel({ title, groups }: { title: string; groups: readonly ExamPassFailGroup[] }): React.ReactElement {
+  return (
+    <section className="c-card" aria-label={title}>
+      <h2 className="c-section-title">{title}</h2>
+      {groups.length === 0 ? (
+        <p className="text-sm text-slate-500">Chưa có lượt đã chấm.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {groups.map((g) => (
+            <li key={g.key} className="flex items-center gap-2 text-sm">
+              <span className="w-40 truncate" title={g.label}>
+                {g.label}
+              </span>
+              <div className="flex h-3 flex-1 overflow-hidden rounded bg-slate-100" aria-hidden="true">
+                {/* Runtime-computed widths: the only inline styles. */}
+                <div className="h-3 bg-emerald-500" style={{ width: `${g.total ? (g.passed / g.total) * 100 : 0}%` }} />
+                <div className="h-3 bg-rose-400" style={{ width: `${g.total ? (g.failed / g.total) * 100 : 0}%` }} />
+              </div>
+              <span className="w-44 text-right text-slate-600">
+                {formatPercent(g.passRate)} • {g.passed} đạt / {g.failed} rớt / {g.total}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 /** slice-13 admin/teacher report: per-exam pass rates incl. retakes, attempt detail, a student's full history. */
 export function ExamReportsPage(): React.ReactElement {
   const filters = useReportFilters()
-  const [query, setQuery] = useState<ExamAttemptReportQuery>({})
+  const [query, setQuery] = useState<Omit<ExamAttemptReportQuery, 'cursor'>>({})
   const [student, setStudent] = useState<{ id: string; phone: string } | null>(null)
   const report = useExamAttemptReport(query)
-  const set = (key: keyof ExamAttemptReportQuery) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const set = (key: keyof Omit<ExamAttemptReportQuery, 'cursor'>) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setQuery((q) => ({ ...q, [key]: e.target.value || undefined }))
-  const data = report.data
+  // Aggregations (byExam/byBranch/byClass/byLevel) are identical on every page; attempts accumulate.
+  const first = report.data?.pages[0]
+  const data: ExamAttemptReport | undefined = first
+    ? { ...first, attempts: report.data!.pages.flatMap((p) => p.attempts) }
+    : undefined
   const pickedExam = data?.byExam.find((e) => e.examId === query.examId)
 
   function exportExcel(): void {
@@ -165,9 +202,25 @@ export function ExamReportsPage(): React.ReactElement {
             <h2 className="c-section-title">Theo đề thi</h2>
             <SummaryTable report={data} onPick={(examId) => setQuery((q) => ({ ...q, examId }))} />
           </section>
+          <div className="grid gap-4 md:grid-cols-3">
+            <PassFailPanel title="Đạt/Rớt theo cơ sở" groups={data.byBranch} />
+            <PassFailPanel title="Đạt/Rớt theo lớp" groups={data.byClass} />
+            <PassFailPanel title="Đạt/Rớt theo cấp độ" groups={data.byLevel} />
+          </div>
           <section className="c-card" aria-label="Chi tiết lượt thi">
             <h2 className="c-section-title">Chi tiết lượt thi</h2>
             <DetailTable rows={data.attempts} onPick={(row) => setStudent({ id: row.studentId, phone: row.studentPhone })} />
+            {report.hasNextPage && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => report.fetchNextPage()}
+                disabled={report.isFetchingNextPage}
+              >
+                {report.isFetchingNextPage ? 'Đang tải…' : 'Tải thêm'}
+              </Button>
+            )}
           </section>
         </>
       )}
