@@ -20,6 +20,8 @@ export interface UserRow {
   gender: string | null
   address: string | null
   parent_phone: string | null
+  // slice-23: ma hoc vien (nullable). Chi hoc vien moi co ma; role khac luon null.
+  student_code: string | null
   created_at: Date | string
 }
 
@@ -58,6 +60,14 @@ export interface UsersStore {
   createUser: (input: CreateUserFields) => Promise<UserRow>
   updateUser: (id: string, input: UpdateUserFields) => Promise<UserRow | undefined>
   deleteUser: (id: string) => Promise<boolean>
+  // slice-23: tim hoc vien theo ma (khop import diem).
+  findUserByStudentCode: (code: string) => Promise<UserRow | undefined>
+  // slice-23: sinh ma hoc vien ke tiep theo tien to co so (null -> fallback 'HV').
+  nextStudentCode: (branchCode: string | null) => Promise<string>
+  // slice-23: ghi ma hoc vien sau khi tao (chi goi cho role hoc vien).
+  setStudentCode: (id: string, code: string) => Promise<UserRow | undefined>
+  // slice-23: tien to co so (branches.code) cua co so gan som nhat cho user; null khi chua gan / chua co ma.
+  branchCodeForUser: (userId: string) => Promise<string | null>
 }
 
 function toAdminUser(row: UserRow): AdminUser {
@@ -75,6 +85,8 @@ function toAdminUser(row: UserRow): AdminUser {
     gender: row.gender as Gender | null,
     address: row.address,
     parentPhone: row.parent_phone,
+    // slice-23: ma hoc vien (chi doc); null voi role khac hoc vien / hoc vien chua co ma.
+    studentCode: row.student_code,
     // Tuoi tinh tu dong: nam hien tai - birthYear; null khi thieu birthYear.
     age: birthYear != null ? new Date().getFullYear() - birthYear : null,
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
@@ -115,6 +127,14 @@ export async function createUser(
     address: input.address ?? null,
     parentPhone: input.parentPhone ?? null,
   })
+  // slice-23: chi hoc vien moi duoc sinh ma; role khac giu student_code = null.
+  // Sinh sau insert de co id -> tra cuu tien to co so da gan; ghi lai qua setStudentCode.
+  if (row.role === 'student' && row.student_code == null) {
+    const branchCode = await store.branchCodeForUser(row.id)
+    const code = await store.nextStudentCode(branchCode)
+    const updated = await store.setStudentCode(row.id, code)
+    if (updated) return { ok: true, user: toAdminUser(updated) }
+  }
   return { ok: true, user: toAdminUser(row) }
 }
 

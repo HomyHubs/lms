@@ -63,10 +63,38 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
         gender,
         address,
         parent_phone: parentPhone,
+        // slice-23: ma chua sinh luc insert; service goi setStudentCode cho role hoc vien.
+        student_code: null,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       }
       users.push(row)
       return row
+    },
+    async findUserByStudentCode(code) {
+      return users.find((u) => u.student_code === code)
+    },
+    async nextStudentCode(branchCode) {
+      // slice-23: gia lap sinh ma theo prefix (fallback 'HV') + so thu tu lon nhat + 1.
+      const prefix = branchCode && branchCode.trim() !== '' ? branchCode : 'HV'
+      let max = 0
+      for (const u of users) {
+        if (u.role !== 'student' || !u.student_code?.startsWith(prefix)) continue
+        const suffix = u.student_code.slice(prefix.length)
+        if (!/^\d+$/.test(suffix)) continue
+        const n = Number.parseInt(suffix, 10)
+        if (n > max) max = n
+      }
+      return `${prefix}${String(max + 1).padStart(4, '0')}`
+    },
+    async setStudentCode(id, code) {
+      const row = users.find((u) => u.id === id)
+      if (!row) return undefined
+      row.student_code = code
+      return row
+    },
+    async branchCodeForUser() {
+      // slice-23: khong gan co so trong store gia lap -> fallback prefix 'HV'.
+      return null
     },
     async updateUser(id, input) {
       const row = users.find((u) => u.id === id)
@@ -153,6 +181,7 @@ describe('users routes — RBAC guard', () => {
         gender: 'male',
         address: null,
         parent_phone: '0912345678',
+        student_code: 'HV0001',
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])
@@ -169,6 +198,8 @@ describe('users routes — RBAC guard', () => {
     expect(users[0].lastName).toBe('Nguyễn Minh')
     expect(users[0].firstName).toBe('An')
     expect(users[0].age).toBe(new Date().getFullYear() - 2015)
+    // slice-23: ma hoc vien rong duoc tra ra (SAFE_COLUMNS gom student_code).
+    expect(users[0].studentCode).toBe('HV0001')
   })
 
   it('POST /users creates a student with profile fields and derives age', async () => {
@@ -252,6 +283,7 @@ describe('users routes — CRUD (admin only)', () => {
         gender: null,
         address: null,
         parent_phone: null,
+        student_code: null,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])
@@ -279,6 +311,7 @@ describe('users routes — CRUD (admin only)', () => {
         gender: null,
         address: null,
         parent_phone: null,
+        student_code: null,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])

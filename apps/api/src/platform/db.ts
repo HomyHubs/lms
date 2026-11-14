@@ -21,6 +21,8 @@ export interface UsersTable {
   gender: ColumnType<string | null, string | null | undefined, string | null>
   address: ColumnType<string | null, string | null | undefined, string | null>
   parent_phone: ColumnType<string | null, string | null | undefined, string | null>
+  // slice-23: ma hoc vien (nullable). Chi unique voi role 'student' va khi khong null (partial unique index).
+  student_code: ColumnType<string | null, string | null | undefined, string | null>
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -61,6 +63,8 @@ export interface BranchesTable {
   center_id: string
   address: ColumnType<string | null, string | null | undefined, string | null>
   name: string
+  // slice-23: tien to ma hoc vien cua co so (vd 'HN','HCM'), nullable.
+  code: ColumnType<string | null, string | null | undefined, string | null>
   created_at: Timestamp
   updated_at: Timestamp
 }

@@ -36,6 +36,10 @@ export const AdminUser = z.object({
   gender: Gender.nullable(),
   address: z.string().nullable(),
   parentPhone: z.string().nullable(),
+  // Ma hoc vien (slice-23): CHI DOC o slice nay, sinh tu dong theo co so khi tao hoc vien.
+  // null voi role khac hoc vien / hoc vien chua co ma. Chinh sua tay la slice sau.
+  // .default(null): payload cu/khong kem studentCode van parse duoc (additive, khong pha FE cu).
+  studentCode: z.string().nullable().default(null),
   // Tuoi tinh tu dong o backend (nam hien tai - birthYear); KHONG luu DB.
   age: z.number().int().nullable(),
   // ISO-8601 timestamp (created_at) — chuoi de truyen JSON gon.

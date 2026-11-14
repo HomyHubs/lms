@@ -1,0 +1,29 @@
+name: Student code migration integration
+on:
+  pull_request:
+    branches: [dev, main]
+permissions:
+  contents: read
+jobs:
+  student-code-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: pnpm rebuild esbuild
+      - run: pnpm -r build
+      # slice-23: loopback-only disposable PG18, no local env/secrets. Script owns the
+      # container and asserts migrate up -> student_code schema/backfill -> down -> up again.
+      - name: Mandatory isolated student_code migration rollback gate
+        working-directory: apps/api
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/student-code.integration.mjs | tee "$RUNNER_TEMP/student-code-integration.txt"
+          grep -Fx 'STUDENT_CODE_PG_INTEGRATION_PASS' "$RUNNER_TEMP/student-code-integration.txt"

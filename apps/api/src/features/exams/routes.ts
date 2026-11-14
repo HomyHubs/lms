@@ -191,12 +191,16 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
       }
 
       // Branch-scope: superadmin xem toan bo; con lai chi duoc cham hoc vien trong co so minh phu trach.
+      // slice-23: gioi han theo ca ma hoc vien (khoa chinh) lan SDT (fallback) trong pham vi co so.
       const user = getSessionUser(request)
       let allowedPhones: ReadonlySet<string> | undefined
+      let allowedStudentCodes: ReadonlySet<string> | undefined
       if (user.role !== 'superadmin') {
         const branchIds = await branchScope.branchIdsForUser(user.id)
         const phones = await examsStore.listStudentPhonesInBranches(branchIds)
         allowedPhones = new Set(phones)
+        const codes = await examsStore.listStudentCodesInBranches(branchIds)
+        allowedStudentCodes = new Set(codes)
       }
 
       const outcome = await importGrades(
@@ -206,6 +210,7 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
         user.id,
         new Date(),
         allowedPhones,
+        allowedStudentCodes,
       )
       if (!outcome.ok) {
         const map = {

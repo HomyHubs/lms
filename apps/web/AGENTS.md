@@ -25,6 +25,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 
+- slice-23 (Mã học viên): `UsersPage` thêm cột read-only "Mã học viên" (ngay sau "Số điện thoại"), hiện `studentCode` cho học viên, `—` cho role khác. `src/lib/api.ts` KHÔNG đổi — `listUsers` parse bằng zod `AdminUserList` nên `studentCode` (đã trong contract) chảy qua tự động; `useUsers.ts` không đổi. Test `UsersPage.test.tsx` thêm học viên `HN0001` + assert header/giá trị.
 - slice-4.2 (hoàn thiện thi online): `ExamsPage` mở lượt gần nhất qua `GET /exams/:id/attempt` trước, chỉ `POST` khi 404 (không tự sinh lượt mới khi xem lại); gộp lưu nháp (một request đang chạy, giữ bản mới nhất); cảnh báo `beforeunload` khi đang làm; đếm "Đã trả lời x/N câu"; đồng hồ `role="timer"` đổi màu khi ≤60s; hỏi xác nhận khi nộp còn câu trống; nút "Vào thi" + "Đóng lúc …". Test `ExamsPage.test.tsx` cập nhật + test xác nhận nộp.
 - slice-4.3 (điều hướng & lưu nháp): thanh "Danh sách câu" (nút nhảy tới câu, aria-label ghi đã trả lời/xem lại); nút "Xem lại sau" mỗi câu + đếm; hộp xác nhận nộp nêu câu trống + câu đánh dấu; `exam-draft.ts` lưu bản nháp localStorage theo `examId:startedAt`, khôi phục khi revision ≥ server, xoá khi đã nộp; gửi lại khi có sự kiện `online`. 4 test mới (web 62/62).
 - slice-12.1 (ảnh ở form câu hỏi ngân hàng): `QuestionsPage` hiện khối “Hình ảnh” (`QuestionImages`, gắn đề hoặc lựa chọn) khi đang sửa câu; thêm mới thì gợi ý lưu rồi bấm “Sửa”. 1 test mới (web 63/63).
@@ -64,6 +65,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Đã xong**
 
 - slice-9a (Chấm tay): route `/grading` "Chấm bài" (Admin/GV, mục trong `NAV_ITEMS`). Bảng bài chờ chấm → mở bài (câu hỏi + trả lời) → nhập điểm từng câu + nhận xét → lưu. Học viên thấy "Nhận xét của giáo viên" trong kết quả (`ExamsPage`). Hook `useGrading`; test `GradingPage.test.tsx`.
+- slice-23 (Mã học viên): `UsersPage` hiển thị cột read-only "Mã học viên"; chi tiết xem `src/features/users/AGENTS.md`.
 
 ### 2026-11-09
 

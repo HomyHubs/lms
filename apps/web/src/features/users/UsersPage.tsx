@@ -207,6 +207,7 @@ export function UsersPage(): React.ReactElement {
             <thead>
               <tr>
                 <th>Số điện thoại</th>
+                <th>Mã học viên</th>
                 <th>Họ tên</th>
                 <th>Năm sinh</th>
                 <th>Tuổi</th>
@@ -221,6 +222,8 @@ export function UsersPage(): React.ReactElement {
               {usersQuery.data.map((u) => (
                 <tr key={u.id}>
                   <td>{u.phoneNumber}</td>
+                  {/* slice-23: ma hoc vien (chi doc) — chi hien khi co gia tri (hoc vien moi co ma). */}
+                  <td>{u.studentCode ?? '—'}</td>
                   <td>
                     {u.lastName || u.firstName
                       ? [u.lastName, u.firstName].filter(Boolean).join(' ')

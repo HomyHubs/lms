@@ -42,6 +42,24 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
                 gender: null,
                 address: null,
                 parentPhone: null,
+                // slice-23: role khac hoc vien khong co ma.
+                studentCode: null,
+                age: null,
+                createdAt: '2026-09-16T00:00:00.000Z',
+              },
+              {
+                // slice-23: hoc vien co ma hoc vien (read-only) de kiem tra cot "Mã học viên".
+                id: '22222222-2222-2222-2222-222222222222',
+                phoneNumber: '0911111111',
+                email: null,
+                role: 'student',
+                lastName: 'Nguyễn',
+                firstName: 'An',
+                birthYear: 2015,
+                gender: 'male',
+                address: null,
+                parentPhone: null,
+                studentCode: 'HN0001',
                 age: null,
                 createdAt: '2026-09-16T00:00:00.000Z',
               },
@@ -76,6 +94,14 @@ describe('UsersPage', () => {
     renderPage()
     expect(screen.getByRole('heading', { name: /Quản lý người dùng/ })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('0901234567')).toBeInTheDocument())
+  })
+
+  // slice-23: cot "Mã học viên" hien ma cho hoc vien (read-only).
+  it('shows the student code column for a student', async () => {
+    stubUsersFetch()
+    renderPage()
+    expect(await screen.findByRole('columnheader', { name: 'Mã học viên' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('HN0001')).toBeInTheDocument())
   })
 
   // slice-19 (ADR 0015): bang cau hinh quyen sua cau hoi theo role.

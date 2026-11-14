@@ -29,7 +29,8 @@ describeWithPostgres('exams store on real Postgres', () => {
       .insertInto('users')
       .values([
         { id: MANAGER_ID, phone_number: '0900000001', password_hash: 'test', role: 'teacher' },
-        { id: STUDENT_ID, phone_number: '0900000002', password_hash: 'test', role: 'student' },
+        // slice-23: hoc vien co student_code de GradingRow mang theo ma (import diem khop theo ma).
+        { id: STUDENT_ID, phone_number: '0900000002', password_hash: 'test', role: 'student', student_code: 'HV9999' },
       ])
       .onConflict((oc) => oc.column('id').doNothing())
       .execute()
@@ -303,7 +304,10 @@ describeWithPostgres('exams store on real Postgres', () => {
     const { store, attempt, question, now } = await freshAttempt(60_000, 'writing')
     await store.saveSubmission(attempt.id, JSON.stringify({ [question.id]: 'essay' }), now.toISOString())
     const queue = await listManualGradingQueue(store, now)
+    // slice-23: GradingRow mang theo student_code (HV9999) de import diem khop theo ma; SDT van la fallback.
     expect(queue.find((item) => item.attemptId === attempt.id)).toMatchObject({ studentPhone: '0900000002', skill: 'writing' })
+    const gradingRow = await store.findGradingRow(attempt.id)
+    expect(gradingRow?.student_code).toBe('HV9999')
 
     const graded = await gradeManually(store, attempt.id, { scores: { [question.id]: question.points }, feedback: 'Good' }, MANAGER_ID, now)
     expect(graded.ok && graded.attempt.result).toMatchObject({ status: 'graded', passed: true, feedback: 'Good' })

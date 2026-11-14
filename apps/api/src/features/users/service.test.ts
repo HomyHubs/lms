@@ -3,7 +3,11 @@ import type { UserRow, UsersStore } from './service.js'
 import { createUser, deleteUser, getUser, listUsers, updateUser } from './service.js'
 
 /** Store gia lap trong bo nho de test logic ma khong can Postgres. */
-function makeFakeStore(seed: UserRow[] = []): UsersStore {
+function makeFakeStore(
+  seed: UserRow[] = [],
+  // slice-23: tien to co so cho tung user (de test sinh ma theo branch.code); mac dinh rong -> 'HV'.
+  branchCodes: Record<string, string | null> = {},
+): UsersStore {
   const users: UserRow[] = [...seed]
   let seq = seed.length
   return {
@@ -38,10 +42,38 @@ function makeFakeStore(seed: UserRow[] = []): UsersStore {
         gender,
         address,
         parent_phone: parentPhone,
+        // slice-23: ma chua sinh luc insert; service se goi setStudentCode cho role hoc vien.
+        student_code: null,
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       }
       users.push(row)
       return row
+    },
+    async findUserByStudentCode(code) {
+      return users.find((u) => u.student_code === code)
+    },
+    async nextStudentCode(branchCode) {
+      // slice-23: gia lap sinh ma theo prefix (fallback 'HV') + so thu tu lon nhat + 1.
+      const prefix = branchCode && branchCode.trim() !== '' ? branchCode : 'HV'
+      let max = 0
+      for (const u of users) {
+        if (u.role !== 'student' || !u.student_code?.startsWith(prefix)) continue
+        const suffix = u.student_code.slice(prefix.length)
+        if (!/^\d+$/.test(suffix)) continue
+        const n = Number.parseInt(suffix, 10)
+        if (n > max) max = n
+      }
+      return `${prefix}${String(max + 1).padStart(4, '0')}`
+    },
+    async setStudentCode(id, code) {
+      const row = users.find((u) => u.id === id)
+      if (!row) return undefined
+      row.student_code = code
+      return row
+    },
+    async branchCodeForUser(userId) {
+      // slice-23: tien to co so gan cho user (test tiem qua `branchCodes`); null -> fallback 'HV'.
+      return branchCodes[userId] ?? null
     },
     async updateUser(id, input) {
       const row = users.find((u) => u.id === id)
@@ -113,6 +145,8 @@ describe('createUser', () => {
     expect(outcome.user.birthYear).toBe(2015)
     expect(outcome.user.gender).toBe('male')
     expect(outcome.user.parentPhone).toBe('0912345678')
+    // slice-23: hoc vien moi duoc sinh ma tu dong (fallback 'HV' khi chua gan co so).
+    expect(outcome.user.studentCode).toBe('HV0001')
     // Tuoi = nam hien tai - birthYear (tinh tu dong o backend).
     expect(outcome.user.age).toBe(new Date().getFullYear() - 2015)
   })
@@ -130,6 +164,47 @@ describe('createUser', () => {
     expect(outcome.user.firstName).toBeNull()
     expect(outcome.user.birthYear).toBeNull()
     expect(outcome.user.age).toBeNull()
+  })
+
+  // slice-23: sinh ma hoc vien tu dong + map studentCode; role khac khong co ma.
+  it('auto-generates a studentCode for a student using the branch prefix', async () => {
+    const store = makeFakeStore([], { 'u-1': 'HN' })
+    const outcome = await createUser(store, {
+      phoneNumber: '0909999001',
+      password: 'secret12',
+      role: 'student',
+    })
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    // Tien to theo branch.code cua co so da gan ('HN'), so thu tu zero-pad 4 chu so.
+    expect(outcome.user.studentCode).toBe('HN0001')
+  })
+
+  it('leaves studentCode null for a non-student role', async () => {
+    const store = makeFakeStore()
+    const outcome = await createUser(store, {
+      phoneNumber: '0909999002',
+      password: 'secret12',
+      role: 'teacher',
+    })
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.user.studentCode).toBeNull()
+  })
+
+  it('finds a student by their generated studentCode', async () => {
+    const store = makeFakeStore()
+    const created = await createUser(store, {
+      phoneNumber: '0909999003',
+      password: 'secret12',
+      role: 'student',
+    })
+    if (!created.ok) throw new Error('setup failed')
+    const code = created.user.studentCode
+    expect(code).not.toBeNull()
+    const found = await store.findUserByStudentCode(code!)
+    expect(found?.id).toBe(created.user.id)
+    expect(await store.findUserByStudentCode('KHONG-CO')).toBeUndefined()
   })
 })
 
