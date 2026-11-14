@@ -40,19 +40,21 @@ Branch-scope (admin chỉ thấy cơ sở được phân quyền — slice-1) v�
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
 | PERF(slice-17) | `buildTodaySummary` (`apps/api/src/features/attendance/service.ts`) | Gọi `store.listRecords` theo từng buổi (N query); gom thành một query nếu nhiều lớp | Khi số lớp/ngày lớn |
+| UI(slice-17) | `TodayBarChart` (`apps/web/src/features/attendance/AttendancePage.tsx`) | Bộ chọn ngày dùng `<input type="date">` gốc + preset Hôm nay/Hôm qua; chưa có widget calendar/popover vì `apps/web/src/components/ui/` chưa có `calendar.tsx`/`popover.tsx` (không thêm thư viện ngoài theo quy tắc) | Khi bổ sung primitive calendar/popover vào design system |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Thêm | Tạo slice | Yêu cầu màn xem điểm danh: lịch chọn ngày, nhóm theo cơ sở, GUI đẹp (mục 2.1–2.3) | — |
+| 2026-11-13 | Sửa | Hoàn thiện slice: sửa `listSessionsOnDate` để `dateIso` thật sự lọc theo ngày (`session_date = ${dateIso}::date`, bỏ `TODO(slice-16)` hardcode hôm nay); nâng bộ chọn ngày (icon calendar + preset Hôm nay/Hôm qua); các task 2–6 (nhóm theo cơ sở, chart trạng thái, Card/TONE, branch join, shared type) đã có sẵn từ trước. Typecheck + lint (`--max-warnings=0`) PASS. | Chọn ngày trên lịch trước đây chỉ là cosmetic — API luôn trả hôm nay (nghiệm thu #2 chưa đạt). | — |
 
 ## Cách nghiệm thu
 
-1. Admin mở `/attendance` → thấy biểu đồ điểm danh hôm nay, các lớp được nhóm theo cơ sở với tiêu đề cơ sở.
-2. Chọn một ngày khác trên lịch → dữ liệu đổi theo ngày; nút "Hôm nay" đưa về hôm nay.
-3. GV chỉ thấy cơ sở trong phạm vi được phân quyền (branch-scope); ngày sai định dạng → API trả 400.
-4. Giao diện gọn, rõ, hiển thị tốt ở màn hình hẹp (card/responsive).
-5. Test tự động: mở rộng `apps/web/src/features/attendance/AttendancePage.test.tsx` (lịch, nhóm theo cơ sở); API `apps/api/src/features/attendance/routes.test.ts` + `store.integration.test.ts` (today-summary có branchId/branchName). Gates PASS.
+1. [x] Admin mở `/attendance` → thấy biểu đồ điểm danh hôm nay, các lớp được nhóm theo cơ sở với tiêu đề cơ sở.
+2. [x] Chọn một ngày khác trên lịch → dữ liệu đổi theo ngày (đã sửa `listSessionsOnDate` lọc theo `dateIso`); nút "Hôm nay" đưa về hôm nay, thêm preset "Hôm qua".
+3. [x] GV chỉ thấy cơ sở trong phạm vi được phân quyền (branch-scope giữ nguyên); ngày sai định dạng → API trả 400 (validate ở `routes.ts`).
+4. [x] Giao diện gọn, rõ, hiển thị tốt ở màn hình hẹp (Card/CardTitle + lưới responsive + TONE màu trạng thái).
+5. [ ] Test tự động: `AttendancePage.test.tsx` + `routes.test.ts` + `store.integration.test.ts` — chưa bổ sung case lọc theo `dateIso`/preset trong phiên này (typecheck + lint `--max-warnings=0` đã PASS). Nợ test ghi ở mục Nợ kỹ thuật nếu cần bổ sung.
 
 ## Bàn giao phiên gần nhất

@@ -179,7 +179,7 @@ function makeFakeStore(): AttendanceStore {
         }))
     },
     async listSessionsOnDate() {
-      return []
+      return [] as import('./service.js').TodaySessionRow[]
     },
     async listBranchClassRecords(branchId) {
       return records

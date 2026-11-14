@@ -6,9 +6,10 @@ import {
   type AttendanceSummary,
   type ClassSession,
   type StudentAttendance,
+  type TodayClassSummary,
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
-import { PageHeader } from '@/components/ui/card'
+import { Card, CardTitle, PageHeader } from '@/components/ui/card'
 import { useSession } from '@/features/auth/useAuth'
 import {
   useAdminClasses,
@@ -35,6 +36,23 @@ const STATUS_LABEL: Record<AttendanceStatus, string> = {
   excused: 'Có phép',
 }
 
+
+/** Yesterday's date (YYYY-MM-DD) in Asia/Ho_Chi_Minh — a client-side shortcut for the date picker. */
+function yesterdayVNDate(): string {
+  const nowVN = new Date(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date()),
+  )
+  nowVN.setDate(nowVN.getDate() - 1)
+  const y = nowVN.getFullYear()
+  const m = String(nowVN.getMonth() + 1).padStart(2, '0')
+  const d = String(nowVN.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 function formatRate(summary: AttendanceSummary): string {
   return summary.ratePercent === null ? '—' : `${summary.ratePercent}%`
@@ -438,70 +456,102 @@ function TeachersSection({ classId }: { classId: string }): React.ReactElement {
   )
 }
 
-/** Bar chart (admin): các lớp có buổi học trong ngày chọn (mặc định hôm nay) + tỷ lệ điểm danh theo trạng thái. */
+/** Segmented bar for one class. */
+function ClassAttendanceBar({ c }: { c: TodayClassSummary }): React.ReactElement {
+  const seg = (n: number): number => (c.total > 0 ? (n / c.total) * 100 : 0)
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium">
+          {c.className} <span className="text-xs text-slate-400">{c.startsAt}</span>
+        </span>
+        <span className="text-xs text-slate-600">
+          {c.ratePercent !== null ? `${c.ratePercent}%` : '—'} · Có mặt {c.present} · Muộn {c.late} · Vắng{' '}
+          {c.absent} · Phép {c.excused}
+          {c.notMarked > 0 ? ` · Chưa ĐD ${c.notMarked}` : ''}
+        </span>
+      </div>
+      <div
+        className="flex h-4 w-full overflow-hidden rounded-full bg-slate-100"
+        role="img"
+        aria-label={`Điểm danh ${c.className}: ${c.ratePercent ?? 0}%`}
+      >
+        {seg(c.present) > 0 && <div className="h-full bg-success-500" style={{ width: `${seg(c.present)}%` }} />}
+        {seg(c.late) > 0 && <div className="h-full bg-warning-400" style={{ width: `${seg(c.late)}%` }} />}
+        {seg(c.absent) > 0 && <div className="h-full bg-danger-400" style={{ width: `${seg(c.absent)}%` }} />}
+        {seg(c.excused) > 0 && <div className="h-full bg-accent-300" style={{ width: `${seg(c.excused)}%` }} />}
+        {seg(c.notMarked) > 0 && <div className="h-full bg-slate-300" style={{ width: `${seg(c.notMarked)}%` }} />}
+      </div>
+    </div>
+  )
+}
+
+/** Bar chart (admin): các lớp có buổi học trong ngày chọn, nhóm theo cơ sở. */
 function TodayBarChart(): React.ReactElement {
   // Rỗng = hôm nay (theo giờ VN, do API quyết định). Admin có thể chọn ngày bất kỳ.
   const [selectedDate, setSelectedDate] = useState('')
   const today = useTodayAttendanceSummary(true, selectedDate || undefined)
   const classes = today.data?.classes ?? []
+
+  // Group by branch
+  const branchMap = new Map<string, { branchName: string; classes: TodayClassSummary[] }>()
+  for (const c of classes) {
+    const entry = branchMap.get(c.branchId) ?? { branchName: c.branchName, classes: [] }
+    entry.classes.push(c)
+    branchMap.set(c.branchId, entry)
+  }
+  const branches = [...branchMap.entries()].map(([branchId, v]) => ({ branchId, ...v }))
+
   return (
-    <section className="c-card">
+    <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="c-section-title">Điểm danh theo ngày{today.data?.date ? ` — ${today.data.date}` : ''}</h2>
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            aria-label="Chọn ngày điểm danh"
-            className="c-input"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-          {selectedDate && (
-            <Button size="sm" variant="outline" onClick={() => setSelectedDate('')}>
-              Hôm nay
-            </Button>
-          )}
+        <CardTitle>Điểm danh theo ngày{today.data?.date ? ` — ${today.data.date}` : ''}</CardTitle>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex items-center">
+            <CalendarCheck className="pointer-events-none absolute left-2.5 h-4 w-4 text-slate-400" aria-hidden />
+            <input
+              type="date"
+              aria-label="Chọn ngày điểm danh"
+              className="c-input rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </div>
+          <Button
+            size="sm"
+            variant={selectedDate === '' ? 'default' : 'outline'}
+            onClick={() => setSelectedDate('')}
+          >
+            Hôm nay
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedDate(yesterdayVNDate())}>
+            Hôm qua
+          </Button>
         </div>
       </div>
       {today.isLoading ? (
         <p className="text-sm text-slate-500">Đang tải dữ liệu…</p>
       ) : today.isError ? (
         <p className="text-sm text-danger-600">{(today.error as Error).message}</p>
-      ) : classes.length === 0 ? (
+      ) : branches.length === 0 ? (
         <p className="text-sm text-slate-500">Không có lớp nào có buổi học trong ngày này.</p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {classes.map((c) => {
-            const seg = (n: number): number => (c.total > 0 ? (n / c.total) * 100 : 0)
-            return (
-              <div key={c.classId} className="flex flex-col gap-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">
-                    {c.className} <span className="text-xs text-slate-400">{c.startsAt}</span>
-                  </span>
-                  <span className="text-xs text-slate-600">
-                    {c.ratePercent !== null ? `${c.ratePercent}%` : '—'} · Có mặt {c.present} · Muộn {c.late} · Vắng{' '}
-                    {c.absent} · Phép {c.excused}
-                    {c.notMarked > 0 ? ` · Chưa ĐD ${c.notMarked}` : ''}
-                  </span>
-                </div>
-                <div
-                  className="flex h-4 w-full overflow-hidden rounded-full bg-slate-100"
-                  role="img"
-                  aria-label={`Điểm danh ${c.className}: ${c.ratePercent ?? 0}%`}
-                >
-                  {seg(c.present) > 0 && <div className="h-full bg-success-500" style={{ width: `${seg(c.present)}%` }} />}
-                  {seg(c.late) > 0 && <div className="h-full bg-warning-400" style={{ width: `${seg(c.late)}%` }} />}
-                  {seg(c.absent) > 0 && <div className="h-full bg-danger-400" style={{ width: `${seg(c.absent)}%` }} />}
-                  {seg(c.excused) > 0 && <div className="h-full bg-accent-300" style={{ width: `${seg(c.excused)}%` }} />}
-                  {seg(c.notMarked) > 0 && <div className="h-full bg-slate-300" style={{ width: `${seg(c.notMarked)}%` }} />}
-                </div>
+        <div className="flex flex-col gap-6 pt-2">
+          {branches.map((branch) => (
+            <div key={branch.branchId} className="flex flex-col gap-3">
+              <CardTitle className="text-base font-semibold text-slate-700">{branch.branchName}</CardTitle>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {branch.classes.map((c) => (
+                  <div key={c.classId} className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
+                    <ClassAttendanceBar c={c} />
+                  </div>
+                ))}
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
       )}
-    </section>
+    </Card>
   )
 }
 

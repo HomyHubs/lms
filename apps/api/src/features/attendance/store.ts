@@ -240,13 +240,15 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       if (studentId) query = query.where('attendance_records.student_id', '=', studentId)
       return query.execute()
     },
-    // TODO(slice-16): `_dateIso` hiện bị bỏ qua — câu lệnh dưới hardcode "hôm nay" theo giờ
-    // Asia/Ho_Chi_Minh. Nếu cần truy vấn theo ngày tùy chọn, thay NOW() bằng tham số này.
-    async listSessionsOnDate(branchIds, _dateIso) {
+    // `dateIso` ('YYYY-MM-DD', đã validate + mặc định = hôm nay giờ Asia/Ho_Chi_Minh ở routes.ts) lọc
+    // đúng các buổi học của ngày đó. `session_date` là cột Postgres `date` (không có giờ) nên so khớp
+    // trực tiếp sau khi ép ${dateIso}::date; toàn bộ xử lý ngày/giờ VN ở server, không nhận đồng hồ client.
+    async listSessionsOnDate(branchIds, dateIso) {
       if (branchIds.length === 0) return []
       const rows = await db
         .selectFrom('class_sessions')
         .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
+        .innerJoin('branches', 'branches.id', 'classes.branch_id')
         .leftJoin('enrollments', 'enrollments.class_id', 'classes.id')
         .select([
           'classes.id as class_id',
@@ -254,13 +256,13 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
           'class_sessions.id as session_id',
           SESSION_TIME.as('starts_at'),
           db.fn.count('enrollments.student_id').as('enrolled_count'),
+          'branches.id as branch_id',
+          'branches.name as branch_name',
         ])
         .where('classes.branch_id', 'in', branchIds)
         .where('class_sessions.cancelled_at', 'is', null)
-        .where(
-          sql<boolean>`to_char(class_sessions.session_date, 'YYYY-MM-DD') = to_char(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')`,
-        )
-        .groupBy(['classes.id', 'classes.name', 'class_sessions.id', 'class_sessions.starts_at'])
+        .where(sql<boolean>`class_sessions.session_date = ${dateIso}::date`) // date-only column, server-side VN date
+        .groupBy(['classes.id', 'classes.name', 'class_sessions.id', 'class_sessions.starts_at', 'branches.id', 'branches.name'])
         .orderBy('class_sessions.starts_at', 'asc')
         .execute()
       return rows.map((r) => ({ ...r, enrolled_count: Number(r.enrolled_count) }))
