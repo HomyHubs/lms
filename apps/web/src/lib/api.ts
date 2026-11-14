@@ -92,6 +92,7 @@ import {
   ExamSetList,
   ExamSetResponse,
   ExamSetImportPreview,
+  GradeImportPreview,
   GradeImportResult,
   type CommitExamSetImportRequest,
   type AddExamSetQuestionRequest,
@@ -696,6 +697,25 @@ export async function importGrades(
   })
   if (!res.ok) return throwApiError(res, 'Khong nhap duoc bang diem')
   return GradeImportResult.parse(await res.json())
+}
+
+/**
+ * slice-22: XEM TRUOC nhap diem (buoc 1). Gui file (raw bytes) va nhan ban preview tung dong
+ * (se ap / bo qua kem ly do) + loi dinh dang — KHONG ghi gi. Dung de xac nhan truoc khi commit.
+ */
+export async function previewGradeImport(
+  file: Blob,
+  meta: { examId: string; fileName: string },
+): Promise<GradeImportPreview> {
+  const params = new URLSearchParams(meta)
+  const res = await fetch(`/api/grading/import/preview?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/octet-stream' },
+    body: file,
+  })
+  if (!res.ok) return throwApiError(res, 'Khong xem truoc duoc bang diem')
+  return GradeImportPreview.parse(await res.json())
 }
 
 /** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */
