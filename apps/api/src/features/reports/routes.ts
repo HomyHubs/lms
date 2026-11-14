@@ -51,6 +51,8 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
     },
   )
 
+  // TODO(slice-24): phan trang server cho ranking khi vuot REPORT_ROW_LIMIT (5000). Hien tai ranking
+  // tra toan bo trong pham vi (thu hang tinh tren toan cuc), FE cat trang 20/50 phia client (Task 6).
   app.get('/reports/students', { preHandler: requireAdmin }, async (request, reply) => {
     const parsed = StudentReportQuery.safeParse(request.query)
     if (!parsed.success) {

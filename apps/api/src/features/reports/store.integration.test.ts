@@ -155,7 +155,9 @@ describeWithPostgres('reports store on real Postgres', () => {
   it('reports exam history and retakes per exam from the same attempts, filtering by local day', async () => {
     const history = makeExamHistoryStore(db)
     const now = new Date('2026-12-01T00:00:00Z')
-    const report = await loadExamAttemptReport(history, { branchIds: [BRANCH_ID] }, now)
+    const outcome = await loadExamAttemptReport(history, { branchIds: [BRANCH_ID] }, {}, now)
+    if (!outcome.ok) throw new Error('unexpected bad cursor')
+    const report = outcome.report
     expect(report.byExam).toEqual([
       {
         examId: EXAM_ID,
@@ -174,7 +176,19 @@ describeWithPostgres('reports store on real Postgres', () => {
       [2, 80, '0900000821'],
       [1, 40, '0900000821'],
     ])
-    expect((await loadExamAttemptReport(history, { branchIds: [CENTER_ID] }, now)).attempts).toEqual([])
+    // slice-24: pass/fail aggregations (1 lượt đạt, 1 không đạt cùng cơ sở/lớp/cấp độ); chưa đủ 50 lượt nên hết trang.
+    expect(report.nextCursor).toBeNull()
+    expect(report.byBranch).toEqual([
+      expect.objectContaining({ key: BRANCH_ID, label: 'Branch IT', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(report.byClass).toEqual([
+      expect.objectContaining({ key: CLASS_ID, label: 'Class IT', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(report.byLevel).toEqual([
+      expect.objectContaining({ key: 'starter', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    const centerOutcome = await loadExamAttemptReport(history, { branchIds: [CENTER_ID] }, {}, now)
+    expect(centerOutcome.ok && centerOutcome.report.attempts).toEqual([])
 
     const oct16 = await listStudentHistory(history, STUDENT_ID, { from: '2026-10-16', to: '2026-10-16' }, now)
     expect(oct16).toMatchObject({

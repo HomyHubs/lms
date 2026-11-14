@@ -45,14 +45,17 @@ export async function examHistoryRoutes(app: FastifyInstance, deps: ExamHistoryR
   app.get('/reports/exam-attempts', { preHandler: requireManager }, async (request, reply) => {
     const parsed = ExamAttemptReportQuery.safeParse(request.query)
     if (!parsed.success) return reply.code(400).send({ error: 'Bo loc bao cao thi khong hop le' })
-    const { branchId, ...rest } = parsed.data
+    const { branchId, cursor, ...rest } = parsed.data
     const scoped = await branchScope.branchIdsForUser(getSessionUser(request).id)
     if (branchId && !scoped.includes(branchId)) return reply.code(404).send({ error: 'Khong tim thay co so' })
-    const body: ExamAttemptReport = await loadExamAttemptReport(
+    const outcome = await loadExamAttemptReport(
       store,
       { ...rest, branchIds: branchId ? [branchId] : scoped },
+      { cursor },
       new Date(),
     )
+    if (!outcome.ok) return reply.code(400).send({ error: 'Con tro phan trang khong hop le' })
+    const body: ExamAttemptReport = outcome.report
     return body
   })
 }

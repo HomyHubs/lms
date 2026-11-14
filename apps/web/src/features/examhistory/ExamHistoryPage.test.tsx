@@ -75,7 +75,11 @@ describe('ExamReportsPage', () => {
           firstAttemptPassRate: 0, finalPassRate: 100, averagePercent: 55, bestPercent: 80,
         },
       ],
+      byBranch: [{ key: 'b1', label: 'Cơ sở 1', passed: 1, failed: 1, total: 2, passRate: 50 }],
+      byClass: [{ key: 'c1', label: 'Lớp A', passed: 1, failed: 1, total: 2, passRate: 50 }],
+      byLevel: [{ key: 'starter', label: 'starter', passed: 1, failed: 1, total: 2, passRate: 50 }],
       attempts: [{ ...row(2), studentId: STUDENT_ID, studentPhone: '0933000001', studentFirstName: 'An', studentLastName: 'Nguyễn Minh' }],
+      nextCursor: null,
     }
     const fetchMock = vi.fn(async (url: string) => {
       if (url.startsWith('/api/reports/exam-attempts')) return json(report)
@@ -87,6 +91,12 @@ describe('ExamReportsPage', () => {
 
     expect(await screen.findByText('100%')).toBeInTheDocument()
     expect(screen.getByText('55%')).toBeInTheDocument()
+
+    // slice-24: bảng pass/fail theo cơ sở/lớp/cấp độ có % và số lượng.
+    expect(screen.getByRole('region', { name: 'Đạt/Rớt theo cơ sở' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Đạt/Rớt theo lớp' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Đạt/Rớt theo cấp độ' })).toBeInTheDocument()
+    expect(screen.getAllByText(/1 đạt \/ 1 rớt \/ 2/).length).toBeGreaterThan(0)
 
     expect(screen.getByText('Nguyễn Minh An')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Nguyễn Minh An/ }))
