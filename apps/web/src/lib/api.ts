@@ -112,6 +112,10 @@ import {
   ExamAttemptReport,
   type ExamHistoryQuery,
   type ExamAttemptReportQuery,
+  StudentSearchResponse,
+  StudentProfileResponse,
+  type StudentSearchResult,
+  type StudentProfile,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -1053,6 +1057,26 @@ export async function saveAiRequest(id: string): Promise<SaveAiRequestResult> {
   return SaveAiRequestResult.parse(
     await sendAiJson(`/api/ai-requests/${id}/save`, 'POST', {}, 'Luu vao ngan hang that bai'),
   )
+}
+
+// ─── slice-30: Menu Học viên ────────────────────────────────────────────────
+
+/** Tìm học viên theo tên / SĐT (GET /students?q=). */
+export async function searchStudents(q: string): Promise<StudentSearchResult[]> {
+  const res = await fetch(`/api/students?q=${encodeURIComponent(q)}`, { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Tìm kiếm học viên thất bại')
+  const json: unknown = await res.json()
+  return StudentSearchResponse.parse(json).students
+}
+
+/** Hồ sơ tổng hợp một học viên (GET /students/:id/profile). */
+export async function getStudentProfile(id: string): Promise<StudentProfile> {
+  const res = await fetch(`/api/students/${encodeURIComponent(id)}/profile`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Không tìm thấy học viên')
+  const json: unknown = await res.json()
+  return StudentProfileResponse.parse(json).student
 }
 
 /** Parses what the external AI returned: a JSON array of rows, or CSV with the import header. */

@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Clock,
   FileStack,
+  GraduationCap,
   History,
   LayoutDashboard,
   ListChecks,
@@ -53,6 +54,7 @@ export const NAV_ITEMS = [
   { path: '/centers', label: 'Trung tâm & cơ sở', icon: Building2, tone: 'success', roles: ['admin'] },
   { path: '/catalog', label: 'Chương trình học', icon: BookOpen, tone: 'accent', roles: ['admin'] },
   { path: '/assignments', label: 'Gán cơ sở', icon: MapPin, tone: 'warning', roles: ['admin'] },
+  { path: '/students', label: 'Học viên', icon: GraduationCap, tone: 'success', roles: ['admin', 'teacher', 'staff'] },
 ] as const satisfies readonly NavItem[]
 
 export type NavPath = (typeof NAV_ITEMS)[number]['path']

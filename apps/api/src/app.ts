@@ -27,6 +27,7 @@ import { examHistoryRoutes, makeExamHistoryStore } from './features/examhistory/
 import { attendanceRoutes, makeAttendanceStore } from './features/attendance/index.js'
 import { aiGenerationRoutes, makeAiGenerationStore } from './features/aigeneration/index.js'
 import { makeReportsStore, reportsRoutes } from './features/reports/index.js'
+import { makeStudentsStore, studentsRoutes } from './features/students/index.js'
 import { makeWorkHoursStore, workHoursRoutes } from './features/workhours/index.js'
 import {
   makeNotificationSender,
@@ -159,6 +160,13 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
   await reportsRoutes(app, {
     rbac,
     reportsStore: makeReportsStore(db),
+    branchScope: userBranchesStore,
+  })
+
+  // slice-30: menu "Hoc vien" — tim kiem + ho so chi tiet (read-only, tong hop). admin/teacher/staff.
+  await studentsRoutes(app, {
+    rbac,
+    studentsStore: makeStudentsStore(db),
     branchScope: userBranchesStore,
   })
 
