@@ -107,3 +107,8 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 
 - V002 đã đóng: workflow PR #6 xanh trên `ca45ef8`, gồm migrate up, integration test và down/up migration exams.
+
+### 2026-11-06 — lịch sử ghi danh
+
+- Thêm `ended_at`, duy nhất ghi danh đang hoạt động và log sự kiện vào/ra. Backfill chỉ những dòng còn tồn tại, không suy đoán cơ sở cũ.
+- Migration đã thử up, down/up trên PostgreSQL riêng; rollback bị chặn khi có sự kiện mới để tránh mất lịch sử.

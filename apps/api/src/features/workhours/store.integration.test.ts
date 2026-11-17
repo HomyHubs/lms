@@ -123,6 +123,8 @@ describeWithPostgres('work hours store on real Postgres', () => {
     expect(report.teachers).toEqual([
       {
         teacherId: TEACHER_ID,
+        firstName: null,
+        lastName: null,
         phoneNumber: '0900000911',
         planned: 3,
         held: 3,

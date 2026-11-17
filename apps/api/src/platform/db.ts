@@ -91,12 +91,24 @@ export interface ClassesTable {
   updated_at: Timestamp
 }
 
-/** Bang `enrollments` — slice-1 Task 3: ghi danh hoc vien vao lop (unique class+student). */
+/** One enrollment period; at most one active period per class and student. */
 export interface EnrollmentsTable {
   id: Generated<string>
   class_id: string
   student_id: string
   created_at: Timestamp
+  ended_at: ColumnType<Date | null, string | null | undefined, string | null>
+}
+
+export interface EnrollmentEventsTable {
+  id: Generated<string>
+  enrollment_id: string
+  class_id: string
+  student_id: string
+  branch_id: string | null
+  event_type: 'enrolled' | 'withdrawn'
+  occurred_at: Timestamp
+  is_backfilled: Generated<boolean>
 }
 
 /** Bang `user_branches` — slice-1 Task 4: gan Branch cho User (branch-scoped access). */
@@ -371,6 +383,7 @@ export interface Database {
   courses: CoursesTable
   classes: ClassesTable
   enrollments: EnrollmentsTable
+  enrollment_events: EnrollmentEventsTable
   user_branches: UserBranchesTable
   questions: QuestionsTable
   exams: ExamsTable

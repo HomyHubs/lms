@@ -152,6 +152,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .innerJoin('users', 'users.id', 'enrollments.student_id')
         .select(['enrollments.student_id', 'users.phone_number', 'users.first_name', 'users.last_name'])
         .where('enrollments.class_id', '=', classId)
+        .where('enrollments.ended_at', 'is', null)
         .orderBy('users.last_name', 'asc')
         .orderBy('users.first_name', 'asc')
         .orderBy('users.phone_number', 'asc')
@@ -227,6 +228,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .innerJoin('class_sessions', 'class_sessions.id', 'attendance_records.session_id')
         .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
         .innerJoin('users', 'users.id', 'attendance_records.student_id')
+        .innerJoin('enrollments', (join) => join.onRef('enrollments.class_id', '=', 'classes.id').onRef('enrollments.student_id', '=', 'attendance_records.student_id').on('enrollments.ended_at', 'is', null))
         .select([
           'attendance_records.student_id',
           'users.phone_number',
@@ -240,8 +242,8 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       if (studentId) query = query.where('attendance_records.student_id', '=', studentId)
       return query.execute()
     },
-    // TODO(slice-16): `_dateIso` hiện bị bỏ qua — câu lệnh dưới hardcode "hôm nay" theo giờ
-    // Asia/Ho_Chi_Minh. Nếu cần truy vấn theo ngày tùy chọn, thay NOW() bằng tham số này.
+    // TODO(slice-16): `_dateIso` is currently ignored - the query below hardcodes today in
+    // Asia/Ho_Chi_Minh. If date-specific querying is needed, replace NOW() with this parameter.
     async listSessionsOnDate(branchIds, _dateIso) {
       if (branchIds.length === 0) return []
       const rows = await db

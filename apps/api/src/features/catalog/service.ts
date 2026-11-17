@@ -89,7 +89,7 @@ export interface CatalogStore {
   listEnrollmentsByClass: (classId: string) => Promise<EnrollmentRow[]>
   findEnrollment: (classId: string, studentId: string) => Promise<EnrollmentRow | undefined>
   findEnrollmentById: (id: string) => Promise<EnrollmentRow | undefined>
-  createEnrollment: (input: { classId: string; studentId: string }) => Promise<EnrollmentRow>
+  createEnrollment: (input: { classId: string; studentId: string }) => Promise<EnrollmentRow | undefined>
   deleteEnrollment: (id: string) => Promise<boolean>
 }
 
@@ -254,7 +254,7 @@ export async function createEnrollment(
   if (existing) return { ok: false, reason: 'already_enrolled' }
 
   const row = await store.createEnrollment({ classId: input.classId, studentId: input.studentId })
-  return { ok: true, enrollment: toEnrollment(row) }
+  return row ? { ok: true, enrollment: toEnrollment(row) } : { ok: false, reason: 'already_enrolled' }
 }
 
 export async function deleteEnrollment(store: CatalogStore, id: string): Promise<boolean> {
