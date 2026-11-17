@@ -144,8 +144,6 @@ describeWithPostgres('work hours store on real Postgres', () => {
         firstName: null,
         lastName: null,
         phoneNumber: '0900000911',
-        firstName: null,
-        lastName: null,
         planned: 3,
         held: 3,
         missed: 1,
