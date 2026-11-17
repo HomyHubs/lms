@@ -242,9 +242,8 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       if (studentId) query = query.where('attendance_records.student_id', '=', studentId)
       return query.execute()
     },
-    // TODO(slice-16): `_dateIso` hiá»‡n bá»‹ bá» qua â€” cÃ¢u lá»‡nh dÆ°á»›i hardcode "hÃ´m nay" theo giá»
-    // Asia/Ho_Chi_Minh. Náº¿u cáº§n truy váº¥n theo ngÃ y tÃ¹y chá»n, thay NOW() báº±ng tham sá»‘ nÃ y.
-    async listSessionsOnDate(branchIds, _dateIso) {
+    // TODO(slice-16): `_dateIso` is currently ignored - the query below hardcodes today in
+    // Asia/Ho_Chi_Minh. If date-specific querying is needed, replace NOW() with this parameter.
       if (branchIds.length === 0) return []
       const rows = await db
         .selectFrom('class_sessions')
