@@ -99,7 +99,7 @@ function makeFakeStore(): WorkHoursStore {
       return [session]
     },
     async listUsers(ids) {
-      return [...workers, { id: ADMIN_B1.id, phone_number: ADMIN_B1.phone_number, role: ADMIN_B1.role }].filter((w) => ids.includes(w.id))
+      return [...workers, { id: ADMIN_B1.id, phone_number: ADMIN_B1.phone_number, first_name: null, last_name: null, role: ADMIN_B1.role }].filter((w) => ids.includes(w.id))
     },
     async listBranchWorkers(branchIds) {
       return branchIds.includes(BRANCH_1) ? workers : []
