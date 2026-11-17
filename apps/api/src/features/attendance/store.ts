@@ -244,6 +244,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
     },
     // TODO(slice-16): `_dateIso` is currently ignored - the query below hardcodes today in
     // Asia/Ho_Chi_Minh. If date-specific querying is needed, replace NOW() with this parameter.
+    async listSessionsOnDate(branchIds, _dateIso) {
       if (branchIds.length === 0) return []
       const rows = await db
         .selectFrom('class_sessions')
