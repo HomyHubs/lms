@@ -142,4 +142,5 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 ### 2026-11-06 — lịch sử ghi danh
 
 - Gỡ ghi danh kết thúc giai đoạn thay vì xóa; roster và báo cáo theo lớp chỉ tính ghi danh đang hoạt động, lịch sử cá nhân vẫn giữ. Tái ghi danh đồng thời được ràng buộc ở database.
-- API test PostgreSQL riêng 242/242; build, lint và typecheck đạt. Dashboard lịch sử vào/ra còn là phần tiếp theo.
+- API test PostgreSQL riêng 242/242; build, lint và typecheck đạt.
+- Dashboard: `GET /reports/enrollment-movements` cho Admin, giới hạn cơ sở được gán, lọc ngày theo Asia/Ho_Chi_Minh; không gán bừa cơ sở cho sự kiện cũ. Test route và Postgres 8/8 đạt.

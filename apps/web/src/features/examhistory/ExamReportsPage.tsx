@@ -4,6 +4,7 @@ import type { ExamAttemptDetail, ExamAttemptReport, ExamAttemptReportQuery } fro
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/card'
 import { useReportFilters } from '@/features/reports/useReports'
+import { ReportCharts } from '@/features/reports/ReportCharts'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { examReportToSheets } from './exam-report-export'
 import { StudentHistory } from './ExamHistoryPage'
@@ -161,6 +162,12 @@ export function ExamReportsPage(): React.ReactElement {
       {report.isError && <p className="text-sm text-danger-600">{(report.error as Error).message}</p>}
       {data && (
         <>
+          {data.attempts.length >= 5000 && <p className="text-sm text-slate-600">Danh sách và biểu đồ chỉ bao gồm tối đa 5.000 lượt thi gần nhất; hãy thu hẹp bộ lọc để xem đầy đủ.</p>}
+          <ReportCharts title="Biểu đồ kết quả các lượt thi trong danh sách" items={[
+            { label: 'Đạt', value: data.attempts.filter((a) => a.passed === true).length },
+            { label: 'Trượt', value: data.attempts.filter((a) => a.passed === false).length },
+            { label: 'Chưa có kết quả', value: data.attempts.filter((a) => a.passed === null).length },
+          ]} />
           <section className="c-card" aria-label="Theo đề thi">
             <h2 className="c-section-title">Theo đề thi</h2>
             <SummaryTable report={data} onPick={(examId) => setQuery((q) => ({ ...q, examId }))} />

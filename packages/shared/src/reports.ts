@@ -17,6 +17,23 @@ export const CLASSIFICATION_LABELS: Record<StudentClassification, string> = {
   weak: 'Yếu',
 }
 
+export const EnrollmentMovementQuery = z.object({
+  branchId: z.string().uuid().optional(),
+  from: z.string().date().refine((date) => date >= '0001-01-01'),
+  to: z.string().date().refine((date) => date >= '0001-01-01'),
+}).refine((q) => q.from <= q.to, { message: 'Khoang ngay khong hop le' })
+export type EnrollmentMovementQuery = z.infer<typeof EnrollmentMovementQuery>
+
+export const EnrollmentMovementReport = z.object({
+  branches: z.array(z.object({ id: z.string().uuid(), name: z.string() })),
+  events: z.array(z.object({
+    id: z.string(), branchId: z.string().uuid(), branchName: z.string(),
+    className: z.string().nullable(), studentPhone: z.string().nullable(),
+    type: z.enum(['enrolled', 'withdrawn']), occurredAt: z.string(),
+  })),
+})
+export type EnrollmentMovementReport = z.infer<typeof EnrollmentMovementReport>
+
 const Percent = z.number().int().min(0).max(100)
 
 export const ClassificationPolicy = z.object({

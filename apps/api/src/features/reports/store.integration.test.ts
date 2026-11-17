@@ -119,6 +119,21 @@ describeWithPostgres('reports store on real Postgres', () => {
     }
   })
 
+  it('filters movement events by branch and local date, excluding unknown historical branches', async () => {
+    const rows = [
+      { enrollment_id: '71000000-0000-4000-8000-000000000031', branch_id: BRANCH_ID, occurred_at: '2026-01-01T17:00:00Z' },
+      { enrollment_id: '71000000-0000-4000-8000-000000000032', branch_id: BRANCH_ID, occurred_at: '2026-01-02T16:59:59Z' },
+      { enrollment_id: '71000000-0000-4000-8000-000000000033', branch_id: BRANCH_ID, occurred_at: '2026-01-02T17:00:00Z' },
+      { enrollment_id: '71000000-0000-4000-8000-000000000034', branch_id: null, occurred_at: '2026-01-02T10:00:00Z' },
+    ]
+    await db.insertInto('enrollment_events').values(rows.map((row) => ({ ...row, class_id: CLASS_ID, student_id: STUDENT_ID, event_type: 'enrolled' as const }))).execute()
+    const store = makeReportsStore(db)
+    const result = await store.listMovements([BRANCH_ID], '2026-01-02', '2026-01-02')
+    expect(result.map((r) => r.occurred_at.toISOString())).toEqual(['2026-01-02T16:59:59.000Z', '2026-01-01T17:00:00.000Z'])
+    expect(result[0]).toMatchObject({ branch_name: 'Branch IT', class_name: 'Class IT', phone_number: '0900000821' })
+    expect(await store.listMovements([], '2026-01-02', '2026-01-02')).toEqual([])
+  })
+
   it('builds the branch-scoped report from real attempts and attendance, honoring the date range', async () => {
     const store = makeReportsStore(db)
     const all = await loadStudentReport(store, { branchIds: [BRANCH_ID] }, {})

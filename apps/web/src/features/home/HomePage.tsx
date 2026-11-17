@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   BookOpenCheck,
   Building2,
@@ -25,6 +26,7 @@ import { useExams } from '@/features/exams/useExams'
 import { useUsers } from '@/features/users/useUsers'
 import { toHours } from '@/features/workhours/work-hours-export'
 import { useMyTimesheet } from '@/features/workhours/useWorkHours'
+import { EnrollmentMovements } from './EnrollmentMovements'
 import { cn, currentMonth } from '@/lib/utils'
 import { DashboardCharts } from './DashboardCharts'
 
@@ -83,6 +85,7 @@ function StatGrid({ children }: { children: React.ReactNode }): React.ReactEleme
 }
 
 function AdminDashboard({ user }: { user: PublicUser }): React.ReactElement {
+  const [showMovements, setShowMovements] = useState(false)
   const users = useUsers()
   const branches = useBranches()
   const classes = useClasses()
@@ -91,12 +94,16 @@ function AdminDashboard({ user }: { user: PublicUser }): React.ReactElement {
     <>
       <Hero user={user} subtitle={`${count(branches.data?.length)} cơ sở · ${count(classes.data?.length)} lớp đang quản lý.`} />
       <StatGrid>
-        <StatCard label="Học viên" value={count(byRole('student'))} icon={GraduationCap} tone="primary" />
+        <button type="button" aria-expanded={showMovements} onClick={() => setShowMovements((show) => !show)} className="rounded-xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-600">
+          <StatCard label="Học viên" value={count(byRole('student'))} hint="Xem lịch sử đăng ký" icon={GraduationCap} tone="primary" />
+        </button>
         <StatCard label="Giáo viên" value={count(byRole('teacher'))} icon={UserCheck} tone="success" />
         <StatCard label="Cơ sở" value={count(branches.data?.length)} icon={Building2} tone="accent" />
         <StatCard label="Lớp học" value={count(classes.data?.length)} icon={School} tone="warning" />
       </StatGrid>
       <DashboardCharts />
+      {showMovements && <EnrollmentMovements />}
+      <Link to="/attendance" className="text-sm font-medium text-primary-600 hover:underline">Xem điểm danh theo cơ sở và lớp →</Link>
     </>
   )
 }

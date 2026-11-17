@@ -127,3 +127,9 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 
 - CI guard đã xanh trên `ca45ef8`; review lại PR #6 đúng HEAD bằng identity độc lập.
+
+### 2026-11-06 — Dashboard lịch sử ghi danh
+
+- Ô học viên mở lịch sử vào/ra theo cơ sở, tháng hoặc khoảng ngày, với chú thích về giới hạn dữ liệu cũ; thêm đường dẫn tới bảng điểm danh.
+- Test giao diện 1/1, build/lint/typecheck đạt; chưa kiểm tra trình duyệt thật.
+- Các báo cáo thi, điểm danh, ngày công và xếp loại có biểu đồ thanh/tròn; test web 67/67, build/lint/typecheck đạt. Admin chấm công thay giáo viên còn lại.
