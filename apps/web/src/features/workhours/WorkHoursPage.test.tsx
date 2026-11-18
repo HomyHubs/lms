@@ -81,6 +81,33 @@ describe('WorkHoursPage', () => {
     expect(screen.getByText('Đang trong ca')).toBeTruthy()
   })
 
+  it('lets an admin select a branch and teacher, check in, and see who recorded it', async () => {
+    const branchId = '20000000-0000-4000-8000-000000000001'
+    let open: StaffShift | null = null
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) return json({ user: { id: SESSION_ID, phoneNumber: '0900000001', role: 'admin' } })
+      if (url.endsWith('/api/branches')) return json({ branches: [{ id: branchId, centerId: CLASS_ID, name: 'Cơ sở A', address: null, createdAt: '2026-11-01T00:00:00Z' }] })
+      if (url.includes('/api/reports/work-hours')) return json({ ...report, staff: [{ ...report.staff[0], userId: TEACHER_ID, role: 'teacher' }] })
+      if (url.includes(`/api/admin/teachers/${TEACHER_ID}/timesheet/check-in`) && init?.method === 'POST') {
+        open = { id: SESSION_ID, checkInAt: '2026-11-08T01:00:00.000Z', checkOutAt: null, workedMinutes: null }
+        return json({ shift: open }, 201)
+      }
+      if (url.includes(`/api/admin/teachers/${TEACHER_ID}/timesheet`)) return json({ openShift: open, events: open ? [{ shiftId: SESSION_ID, action: 'check_in', occurredAt: open.checkInAt, recordedBy: SESSION_ID, recordedByPhone: '0900000001', branchId }] : [] })
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    await screen.findByRole('option', { name: 'Cơ sở A' })
+    fireEvent.change(screen.getByLabelText('Cơ sở'), { target: { value: branchId } })
+    const select = await screen.findByRole('combobox', { name: 'Giáo viên' })
+    fireEvent.change(select, { target: { value: TEACHER_ID } })
+    fireEvent.click(await screen.findByRole('button', { name: 'Check-in cho giáo viên' }))
+    expect(await screen.findByRole('button', { name: 'Check-out cho giáo viên' })).toBeTruthy()
+    expect(screen.getByText('0900000001')).toBeTruthy()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes(`branchId=${branchId}`))).toBe(true)
+  })
+
   it('shows the admin monthly report and flattens it for the Excel export', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)

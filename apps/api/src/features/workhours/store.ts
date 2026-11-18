@@ -24,28 +24,49 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
     db.selectFrom('staff_shifts').select(SHIFT_COLUMNS).where('id', '=', id).executeTakeFirstOrThrow()
 
   return {
-    async checkIn(userId) {
+    async checkIn(userId, recordedBy = userId, branchId) {
       try {
-        const inserted = await db
-          .insertInto('staff_shifts')
-          .values({ user_id: userId })
-          .returning('id')
-          .executeTakeFirstOrThrow()
-        return shiftById(inserted.id)
+        const id = await db.transaction().execute(async (trx) => {
+          const shift = await trx.insertInto('staff_shifts')
+            .values({ user_id: userId })
+            .returning(['id', 'check_in_at'])
+            .executeTakeFirstOrThrow()
+          await trx.insertInto('shift_events').values({
+            shift_id: shift.id, user_id: userId, event_type: 'check_in',
+            occurred_at: sql<string>`now()`, recorded_by: recordedBy, branch_id: branchId ?? null,
+          }).execute()
+          return shift.id
+        })
+        return shiftById(id)
       } catch (err) {
         if (isUniqueViolation(err)) return undefined
         throw err
       }
     },
-    async checkOut(userId) {
-      const updated = await db
-        .updateTable('staff_shifts')
-        .set({ check_out_at: sql<string>`now()` })
+    async checkOut(userId, recordedBy = userId, branchId) {
+      const id = await db.transaction().execute(async (trx) => {
+        const shift = await trx.updateTable('staff_shifts')
+          .set({ check_out_at: sql<string>`now()` })
+          .where('user_id', '=', userId)
+          .where('check_out_at', 'is', null)
+          .returning(['id', 'check_out_at'])
+          .executeTakeFirst()
+        if (!shift || !shift.check_out_at) return undefined
+        await trx.insertInto('shift_events').values({
+          shift_id: shift.id, user_id: userId, event_type: 'check_out',
+          occurred_at: sql<string>`now()`, recorded_by: recordedBy, branch_id: branchId ?? null,
+        }).execute()
+        return shift.id
+      })
+      return id ? shiftById(id) : undefined
+    },
+    async listShiftEvents(userId, { from, to }) {
+      const localDate = sql<string>`(occurred_at at time zone ${sql.lit(WORK_TIME_ZONE)})::date`
+      return db.selectFrom('shift_events')
+        .select(['shift_id', 'event_type', 'occurred_at', 'recorded_by', 'branch_id'])
         .where('user_id', '=', userId)
-        .where('check_out_at', 'is', null)
-        .returning('id')
-        .executeTakeFirst()
-      return updated ? shiftById(updated.id) : undefined
+        .where(localDate, '>=', from).where(localDate, '<', to)
+        .orderBy('occurred_at', 'desc').orderBy('id', 'desc').execute()
     },
     async findOpenShift(userId) {
       return db

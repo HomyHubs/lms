@@ -83,6 +83,7 @@ import {
   type UpdateClassificationPolicyRequest,
   MyTimesheet,
   StaffShiftResponse,
+  TeacherTimesheet,
   WorkHoursReport,
   type StaffShift,
   type WorkHoursReportQuery,
@@ -938,6 +939,18 @@ export async function getExamAttemptReport(query: ExamAttemptReportQuery): Promi
 export async function checkShift(action: 'check-in' | 'check-out'): Promise<StaffShift> {
   const res = await fetch(`/api/timesheet/${action}`, { method: 'POST', credentials: 'include' })
   if (!res.ok) return throwApiError(res, action === 'check-in' ? 'Check-in that bai' : 'Check-out that bai')
+  return StaffShiftResponse.parse(await res.json()).shift
+}
+
+export async function getTeacherTimesheet(teacherId: string, branchId: string, month: string): Promise<TeacherTimesheet> {
+  const res = await fetch(`/api/admin/teachers/${teacherId}/timesheet?${queryString({ branchId, month })}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Không lấy được lịch sử chấm công')
+  return TeacherTimesheet.parse(await res.json())
+}
+
+export async function checkTeacherShift(teacherId: string, branchId: string, action: 'check-in' | 'check-out'): Promise<StaffShift> {
+  const res = await fetch(`/api/admin/teachers/${teacherId}/timesheet/${action}?${queryString({ branchId })}`, { method: 'POST', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Không chấm công được')
   return StaffShiftResponse.parse(await res.json()).shift
 }
 

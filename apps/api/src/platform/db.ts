@@ -264,6 +264,25 @@ export interface ClassSessionsTable {
   cancelled_at: ColumnType<Date | null, string | null | undefined, string | null>
 }
 
+export interface SessionTeacherEventsTable {
+  id: Generated<string>
+  session_id: string
+  teacher_id: string
+  recorded_by: string
+  recorded_at: Timestamp
+}
+
+export interface ShiftEventsTable {
+  id: Generated<string>
+  shift_id: string
+  user_id: string
+  event_type: 'check_in' | 'check_out'
+  occurred_at: ColumnType<Date, string, string>
+  recorded_by: string | null
+  branch_id: string | null
+  is_backfilled: Generated<boolean>
+}
+
 /** Table `staff_shifts` — slice-8: one check-in/check-out of a staff member or teacher. */
 export interface StaffShiftsTable {
   id: Generated<string>
@@ -400,6 +419,7 @@ export interface Database {
   ai_generated_items: AiGeneratedItemsTable
   student_grading_policies: StudentGradingPoliciesTable
   staff_shifts: StaffShiftsTable
+  shift_events: ShiftEventsTable
   notifications: NotificationsTable
   media_assets: MediaAssetsTable
   question_media: QuestionMediaTable
