@@ -45,6 +45,36 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
                 age: null,
                 createdAt: '2026-09-16T00:00:00.000Z',
               },
+              // slice-26: hoc vien co tuoi; SDT hien nho duoi ho ten.
+              {
+                id: '22222222-2222-2222-2222-222222222222',
+                phoneNumber: '0902222222',
+                email: null,
+                role: 'student',
+                lastName: 'Nguyễn',
+                firstName: 'An',
+                birthYear: 2015,
+                gender: 'male',
+                address: null,
+                parentPhone: null,
+                age: 11,
+                createdAt: '2026-09-16T00:00:00.000Z',
+              },
+              // slice-26: giao vien co birthYear nhung KHONG hien tuoi (age=null tu API).
+              {
+                id: '33333333-3333-3333-3333-333333333333',
+                phoneNumber: '0903333333',
+                email: null,
+                role: 'teacher',
+                lastName: 'Trần',
+                firstName: 'Bình',
+                birthYear: 1990,
+                gender: 'female',
+                address: null,
+                parentPhone: null,
+                age: null,
+                createdAt: '2026-09-16T00:00:00.000Z',
+              },
             ],
           }),
         }
@@ -76,6 +106,18 @@ describe('UsersPage', () => {
     renderPage()
     expect(screen.getByRole('heading', { name: /Quản lý người dùng/ })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('0901234567')).toBeInTheDocument())
+  })
+
+  // slice-26: bo cot SDT rieng (SDT nho duoi ho ten); cot Tuoi chi cho hoc vien.
+  it('removes the phone column, shows phone under the name, and ages only students', async () => {
+    stubUsersFetch()
+    renderPage()
+    // SDT van hien (nay nam duoi ho ten), nhung KHONG con cot "So dien thoai".
+    await waitFor(() => expect(screen.getByText('0902222222')).toBeInTheDocument())
+    expect(screen.queryByRole('columnheader', { name: 'Số điện thoại' })).toBeNull()
+    // Hoc vien co tuoi -> hien; giao vien co nam sinh nhung khong hien tuoi.
+    expect(screen.getByText('11')).toBeInTheDocument()
+    expect(screen.queryByText('36')).toBeNull()
   })
 
   // slice-19 (ADR 0015): bang cau hinh quyen sua cau hoi theo role.
