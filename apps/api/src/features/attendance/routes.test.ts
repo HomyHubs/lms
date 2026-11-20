@@ -20,12 +20,13 @@ function user(id: string, phone: string, role: string): UserRecord {
 }
 const ADMIN_B1 = user('60000000-0000-0000-0000-000000000001', '0900000001', 'admin')
 const ADMIN_B2 = user('60000000-0000-0000-0000-000000000002', '0900000002', 'admin')
+const STAFF_B1 = user('60000000-0000-0000-0000-000000000003', '0900000003', 'staff')
 const TEACHER_1 = user('70000000-0000-0000-0000-000000000001', '0900000011', 'teacher')
 const TEACHER_2 = user('70000000-0000-0000-0000-000000000002', '0900000012', 'teacher')
 const STUDENT_1 = user('80000000-0000-0000-0000-000000000001', '0900000021', 'student')
 const STUDENT_2 = user('80000000-0000-0000-0000-000000000002', '0900000022', 'student')
 const STUDENT_3 = user('80000000-0000-0000-0000-000000000003', '0900000023', 'student')
-const USERS = [ADMIN_B1, ADMIN_B2, TEACHER_1, TEACHER_2, STUDENT_1, STUDENT_2, STUDENT_3]
+const USERS = [ADMIN_B1, ADMIN_B2, STAFF_B1, TEACHER_1, TEACHER_2, STUDENT_1, STUDENT_2, STUDENT_3]
 const COOKIE = { cookie: `${SESSION_COOKIE}=any-token` }
 
 function makeFakeAuthStore(sessionUser: UserRecord): AuthStore {
@@ -46,7 +47,7 @@ function makeFakeAuthStore(sessionUser: UserRecord): AuthStore {
 
 const branchScope: BranchScope = {
   async branchIdsForUser(userId) {
-    return ({ [ADMIN_B1.id]: [BRANCH_1], [ADMIN_B2.id]: [BRANCH_2] } as Record<string, string[]>)[userId] ?? []
+    return ({ [ADMIN_B1.id]: [BRANCH_1], [ADMIN_B2.id]: [BRANCH_2], [STAFF_B1.id]: [BRANCH_1] } as Record<string, string[]>)[userId] ?? []
   },
 }
 
@@ -97,6 +98,10 @@ function makeFakeStore(): AttendanceStore {
     },
     async listSessions(classId) {
       return sessions.filter((s) => s.class_id === classId)
+    },
+    async listTodaySessions(branchIds, date) {
+      return sessions.filter((s) => s.session_date === date && !s.cancelled_at && branchIds.includes(classOf(s.id)?.branch_id ?? ''))
+        .map((s) => ({ ...s, class_name: classOf(s.id)!.name, branch_id: classOf(s.id)!.branch_id, branch_name: classOf(s.id)!.branch_id === BRANCH_1 ? 'Center 1' : 'Center 2' }))
     },
     async findSession(id) {
       return sessions.find((s) => s.id === id)
@@ -247,7 +252,7 @@ describe('attendance routes', () => {
     expect(dup.statusCode).toBe(409)
   })
 
-  it('blocks marking by unassigned teachers, admins, students and for non-enrolled students', async () => {
+  it('blocks marking by unassigned teachers, students and for non-enrolled students', async () => {
     const store = makeFakeStore()
     const { teacher, sessionId } = await createMarkedSession(store)
     const client = makeClient(store)
@@ -258,7 +263,16 @@ describe('attendance routes', () => {
     expect((await otherTeacher('POST', `/classes/${CLASS_1}/sessions`, { sessionDate: '2026-11-06' })).statusCode).toBe(404)
 
     const admin = await client(ADMIN_B1)
-    expect((await admin('PUT', `/sessions/${sessionId}/attendance`, body)).statusCode).toBe(403)
+    expect((await admin('PUT', `/sessions/${sessionId}/attendance`, body)).statusCode).toBe(400)
+    const staff = await client(STAFF_B1)
+    expect((await staff('PUT', `/sessions/${sessionId}/attendance`, { ...body, actualTeacherId: TEACHER_2.id })).statusCode).toBe(400)
+    const staffMarked = await staff('PUT', `/sessions/${sessionId}/attendance`, { ...body, actualTeacherId: TEACHER_1.id })
+    expect(staffMarked.json()).toMatchObject({ roster: expect.any(Array) })
+    expect(staffMarked.statusCode).toBe(200)
+    const outside = await client(ADMIN_B2)
+    expect((await outside('PUT', `/sessions/${sessionId}/attendance`, { ...body, actualTeacherId: TEACHER_1.id })).statusCode).toBe(404)
+    expect((await staff('GET', '/attendance/today')).statusCode).toBe(200)
+    expect((await otherTeacher('GET', '/attendance/today')).statusCode).toBe(403)
     expect((await admin('GET', `/sessions/${sessionId}/attendance`)).statusCode).toBe(200)
 
     const student = await client(STUDENT_1)
@@ -269,6 +283,22 @@ describe('attendance routes', () => {
     })
     expect(notEnrolled.statusCode).toBe(400)
     expect(notEnrolled.json().studentIds).toEqual([STUDENT_3.id])
+  })
+
+  it('lists all sessions today only in the staff branch and excludes cancelled sessions', async () => {
+    const store = makeFakeStore()
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    const create = (classId: string, startsAt: string) => store.createSession({ classId, sessionDate: date, startsAt, topic: null, createdBy: TEACHER_1.id, durationMinutes: 90, makeupForSessionId: null })
+    const one = await create(CLASS_1, '17:00')
+    const two = await create(CLASS_1, '18:00')
+    const cancelled = await create(CLASS_1, '19:00')
+    await create(CLASS_2, '18:00')
+    await store.cancelSession(cancelled!.id)
+    const staff = await makeClient(store)(STAFF_B1)
+    const response = await staff('GET', '/attendance/today')
+    expect(response.statusCode).toBe(200)
+    expect(response.json().sessions.map((s: { attendance: { session: { id: string } } }) => s.attendance.session.id)).toEqual([one!.id, two!.id])
+    expect(response.json().sessions[0]).toMatchObject({ branchName: 'Center 1', className: 'Starter A', attendance: { roster: [{ status: null }, { status: null }] } })
   })
 
   it('cancels only unmarked sessions and accepts make-ups only for untaught sessions of the class', async () => {

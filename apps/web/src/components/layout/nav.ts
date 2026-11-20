@@ -41,7 +41,7 @@ export const NAV_ITEMS = [
   { path: '/', label: 'Tổng quan', icon: LayoutDashboard, tone: 'primary', roles: ['admin', 'teacher', 'staff', 'student'] },
   { path: '/exams', label: 'Bài thi của tôi', icon: ClipboardList, tone: 'accent', roles: ['student'] },
   { path: '/exam-history', label: 'Lịch sử thi', icon: History, tone: 'primary', roles: ['student'] },
-  { path: '/attendance', label: 'Điểm danh', icon: CalendarCheck, tone: 'success', roles: ['admin', 'teacher', 'student'] },
+  { path: '/attendance', label: 'Điểm danh', icon: CalendarCheck, tone: 'success', roles: ['admin', 'teacher', 'staff', 'student'] },
   { path: '/questions', label: 'Ngân hàng câu hỏi', icon: ListChecks, tone: 'primary', roles: ['admin', 'teacher'] },
   { path: '/exam-sets', label: 'Bộ đề & đề thi', icon: FileStack, tone: 'warning', roles: ['admin', 'teacher'] },
   { path: '/ai-questions', label: 'Sinh câu hỏi AI', icon: Sparkles, tone: 'accent', roles: ['admin', 'teacher'] },

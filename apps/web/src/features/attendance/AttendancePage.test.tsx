@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AttendancePage } from './AttendancePage'
+import { TodayAttendanceBoard } from './TodayAttendanceBoard'
 
 const CLASS_ID = '50000000-0000-0000-0000-000000000001'
 const SESSION_ID = '90000000-0000-0000-0000-000000000001'
@@ -52,10 +53,41 @@ function stubTeacherFetch() {
   return fetchMock
 }
 
-describe('AttendancePage', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
+afterEach(() => vi.unstubAllGlobals())
+
+it('marks several classes without fabricating arrival, supporting lateness and early-leave notes', async () => {
+  const teacherId = '70000000-0000-0000-0000-000000000001'
+  const studentB = '80000000-0000-0000-0000-000000000002'
+  const studentC = '80000000-0000-0000-0000-000000000003'
+  const roster = [STUDENT_ID, studentB, studentC].map((studentId, i) => ({ studentId, phoneNumber: `090000000${i + 1}`, status: null, note: null }))
+  const item = { className: 'Lớp A', branchId: CLASS_ID, branchName: 'Cơ sở A', teachers: [{ classId: CLASS_ID, teacherId, phoneNumber: '0900000011' }], attendance: { session, roster } }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith('/api/attendance/today')) return json({ sessions: [item, { ...item, className: 'Lớp B', attendance: { session: { ...session, id: '90000000-0000-0000-0000-000000000002' }, roster: [] } }] })
+    if (init?.method === 'PUT') return json({ session, roster: roster.map((r, i) => ({ ...r, status: i ? 'absent' : 'late' })) })
+    throw new Error('Unexpected request')
   })
+  vi.stubGlobal('fetch', fetchMock)
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><TodayAttendanceBoard /></QueryClientProvider>)
+  expect(await screen.findByText(/Lớp A ·/)).toBeInTheDocument()
+  expect(screen.getByText(/Lớp B ·/)).toBeInTheDocument()
+  const row = within(screen.getByText(/Lớp A ·/).closest('section')!)
+  fireEvent.change(row.getByLabelText('Giáo viên thực dạy Lớp A'), { target: { value: teacherId } })
+  fireEvent.click(row.getByRole('button', { name: 'Chọn tất cả có mặt' }))
+  fireEvent.click(row.getByLabelText('Có mặt 0900000002'))
+  fireEvent.change(row.getByLabelText('Trạng thái 0900000001'), { target: { value: '10' } })
+  fireEvent.change(row.getByLabelText('Giờ đến 0900000001'), { target: { value: '18:10' } })
+  fireEvent.change(row.getByLabelText('Ghi chú 0900000001'), { target: { value: 'Về sớm' } })
+  fireEvent.click(row.getByRole('button', { name: 'Lưu điểm danh' }))
+  await waitFor(() => expect(row.getByRole('status')).toHaveTextContent('Đã lưu'))
+  const put = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')
+  expect(JSON.parse(String(put?.[1]?.body))).toEqual({ actualTeacherId: teacherId, records: [
+    { studentId: STUDENT_ID, status: 'late', note: 'Về sớm', arrivedAt: '2026-11-05T11:10:00.000Z', lateMinutes: 10 },
+    { studentId: studentB, status: 'absent', arrivedAt: null, lateMinutes: null },
+    { studentId: studentC, status: 'present', arrivedAt: null, lateMinutes: null },
+  ] })
+})
+
+describe('AttendancePage', () => {
 
   it('lets a teacher mark a session of an assigned class and sends the chosen statuses', async () => {
     const fetchMock = stubTeacherFetch()

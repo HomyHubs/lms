@@ -54,6 +54,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-29 | Ghi danh & Quản lý (đổi tên từ Gán cơ sở): 2 panel — HV/GV gán theo lớp, quản lý gán theo cơ sở (mục 12) | Dọc | Chưa bắt đầu | — | — | — | slice-1 | `slices/slice-29-ghi-danh-quan-ly.md` |
 | slice-30 | Menu Học viên (mới): tìm & hồ sơ chi tiết học viên — điểm, giờ học, chuyên cần, thi, học lực (số + chart theo panel) (mục 13) | Dọc | Chưa bắt đầu | — | — | — | slice-13, slice-5, slice-6 | `slices/slice-30-menu-hoc-vien.md` |
 | slice-1.1 | Bảo toàn lịch sử ghi danh (thay đổi slice-1) | Dọc | Đang làm | Notion AI | feature/slice-1.1-lich-su-ghi-danh | — | slice-1, slice-6.1 | `slices/slice-1.1-lich-su-ghi-danh.md` |
+| slice-6.1 | Điểm danh nhiều lớp và hiện diện (thay đổi slice-6) | Dọc | Đang làm | Notion AI | feature/slice-6.1-diem-danh-hien-dien | — | slice-6, slice-8 | `slices/slice-6.1-diem-danh-hien-dien.md` |
 
 ## Trạng thái hợp lệ
 

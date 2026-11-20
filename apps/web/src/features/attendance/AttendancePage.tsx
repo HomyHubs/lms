@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardTitle, PageHeader } from '@/components/ui/card'
 import { useSession } from '@/features/auth/useAuth'
+import { TodayAttendanceBoard } from './TodayAttendanceBoard'
 import {
   useAdminClasses,
   useAssignTeacher,
@@ -617,7 +618,10 @@ export function AttendancePage(): React.ReactElement {
   return (
     <>
       <PageHeader icon={CalendarCheck} title="Điểm danh" />
-      {user?.role === 'student' ? <StudentView /> : <StaffView isAdmin={user?.role === 'admin'} />}
+      {(user?.role === 'admin' || user?.role === 'staff') && <TodayAttendanceBoard />}
+      {user?.role === 'student' && <StudentView />}
+      {user?.role === 'admin' && <StaffView isAdmin />}
+      {user?.role === 'teacher' && <StaffView isAdmin={false} />}
     </>
   )
 }

@@ -56,6 +56,8 @@ export interface RecordRow {
   student_id: string
   status: string
   note: string | null
+  arrived_at?: Date | string | null
+  late_minutes?: number | null
 }
 
 export interface HistoryRow {
@@ -109,6 +111,8 @@ export interface UpsertRecordFields {
   studentId: string
   status: AttendanceStatus
   note: string | null
+  arrivedAt?: string | null
+  lateMinutes?: number | null
 }
 
 /** Filter for rate queries. `branchIds` limits the result to classes in those branches. */
@@ -118,6 +122,8 @@ export interface RecordScope {
   studentId?: string
   branchIds: string[]
 }
+
+export class SessionCancelledError extends Error {}
 
 export interface AttendanceStore {
   findClass(classId: string): Promise<AttendanceClassRow | undefined>
@@ -132,6 +138,7 @@ export interface AttendanceStore {
   listTeachingClasses(teacherId: string): Promise<AttendanceClassRow[]>
 
   listSessions(classId: string): Promise<SessionRow[]>
+  listTodaySessions(branchIds: string[], date: string): Promise<Array<SessionRow & { class_name: string; branch_id: string; branch_name: string }>>
   findSession(sessionId: string): Promise<SessionRow | undefined>
   /** Returns undefined when (class, date, start time) already exists. */
   createSession(fields: CreateSessionFields): Promise<SessionRow | undefined>
@@ -142,7 +149,7 @@ export interface AttendanceStore {
   listRoster(classId: string): Promise<RosterStudentRow[]>
   listRecords(sessionId: string): Promise<RecordRow[]>
   /** Insert-or-update all records atomically. */
-  upsertRecords(sessionId: string, recordedBy: string, records: UpsertRecordFields[]): Promise<void>
+  upsertRecords(sessionId: string, recordedBy: string, records: UpsertRecordFields[], actualTeacherId?: string): Promise<void>
 
   listStudentHistory(studentId: string, branchIds?: string[]): Promise<HistoryRow[]>
   listScopedRecords(scope: RecordScope): Promise<ScopedRecordRow[]>
@@ -224,6 +231,8 @@ export function buildRoster(
       lastName: s.last_name ?? null,
       status: rec ? toStatus(rec.status) : null,
       note: rec?.note ?? null,
+      ...(rec?.arrived_at !== undefined ? { arrivedAt: rec.arrived_at === null ? null : toIso(rec.arrived_at) } : {}),
+      ...(rec?.late_minutes !== undefined ? { lateMinutes: rec.late_minutes } : {}),
     }
   })
 }
@@ -342,6 +351,7 @@ export async function markAttendance(
   session: SessionRow,
   recordedBy: string,
   records: readonly MarkAttendanceRecord[],
+  actualTeacherId?: string,
 ): Promise<MarkAttendanceOutcome> {
   const ids = records.map((r) => r.studentId)
   if (new Set(ids).size !== ids.length) return { ok: false, reason: 'duplicate_student' }
@@ -351,7 +361,8 @@ export async function markAttendance(
   await store.upsertRecords(
     session.id,
     recordedBy,
-    records.map((r) => ({ studentId: r.studentId, status: r.status, note: r.note ? r.note : null })),
+    records.map((r) => ({ studentId: r.studentId, status: r.status, note: r.note ? r.note : null, arrivedAt: r.arrivedAt, lateMinutes: r.lateMinutes })),
+    actualTeacherId,
   )
   return { ok: true }
 }
