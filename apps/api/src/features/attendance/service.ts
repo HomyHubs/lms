@@ -83,6 +83,8 @@ export interface TodaySessionRow {
   session_id: string
   starts_at: string
   enrolled_count: number
+  branch_id: string
+  branch_name: string
 }
 
 /** One attendance record for a class in a branch (slice-16 branch rates). */
@@ -321,7 +323,7 @@ export async function buildTodaySummary(
     const notMarked = Math.max(0, total - marked)
     const counted = counts.present + counts.late + counts.absent
     const ratePercent = counted === 0 ? null : Math.round(((counts.present + counts.late) / counted) * 1000) / 10
-    classes.push({ classId: s.class_id, className: s.class_name, startsAt: s.starts_at, ...counts, notMarked, total, ratePercent })
+    classes.push({ classId: s.class_id, className: s.class_name, startsAt: s.starts_at, branchId: s.branch_id, branchName: s.branch_name, ...counts, notMarked, total, ratePercent })
   }
   return { date: dateIso, classes }
 }

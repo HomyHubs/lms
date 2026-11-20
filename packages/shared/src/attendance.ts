@@ -185,6 +185,8 @@ export const TodayClassSummary = z.object({
   classId: z.string().uuid(),
   className: z.string(),
   startsAt: z.string(),
+  branchId: z.string(),
+  branchName: z.string(),
   present: z.number().int(),
   late: z.number().int(),
   absent: z.number().int(),
