@@ -119,4 +119,57 @@ describe('ReportsPage', () => {
     expect(ranking[0]?.[0]).toBe('Hạng')
     expect(ranking[1]).toEqual([1, 'Nguyễn Văn A', '0900000021', 'Starter A', 'Cơ sở 1', 'starter', 80, 100, 82, 'Khá', 'Đậu', 2, 1, 3, 1, 1])
   })
+
+  it('paginates the ranking 20/50 per page and keeps the search filter (slice-24)', async () => {
+    const many: StudentReport = {
+      ...report,
+      totals: { ...report.totals, students: 25 },
+      ranking: Array.from({ length: 25 }, (_, i) => ({
+        ...report.ranking[0]!,
+        rank: i + 1,
+        studentId: `80000000-0000-0000-0000-0000000000${String(i).padStart(2, '0')}`,
+        phoneNumber: `090000${String(i).padStart(4, '0')}`,
+        studentName: `HV ${String(i).padStart(2, '0')}`,
+      })),
+    }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/branches')) return json({ branches: [] })
+      if (url.endsWith('/api/levels')) return json({ levels: [] })
+      if (url.endsWith('/api/classes')) return json({ classes: [] })
+      if (url.includes('/api/reports/students')) return json(many)
+      if (url.endsWith('/api/reports/classification-policies')) return json({ policies: [] })
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <ReportsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    // Default page size 20: first row visible, row 21 (HV 20) not yet.
+    expect(await screen.findByText('HV 00')).toBeInTheDocument()
+    expect(screen.queryByText('HV 20')).not.toBeInTheDocument()
+    expect(screen.getByText(/Trang 1\/2/)).toBeInTheDocument()
+
+    // Next page shows the remaining 5.
+    fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }))
+    expect(await screen.findByText('HV 20')).toBeInTheDocument()
+    expect(screen.queryByText('HV 00')).not.toBeInTheDocument()
+
+    // Switch to 50/page: everyone on one page, back to page 1.
+    fireEvent.change(screen.getByLabelText('Số dòng mỗi trang'), { target: { value: '50' } })
+    expect(await screen.findByText('HV 00')).toBeInTheDocument()
+    expect(screen.getByText('HV 24')).toBeInTheDocument()
+    expect(screen.getByText(/Trang 1\/1/)).toBeInTheDocument()
+
+    // Search narrows + resets to page 1 without losing the filter.
+    fireEvent.change(screen.getByLabelText('Tìm theo tên hoặc mã học sinh'), { target: { value: 'HV 24' } })
+    expect(await screen.findByText('HV 24')).toBeInTheDocument()
+    expect(screen.queryByText('HV 00')).not.toBeInTheDocument()
+  })
 })

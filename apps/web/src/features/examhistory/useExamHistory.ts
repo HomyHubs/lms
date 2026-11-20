@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import type { ExamAttemptReportQuery, ExamHistoryQuery } from '@lms/shared'
 import { getExamAttemptReport, getExamHistory } from '@/lib/api'
 
@@ -12,6 +12,15 @@ export function useExamHistory(query: Omit<ExamHistoryQuery, 'cursor'>, studentI
   })
 }
 
-export function useExamAttemptReport(query: ExamAttemptReportQuery) {
-  return useQuery({ queryKey: ['reports', 'exam-attempts', query], queryFn: () => getExamAttemptReport(query) })
+/**
+ * Exam attempt report (slice-13 + slice-24). byExam/byBranch/byClass/byLevel come from the first
+ * page (aggregated server-side over the scope); the detail `attempts` list pages via `nextCursor`.
+ */
+export function useExamAttemptReport(query: Omit<ExamAttemptReportQuery, 'cursor'>) {
+  return useInfiniteQuery({
+    queryKey: ['reports', 'exam-attempts', query],
+    queryFn: ({ pageParam }) => getExamAttemptReport({ ...query, cursor: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+  })
 }

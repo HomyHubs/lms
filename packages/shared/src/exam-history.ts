@@ -71,6 +71,8 @@ export const ExamAttemptReportQuery = z.object({
   branchId: z.string().uuid().optional(),
   classId: z.string().uuid().optional(),
   examId: z.string().uuid().optional(),
+  // Cursor phân trang phần chi tiết lượt thi (`<started_at>~<id>`) — slice-24.
+  cursor: z.string().max(100).optional(),
 })
 export type ExamAttemptReportQuery = z.infer<typeof ExamAttemptReportQuery>
 
@@ -98,8 +100,27 @@ export const ExamAttemptDetail = ExamHistoryRow.extend({
 })
 export type ExamAttemptDetail = z.infer<typeof ExamAttemptDetail>
 
+/** Tỉ lệ đạt/không đạt theo một nhóm (cơ sở / lớp / cấp độ) — số lượt đạt, không đạt, tổng và % đạt. */
+export const ExamPassFailGroup = z.object({
+  key: z.string(),
+  label: z.string(),
+  passed: z.number().int(),
+  failed: z.number().int(),
+  total: z.number().int(),
+  /** % đạt trên tổng lượt đã chấm (đạt + không đạt); null khi chưa có lượt nào. */
+  passRate: z.number().nullable(),
+})
+export type ExamPassFailGroup = z.infer<typeof ExamPassFailGroup>
+
 export const ExamAttemptReport = z.object({
   byExam: z.array(ExamAttemptSummary),
+  /** Pass/fail theo Cơ sở, theo lớp (trung tâm) và theo Cấp độ — tính trên toàn bộ lượt trong phạm vi lọc (slice-24). */
+  byBranch: z.array(ExamPassFailGroup),
+  byClass: z.array(ExamPassFailGroup),
+  byLevel: z.array(ExamPassFailGroup),
+  /** Chi tiết lượt thi, phân trang 50 dòng/trang bằng cursor `<started_at>~<id>` (slice-24). */
   attempts: z.array(ExamAttemptDetail),
+  /** Cursor trang kế tiếp cho `attempts`; null khi hết trang. */
+  nextCursor: z.string().nullable(),
 })
 export type ExamAttemptReport = z.infer<typeof ExamAttemptReport>
