@@ -664,6 +664,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-21 | Liên kết Đề thi ↔ Bộ đề (đưa câu hỏi vào/ra bộ đề + xem trước; mục 4.4) | Dọc | Done | 794bc74 | 2026-11-14 |
 | slice-24 | Báo cáo thi & xếp loại (phân trang 50/trang, chọn 20/50, dashboard pass/fail theo cơ sở/trung tâm/cấp độ; mục 6, 8) | Dọc | Done | 2cf6306 | 2026-11-20 |
 | slice-26 | Người dùng: SĐT nhỏ dưới họ tên, làm lại cột tuổi học viên (mục 9.1-hiển thị, 9.2) | Dọc | Done | 32 | 2026-11-20 |
+| slice-22 | Chấm bài: link tải mẫu, nút bắt đầu chấm, sửa kết quả, đưa điểm vào lớp + preview trước khi import (mục 5.2, 5.3) | Dọc | Done | 31 | 2026-11-21 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

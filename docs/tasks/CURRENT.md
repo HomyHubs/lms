@@ -4,6 +4,14 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 
 ## Đang làm
 
+- ID Slice/Task: slice-22 (Chấm bài — mục 5.2, 5.3)
+- Cập nhật ngày: 2026-11-21
+- Nhánh: `dev` (PR #31 đã merge; nhánh `feature/slice-22-cham-bai` đã xóa sau merge)
+- PR: 31
+- Trạng thái: Done — code đã merge vào `dev`; đóng sổ trạng thái ở `MVP-BACKLOG.md` + rollup `AGENTS.md` gốc.
+
+### Việc trước đó
+
 - ID Slice/Task: postman-setup (Bộ tài nguyên Postman cho LMS API)
 - Cập nhật ngày: 2026-11-12
 - Nhánh: `dev`
