@@ -43,3 +43,13 @@
 - `store.ts`: `selectGradingRows` chọn thêm `users.student_code as student_code`; thêm `listStudentCodesInBranches(branchIds)` (mirror `listStudentPhonesInBranches`, `role='student'` + `student_code is not null`). `GradingRow` (service.ts) thêm `student_code: string | null`.
 - `routes.ts`: non-superadmin dựng `allowedStudentCodes` qua `listStudentCodesInBranches` cùng scope với `allowedPhones`, truyền vào `importGrades`.
 - Nợ: `// TODO(slice-23)` — khớp SĐT chỉ là fallback chuyển tiếp, gỡ khi 100% học viên đã có `student_code`.
+### 2026-11-14 — slice-22 preview nhập điểm (Owner: Hoang Hoang HA, feature/slice-22-cham-bai)
+
+**Đã xong**
+- Thêm `previewImportGrades(store, examId, rows, now, allowedPhones)` ở `service.ts`: chạy ĐÚNG logic khớp của `importGrades` (branch-scope, cohort theo lớp, khớp lượt chờ chấm, maxScore + passed, các lý do bỏ qua) nhưng KHÔNG `saveGrade` — trả `GradeImportPreviewRow[]` + `applicable`.
+- Route `POST /grading/import/preview` (cùng RBAC `admin|staff`, raw octet-stream như commit) trả `GradeImportPreview` ({rows, errors, applicable}); `/grading/import` giữ nguyên làm bước COMMIT.
+- Contract shared mới: `GradeImportPreviewRow`, `GradeImportPreview` (`packages/shared/src/exams.ts`).
+- Test: `grade-import-preview.test.ts` (fake store tối thiểu) — will-apply/skip, trùng file, vượt điểm, ngoài phạm vi, không phải exam chấm tay, và preview.applicable == commit.applied; khẳng định preview KHÔNG gọi saveGrade.
+
+**Bước tiếp theo**
+- PR slice-22 → dev; sau MVP cân nhắc gộp preview+commit để tránh parse file 2 lần.
