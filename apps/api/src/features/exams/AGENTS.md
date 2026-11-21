@@ -35,3 +35,11 @@
 
 **Bước tiếp theo**
 - Merge PR #6 first, then PR slice-5; slice-9 manual grading for Speaking/Writing.
+
+### slice-23 — grade-import khớp theo mã học viên (code-primary, phone-fallback)
+
+**Đã xong**
+- `importGrades` khớp mỗi dòng theo `student_code` trước (map `byCode`); không thấy thì fallback SĐT (map `byPhone` — hành vi cũ). Không khớp cả hai → `student_not_found`. Scope (`out_of_scope`) và `duplicate_in_file` giữ nguyên, xét cả mã lẫn SĐT. Chữ ký thêm `allowedStudentCodes` SAU `allowedPhones`.
+- `store.ts`: `selectGradingRows` chọn thêm `users.student_code as student_code`; thêm `listStudentCodesInBranches(branchIds)` (mirror `listStudentPhonesInBranches`, `role='student'` + `student_code is not null`). `GradingRow` (service.ts) thêm `student_code: string | null`.
+- `routes.ts`: non-superadmin dựng `allowedStudentCodes` qua `listStudentCodesInBranches` cùng scope với `allowedPhones`, truyền vào `importGrades`.
+- Nợ: `// TODO(slice-23)` — khớp SĐT chỉ là fallback chuyển tiếp, gỡ khi 100% học viên đã có `student_code`.

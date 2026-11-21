@@ -18,6 +18,7 @@ import {
   gradeAttempt,
   gradeManually,
   getManualGradingAttempt,
+  importGrades,
   listAttemptHistory,
   listManualGradingQueue,
   listExams,
@@ -70,7 +71,8 @@ function makeFakeStore(
     const exam = exams.find((e) => e.id === a.exam_id)
     if (!exam) return undefined
     const { title, level_code, skill, pass_percent } = exam
-    return { ...a, exam_title: title, level_code, skill, pass_percent, student_phone: `phone-${a.student_id}`, student_first_name: null, student_last_name: null }
+    // slice-23: SDT va ma hoc vien gia lap suy ra tu student_id (vd student-1 -> phone-student-1 / code-student-1).
+    return { ...a, exam_title: title, level_code, skill, pass_percent, student_phone: `phone-${a.student_id}`, student_code: `code-${a.student_id}`, student_first_name: null, student_last_name: null }
   }
 
   return {
@@ -240,6 +242,10 @@ function makeFakeStore(
       return row
     },
     async listStudentPhonesInBranches() {
+      return []
+    },
+    async listStudentCodesInBranches() {
+      // slice-23: khong gioi han theo co so trong store gia lap mac dinh (test import phu trach scope rieng).
       return []
     },
     async listClassRefsForLevel(levelId) {
@@ -778,6 +784,72 @@ describe('cham diem & thi lai', () => {
     const auto = seeded()
     await sitAndSubmit(auto, 'a', '10:00', '10:10')
     expect(await getManualGradingAttempt(auto, 'attempt-1', at('10:11'))).toEqual({ ok: false, reason: 'not_manual' })
+  })
+})
+
+describe('importGrades — khop theo ma hoc vien (chinh) va SDT (fallback) — slice-23', () => {
+  const at = (time: string) => new Date(`2026-09-21T${time}:00.000Z`)
+
+  function seeded(skill = 'writing'): ExamsStore {
+    return makeFakeStore({
+      exams: [openExam({ skill })],
+      questions: ['q1', 'q2'].map((id) => q(id, 'lvl-starter', skill)),
+    })
+  }
+
+  /** Nop bai cham tay (Speaking/Writing) de co luot cho cham khop theo ma/SDT. */
+  async function submitFor(store: ExamsStore, studentId: string) {
+    const started = await startAttempt(store, 'exam-open', studentId, at('10:00'), () => 0)
+    if (!started.ok) throw new Error(started.reason)
+    const answers = Object.fromEntries(started.attempt.questions.map((x) => [x.id, 'essay']))
+    const out = await submitAttempt(store, 'exam-open', studentId, answers, at('10:10'))
+    if (!out.ok) throw new Error(out.reason)
+  }
+
+  it('khop theo student_code la khoa chinh', async () => {
+    const store = seeded()
+    await submitFor(store, 'student-1') // -> code-student-1 / phone-student-1
+    const out = await importGrades(
+      store,
+      'exam-open',
+      [{ row: 2, studentCode: 'code-student-1', score: 2, feedback: 'Tot' }],
+      'staff-1',
+      at('10:11'),
+      undefined,
+      undefined,
+    )
+    expect(out.ok && out.summary).toEqual({ applied: 1, skipped: [] })
+  })
+
+  it('fallback khop theo SDT khi gia tri khong phai ma hoc vien', async () => {
+    const store = seeded()
+    await submitFor(store, 'student-1')
+    const out = await importGrades(
+      store,
+      'exam-open',
+      [{ row: 2, studentCode: 'phone-student-1', score: 2, feedback: null }],
+      'staff-1',
+      at('10:11'),
+      undefined,
+      undefined,
+    )
+    expect(out.ok && out.summary).toEqual({ applied: 1, skipped: [] })
+  })
+
+  it('gia tri khong khop ca ma lan SDT -> student_not_found', async () => {
+    const store = seeded()
+    await submitFor(store, 'student-1')
+    const out = await importGrades(
+      store,
+      'exam-open',
+      [{ row: 2, studentCode: 'khong-ton-tai', score: 2, feedback: null }],
+      'staff-1',
+      at('10:11'),
+      undefined,
+      undefined,
+    )
+    expect(out.ok && out.summary.applied).toBe(0)
+    expect(out.ok && out.summary.skipped).toEqual([{ row: 2, studentCode: 'khong-ton-tai', reason: 'student_not_found' }])
   })
 })
 
