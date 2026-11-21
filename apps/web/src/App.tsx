@@ -20,6 +20,8 @@ import { ReportsPage } from '@/features/reports/ReportsPage'
 import { AssignmentsPage } from '@/features/userbranches/AssignmentsPage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { WorkHoursPage } from '@/features/workhours/WorkHoursPage'
+import { StudentsPage } from '@/features/students/StudentsPage'
+import { StudentDetailPage } from '@/features/students/StudentDetailPage'
 
 const PAGES: Record<NavPath, React.ReactElement> = {
   '/': <HomePage />,
@@ -37,6 +39,7 @@ const PAGES: Record<NavPath, React.ReactElement> = {
   '/centers': <CentersPage />,
   '/catalog': <CatalogPage />,
   '/assignments': <AssignmentsPage />,
+  '/students': <StudentsPage />,
 }
 
 /** Public: /login, /forgot-password. Everything else renders inside AppShell, role-guarded by NAV_ITEMS. */
@@ -65,6 +68,15 @@ export function App(): React.ReactElement {
           element={
             <RequireAuth role={['admin']}>
               <BranchAttendancePage />
+            </RequireAuth>
+          }
+        />
+        {/* slice-30: trang hồ sơ chi tiết học viên (non-nav route) */}
+        <Route
+          path="/students/:id"
+          element={
+            <RequireAuth role={['admin', 'teacher', 'staff']}>
+              <StudentDetailPage />
             </RequireAuth>
           }
         />
