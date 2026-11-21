@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { GraduationCap, LogOut, Menu, X } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { ChevronDown, GraduationCap, LogOut, Menu, X } from 'lucide-react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { TONE_TILE } from '@/components/ui/tone'
 import { useLogout, useSession } from '@/features/auth/useAuth'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { fetchHealth } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { navItemsFor, ROLE_LABELS } from './nav'
+import { examItemsFor, NAV_ITEMS, navItemsFor, ROLE_LABELS, type NavItem } from './nav'
 
 function HealthChip(): React.ReactElement {
   const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth, refetchInterval: 30_000 })
@@ -35,8 +35,11 @@ export function AppShell(): React.ReactElement | null {
   const { user } = useSession()
   const logout = useLogout()
   const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
+  const [examOpen, setExamOpen] = useState(() => location.pathname === '/exam-management' || NAV_ITEMS.some((item) => (item as NavItem).group === 'exams' && item.path === location.pathname))
   if (!user) return null // rendered only inside RequireAuth
   const items = navItemsFor(user.role)
+  const examItems = examItemsFor(user.role)
 
   return (
     <div className="min-h-screen bg-slate-50 md:flex">
@@ -59,20 +62,35 @@ export function AppShell(): React.ReactElement | null {
         </div>
         <nav aria-label="Điều hướng chính" className="flex flex-1 flex-col gap-1 overflow-y-auto">
           {items.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/'}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-primary-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100',
-                )
-              }
-            >
-              <item.icon className="h-4 w-4" /> {item.label}
-            </NavLink>
+            <div key={item.path}>
+              <div className="flex items-center">
+                <NavLink
+                  to={item.path}
+                  end={item.path === '/'}
+                  onClick={() => { if (item.path === '/exam-management') setExamOpen(true); setMenuOpen(false) }}
+                  className={({ isActive }) => cn(
+                    'flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive ? 'bg-primary-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100',
+                  )}
+                >
+                  <item.icon className="h-4 w-4" /> {item.label}
+                </NavLink>
+                {item.path === '/exam-management' && (
+                  <button type="button" aria-label={examOpen ? 'Thu gọn menu Quản lý thi' : 'Mở menu Quản lý thi'} aria-expanded={examOpen} aria-controls="exam-submenu" onClick={() => setExamOpen((open) => !open)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100">
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', examOpen && 'rotate-180')} />
+                  </button>
+                )}
+              </div>
+              {item.path === '/exam-management' && (
+                <div id="exam-submenu" hidden={!examOpen} className={cn('ml-4 flex-col gap-1 border-l border-slate-200 pl-2', examOpen ? 'flex' : 'hidden')}>
+                  {examItems.map((child) => (
+                    <NavLink key={child.path} to={child.path} onClick={() => setMenuOpen(false)} className={({ isActive }) => cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors', isActive ? 'bg-primary-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100')}>
+                      <child.icon className="h-4 w-4" /> {child.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
       </aside>

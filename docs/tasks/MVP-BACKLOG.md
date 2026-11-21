@@ -55,6 +55,7 @@ Bß║úng chß╗ë mß╗Ñc cß║Ñp cao cho to├án bß╗Ö Slice / Task 
 | slice-30 | Menu Học viên (mới): tìm & hồ sơ chi tiết học viên — điểm, giờ học, chuyên cần, thi, học lực (số + chart theo panel) (mục 13) | Dọc | Đang làm | Hoang Hoang HA | feature/slice-30-menu-hoc-vien | — | slice-13, slice-5, slice-6 | `slices/slice-30-menu-hoc-vien.md` |
 | slice-1.1 | Bảo toàn lịch sử ghi danh (thay đổi slice-1) | Dọc | Đang làm | Notion AI | feature/slice-1.1-lich-su-ghi-danh | — | slice-1, slice-6.1 | `slices/slice-1.1-lich-su-ghi-danh.md` |
 | slice-6.1 | Điểm danh nhiều lớp và hiện diện (thay đổi slice-6) | Dọc | Đang làm | Notion AI | feature/slice-6.1-diem-danh-hien-dien | — | slice-6, slice-8 | `slices/slice-6.1-diem-danh-hien-dien.md` |
+| slice-10.1 | Menu quản lý thi | Dọc | Đang làm | Notion AI | feature/exam-management-menu | — | slice-10, slice-11a, slice-13 | `slices/slice-10.1-menu-quan-ly-thi.md` |
 
 ## Trß║íng th├íi hß╗úp lß╗ç
 
