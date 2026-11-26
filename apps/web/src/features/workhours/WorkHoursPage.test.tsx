@@ -132,4 +132,30 @@ describe('WorkHoursPage', () => {
     expect(staffSheet?.rows[1]).toEqual(['2026-11', '0912000001', '', 'staff', 2, 16, 0])
     expect(detailSheet?.rows[1]?.slice(6)).toEqual(['Đã dạy', 'Có', ''])
   })
+
+  it('shows per-class teaching hours and per-teacher session detail (slice-25)', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) return json({ user: { id: TEACHER_ID, phoneNumber: '0901234567', role: 'admin' } })
+      if (url.endsWith('/api/branches')) return json({ branches: [] })
+      if (url.includes('/api/reports/work-hours')) return json(report)
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+
+    // Theo lop: 1 buoi da day, 90 phut -> 1.5 gio.
+    const classCard = await screen.findByRole('region', { name: 'Theo lớp' })
+    expect(classCard.textContent).toContain('Starter A')
+    expect(classCard.textContent).toContain('1.5 giờ')
+    // Bieu do gio day theo lop co trong trang.
+    expect(await screen.findByRole('region', { name: 'Biểu đồ giờ dạy theo lớp' })).toBeTruthy()
+
+    // Chi tiet theo giao vien: chon 0911000001 -> thay buoi day cua giao vien do.
+    fireEvent.change(await screen.findByLabelText('Xem chi tiết giáo viên'), { target: { value: '0911000001' } })
+    const detail = await screen.findByRole('region', { name: 'Chi tiết giáo viên' })
+    expect(detail.textContent).toContain('2026-11-03 18:00')
+    expect(detail.textContent).toContain('90 phút')
+    expect(detail.textContent).toContain('Đã dạy')
+  })
 })

@@ -26,6 +26,7 @@ import { ReportCharts } from '@/features/reports/ReportCharts'
 import { currentMonth } from '@/lib/utils'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { toHours, workHoursToSheets } from './work-hours-export'
+import { hoursByClass, sessionsForTeacher } from './work-hours-detail'
 import { useBranches, useCheckShift, useCheckTeacherShift, useMyTimesheet, useTeacherTimesheet, useWorkHoursReport } from './useWorkHours'
 
 const hoursLabel = (minutes: number): string => `${toHours(minutes)} giờ`
@@ -172,10 +173,32 @@ function MyTimesheetView(): React.ReactElement {
 }
 
 function ReportTables({ report }: { report: WorkHoursReport }): React.ReactElement {
+  // slice-25: xem chi tiet theo tung giao vien (loc theo thang dang chon o cap trang).
+  const [detailPhone, setDetailPhone] = useState('')
+  const detailTeacher = report.teachers.find((t) => t.phoneNumber === detailPhone)
+  const detailSessions = detailPhone ? sessionsForTeacher(report.sessions, detailPhone) : []
+  const classHours = hoursByClass(report.sessions)
+
   return (
     <>
       <Card aria-label="Giáo viên">
         <CardTitle>Giờ dạy giáo viên</CardTitle>
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-slate-600">Xem chi tiết</span>
+          <select
+            aria-label="Xem chi tiết giáo viên"
+            className="c-input"
+            value={detailPhone}
+            onChange={(e) => setDetailPhone(e.target.value)}
+          >
+            <option value="">-- Chọn giáo viên --</option>
+            {report.teachers.map((t) => (
+              <option key={t.teacherId} value={t.phoneNumber}>
+                {personName(t)}
+              </option>
+            ))}
+          </select>
+        </label>
         {report.teachers.length === 0 ? (
           <p className="text-sm text-slate-500">Không có buổi học trong tháng.</p>
         ) : (
@@ -271,6 +294,76 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
           </tbody>
         </table>
       </Card>
+
+      {detailTeacher && (
+        <Card aria-label="Chi tiết giáo viên">
+          <CardTitle>Chi tiết giáo viên — {personName(detailTeacher)}</CardTitle>
+          <p className="text-sm text-slate-600">
+            {detailTeacher.held} buổi thực dạy · {hoursLabel(detailTeacher.taughtMinutes)} · nghỉ{' '}
+            {detailTeacher.missed} buổi · dạy bù {detailTeacher.makeup} · dạy thay {detailTeacher.substitute}
+          </p>
+          {detailSessions.length === 0 ? (
+            <p className="text-sm text-slate-500">Giáo viên chưa có buổi học nào trong tháng.</p>
+          ) : (
+            <table className="c-table">
+              <thead>
+                <tr>
+                  <th>Ngày</th>
+                  <th>Lớp</th>
+                  <th>Thời lượng</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailSessions.map((s) => (
+                  <tr key={s.sessionId}>
+                    <td>
+                      {s.sessionDate} {s.startsAt}
+                    </td>
+                    <td>{s.className}</td>
+                    <td>{s.durationMinutes} phút</td>
+                    <td>
+                      <span className="inline-flex items-center gap-1">
+                        {WORK_SESSION_STATUS_LABELS[s.status]}
+                        {s.isMakeup && <Badge tone="accent">Bù</Badge>}
+                        {s.isSubstitute && <Badge tone="warning">Thay</Badge>}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
+
+      <Card aria-label="Theo lớp">
+        <CardTitle>Giờ dạy theo lớp</CardTitle>
+        {classHours.length === 0 ? (
+          <p className="text-sm text-slate-500">Không có buổi học trong tháng.</p>
+        ) : (
+          <table className="c-table">
+            <thead>
+              <tr>
+                <th>Lớp</th>
+                <th>Buổi thực dạy</th>
+                <th>Buổi nghỉ</th>
+                <th>Giờ dạy</th>
+              </tr>
+            </thead>
+            <tbody>
+              {classHours.map((c) => (
+                <tr key={c.classId}>
+                  <td>{c.className}</td>
+                  <td>{c.heldSessions}</td>
+                  <td>{c.missedSessions}</td>
+                  <td className="font-medium">{hoursLabel(c.taughtMinutes)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </>
   )
 }
@@ -337,6 +430,7 @@ function AdminReportView(): React.ReactElement {
   const data = report.data
   const totalTaught = data?.teachers.reduce((sum, t) => sum + t.taughtMinutes, 0) ?? 0
   const totalWorked = data?.staff.reduce((sum, s) => sum + s.workedMinutes, 0) ?? 0
+  const classHours = hoursByClass(data?.sessions ?? [])
 
   function exportExcel(): void {
     if (!data) return
@@ -379,6 +473,7 @@ function AdminReportView(): React.ReactElement {
             { label: 'Nhân viên', value: data.staff.filter((s) => s.role === 'staff').reduce((n, s) => n + s.workedMinutes, 0) },
           ]} />
           <ReportCharts title="Biểu đồ trạng thái buổi dạy" unit="buổi" items={WORK_SESSION_STATUSES.map((status) => ({ label: WORK_SESSION_STATUS_LABELS[status], value: data.sessions.filter((s) => s.status === status).length }))} />
+          <ReportCharts title="Biểu đồ giờ dạy theo lớp" unit="phút" items={classHours.map((c) => ({ label: c.className, value: c.taughtMinutes }))} />
           <TeacherTimekeeping key={query.branchId ?? ''} branchId={query.branchId ?? ''} month={query.month} report={data} />
           <ReportTables report={data} />
         </>

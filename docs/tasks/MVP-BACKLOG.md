@@ -47,7 +47,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-22 | Chấm bài: link tải mẫu file, nút bắt đầu chấm, sửa kết quả, đưa điểm vào lớp + preview trước khi import (mục 5.2, 5.3) | Dọc | Done | — | feature/slice-22-cham-bai | 31 | slice-5, slice-9a | `slices/slice-22-cham-bai.md` |
 | slice-23 | Mã học viên / mã user chuẩn hóa, tách khỏi SĐT (mục 5.1, 9.1-mã; ADR 0014, migration) | Dọc | Done | — | feature/slice-23-ma-hoc-vien | 39 | slice-1 | `slices/slice-23-ma-hoc-vien.md` |
 | slice-24 | Báo cáo thi & xếp loại: phân trang 50/trang, chọn 20/50, dashboard pass/fail theo cơ sở/trung tâm/cấp độ (chart, %, số) (mục 6, 8) | Dọc | Done | — | dev | — | slice-13, slice-7 | `slices/slice-24-bao-cao-thi-xep-loai.md` |
-| slice-25 | Ngày công & giờ dạy: chi tiết theo giáo viên (filter tháng), theo lớp + chart (mục 7) | Dọc | Chưa bắt đầu | — | — | — | slice-8 | `slices/slice-25-ngay-cong-gio-day-chi-tiet.md` |
+| slice-25 | Ngày công & giờ dạy: chi tiết theo giáo viên (filter tháng), theo lớp + chart (mục 7) | Dọc | Done | — | dev | — | slice-8 | `slices/slice-25-ngay-cong-gio-day-chi-tiet.md` |
 | slice-26 | Người dùng: SĐT nhỏ dưới họ tên, làm lại cột tuổi học viên (mục 9.1-hiển thị, 9.2) | Dọc | Done | — | dev | 32 | slice-1 | `slices/slice-26-nguoi-dung-hien-thi.md` |
 | slice-27 | Trung tâm cơ sở: cho sửa thông tin cơ sở (mục 10) | Dọc | Done | — | dev | — | slice-1 | `slices/slice-27-trung-tam-co-so-edit.md` |
 | slice-28 | Chương trình học: tạo lớp chọn cơ sở, chặn xóa lớp có học viên, sơ đồ lộ trình cấp độ (mục 11) | Dọc | Done | — | dev | — | slice-1 | `slices/slice-28-chuong-trinh-hoc.md` |
