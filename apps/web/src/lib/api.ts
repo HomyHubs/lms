@@ -374,7 +374,8 @@ export async function createClass(input: CreateClassRequest): Promise<Class> {
 
 export async function deleteClass(id: string): Promise<void> {
   const res = await fetch(`/api/classes/${id}`, { method: 'DELETE', credentials: 'include' })
-  if (!res.ok) throw new ApiError(res.status, 'Xoa lop that bai')
+  // slice-28: 409 khi lop con hoc vien — hien thi thong bao that tu server.
+  if (!res.ok) return throwApiError(res, 'Xoa lop that bai')
 }
 
 export async function listEnrollments(classId: string): Promise<Enrollment[]> {

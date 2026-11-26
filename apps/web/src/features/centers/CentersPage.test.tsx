@@ -9,7 +9,7 @@ const BRANCH_ID = '22222222-2222-2222-2222-222222222222'
 
 /** Fetch gia lap tra ve mot trung tam va mot co so. */
 function stubFetch() {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
     const url = String(input)
     if (url.includes('/branches')) {
       return {

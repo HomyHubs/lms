@@ -190,7 +190,15 @@ export async function catalogRoutes(app: FastifyInstance, deps: CatalogRoutesDep
       reply.code(404)
       return { error: 'Khong tim thay lop' }
     }
-    await deleteClass(catalogStore, id)
+    const outcome = await deleteClass(catalogStore, id)
+    if (!outcome.ok) {
+      if (outcome.reason === 'has_enrollments') {
+        reply.code(409)
+        return { error: 'Lop con hoc vien dang hoc, khong the xoa' }
+      }
+      reply.code(404)
+      return { error: 'Khong tim thay lop' }
+    }
     reply.code(204)
     return null
   })

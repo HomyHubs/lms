@@ -227,8 +227,19 @@ export async function updateClass(
   return row ? { ok: true, class: toClass(row) } : { ok: false, reason: 'not_found' }
 }
 
-export async function deleteClass(store: CatalogStore, id: string): Promise<boolean> {
-  return store.deleteClass(id)
+export type DeleteClassOutcome =
+  | { ok: true }
+  | { ok: false; reason: 'has_enrollments' | 'not_found' }
+
+/**
+ * slice-28: khong cho xoa lop con hoc vien dang hoc — bao toan lich su ghi danh (slice-1.1)
+ * va tranh xoa cascade lam mat du lieu diem danh/ket qua thi gan voi lop.
+ */
+export async function deleteClass(store: CatalogStore, id: string): Promise<DeleteClassOutcome> {
+  const active = await store.listEnrollmentsByClass(id)
+  if (active.length > 0) return { ok: false, reason: 'has_enrollments' }
+  const deleted = await store.deleteClass(id)
+  return deleted ? { ok: true } : { ok: false, reason: 'not_found' }
 }
 
 // ----- Enrollments -----
