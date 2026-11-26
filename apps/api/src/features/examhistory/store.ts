@@ -56,6 +56,10 @@ export function makeExamHistoryStore(db: AppDb): ExamHistoryStore {
       .innerJoin('classes as c', 'c.id', 'e.class_id')
       .innerJoin('branches as b', 'b.id', 'c.branch_id')
       .where('c.branch_id', 'in', branchIds)
+      // slice-1.1: bao cao theo co so/lop KHONG tinh hoc vien da nghi
+      // (enrollments.ended_at). Lich su thi ca nhan van giu du (listStudentAttempts
+      // khong join enrollments nen khong bi anh huong).
+      .where('e.ended_at', 'is', null)
       .select(['b.id as branch_id', 'b.name as branch_name', 'c.id as class_id', 'c.name as class_name'])
       .distinctOn('a.id')
       .orderBy('a.id')
