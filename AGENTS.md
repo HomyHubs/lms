@@ -670,6 +670,11 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-10.1 | Menu quản lý thi: menu cha + menu con theo vai trò, trang chọn chức năng | Dọc | Done | 34 | 2026-11-24 |
 | slice-23 | Mã học viên chuẩn hóa, tách khỏi SĐT (ADR 0014-student-code, migration + backfill) | Dọc | Done | 39 | 2026-11-25 |
 | slice-30 | Menu Học viên: tìm kiếm + hồ sơ chi tiết (điểm, giờ học, chuyên cần, thi, học lực) | Dọc | Done | 40 | 2026-11-25 |
+| slice-27 | Trung tâm & cơ sở: sửa thông tin inline (tên trung tâm, tên + địa chỉ cơ sở) | Dọc | Done | fd67f7d | 2026-11-26 |
+| slice-28 | Chương trình học: chặn xoá lớp còn học viên (409), sơ đồ lộ trình cấp độ, cột khoá học | Dọc | Done | f052224 | 2026-11-26 |
+| slice-29 | Ghi danh & Quản lý: 2 panel (HV/GV theo lớp, quản lý theo cơ sở) | Dọc | Done | 51de9c3 | 2026-11-26 |
+| slice-25 | Ngày công & giờ dạy: chi tiết theo giáo viên + theo lớp + biểu đồ giờ dạy theo lớp | Dọc | Done | 8ce890a | 2026-11-26 |
+| slice-17 (nợ) | Widget calendar in-house + test lọc ngày cho điểm danh | Dọc | Done | a3efab5 | 2026-11-26 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
