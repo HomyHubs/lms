@@ -61,7 +61,15 @@ pass. Chỉ đường dbmate mới lộ.
   hiện học viên đã nghỉ; điểm danh và bài thi cá nhân vẫn còn"*). Đã sửa; lịch sử cá
   nhân không đổi vì `listStudentAttempts` không join `enrollments`.
 - `dev-health-check` xanh với đủ 304 test (trước đó 282 pass + 22 skip).
-- Thời gian job: ~1m07s (thêm Postgres + migrate).
+- **Integration test phải chạy tuần tự.** Ngay sau khi xanh lần đầu, lần chạy kế tiếp
+  fail 5 test — tất cả là timeout 5s/10s, tổng thời gian test nhảy 23s → 95s. Nguyên
+  nhân: các file `*.integration.test.ts` dùng **chung một database `lms_test`** với ID
+  cố định (`insert ... onConflict doNothing`, có file còn `delete` dữ liệu mà file khác
+  đang đọc), nhưng Vitest chạy các file song song → tranh khoá DDL/DML. Lần xanh đầu
+  tiên là may, không phải đúng. Đã tách `apps/api/vitest.config.ts` thành 2 project:
+  `unit` (song song như cũ) và `integration` (`fileParallelism: false`, timeout 30s).
+- Thời gian job: ~1m07s → ~1m25s (thêm Postgres + migrate + chạy tuần tự).
 - Bài học: **một cổng gác "xanh" mà bỏ qua test là tệ hơn không có cổng gác**, vì nó tạo
   cảm giác an toàn giả. Khi thêm hạ tầng cho CI, phải kiểm tra số test thực sự chạy,
-  không chỉ nhìn màu xanh.
+  không chỉ nhìn màu xanh. Và khi một cổng gác vừa xanh sau khi sửa, phải chạy lại lần
+  nữa — xanh một lần chưa chứng minh được gì với test phụ thuộc thời gian.
