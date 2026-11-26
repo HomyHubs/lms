@@ -404,6 +404,7 @@ Chi tiết và quy tắc suy luận khi mất bàn giao: `docs/ai-workflow/READM
 ## 16. Dữ liệu và migration
 
 - Migration là append-only. Không sửa migration đã merge, chỉ thêm migration mới.
+- **Mỗi file migration phải có version (timestamp) duy nhất.** dbmate khoá migration theo version chứ không theo tên file; hai file trùng version sẽ làm `dbmate up` chết với `duplicate key value violates unique constraint "schema_migrations_pkey"` và **file thứ hai không bao giờ được áp dụng**. Kiểm tra trước khi commit: `ls db/migrations/ | sed -E 's/^([0-9]+)_.*/\1/' | sort | uniq -d` phải rỗng. Nếu trùng, đổi tên file sau sang version kế tiếp (giữ nguyên nội dung, vì file thứ hai chưa từng được áp dụng ở DB nào).
 - Mỗi migration phải đảo ngược được và đã test rollback trước khi coi là xong.
 - Không sửa schema trực tiếp trên bất kỳ môi trường nào.
 - Thay đổi phá vỡ chia hai bước: thêm cái mới và tương thích ngược trước, xóa cái cũ ở release sau.
