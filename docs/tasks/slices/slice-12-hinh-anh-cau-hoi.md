@@ -37,7 +37,7 @@ Kiểm mime thật, giới hạn kích thước, phân quyền xem ảnh, ảnh 
 
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
-| TODO(slice-9) | media | Audio cho Listening dùng chung `MediaStorage` | slice-9 |
+| — | media | Audio cho Listening **không làm** (quyết định 2026-11-26, slice-9 đã hủy): GV phát audio ngoài lớp và tự chấm | Không trả |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 

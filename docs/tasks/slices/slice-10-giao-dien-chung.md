@@ -24,7 +24,7 @@ Moi trang sau dang nhap nam trong mot khung chung (sidebar theo vai tro + thanh 
 
 ## Stub cho phep
 
-O tim kiem va chuong thong bao chua lam (chuong thuoc slice-9b).
+O tim kiem chua lam; chuong thong bao da co o slice-9b (Done).
 
 ## Khong duoc stub
 

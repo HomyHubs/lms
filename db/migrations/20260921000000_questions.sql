@@ -3,7 +3,9 @@
 -- Cau hoi phan loai theo Level (levels) / Skill / Type / Difficulty.
 -- `options` luu chuoi JSON (string[]) cho cau hoi nhieu lua chon; nullable.
 -- Additive (AGENTS.md muc 16): chi them bang moi, dao nguoc duoc.
--- TODO(slice-9): chua ho tro audio (Listening) / ghi am (Speaking).
+-- Khong ho tro audio (Listening) / ghi am (Speaking) trong LMS — quyet dinh 2026-11-26 khi huy slice-9:
+-- giao vien tu cham va dua ket qua vao lop qua luong cham tay (slice-9a) + cham bai (slice-22).
+-- Day la quyet dinh co chu y, KHONG phai no ky thuat.
 
 create table if not exists questions (
   id uuid primary key default gen_random_uuid(),

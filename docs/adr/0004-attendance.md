@@ -31,5 +31,5 @@ and a class (`enrollments` only links students), and no notion of a class sessio
 - Slice-7 reads rates from the same formula (`summarize` in `apps/api/src/features/attendance`).
 - Unenrolling a student keeps their past records (history stays truthful) but removes them from
   future rosters.
-- Notifications/reminders for attendance are out of scope (slice-9).
+- Notifications/reminders for attendance are out of scope and were never built: slice-9 (which held this idea) was cancelled on 2026-11-26. Attendance reminders would need a new slice.
 - Migration `20261105000000_attendance.sql` is additive and reversible (drops only the 3 new tables).

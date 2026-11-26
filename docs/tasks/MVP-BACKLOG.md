@@ -25,7 +25,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-6 | Điểm danh | Dọc | Done | — | dev | 10 | slice-1 | `slices/slice-6-diem-danh.md` |
 | slice-7 | Xếp loại học viên & Dashboard Admin (gồm ngưỡng Đậu/Rớt cấu hình theo cấp độ) | Dọc | Done | — | dev | 13 (+be1ea9c) | slice-5, slice-6 | `slices/slice-7-xep-loai-dashboard.md` |
 | slice-8 | Ngày công & giờ dạy giáo viên/nhân viên | Dọc | Done | — | dev | 14 | slice-1, slice-6 | `slices/slice-8-ngay-cong-gio-day.md` |
-| slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động (ô dù, tách thành 9a/9b) | Dọc | Hoãn | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
+| slice-9 | Mở rộng: chấm bán tự động Speaking/Writing + thông báo tự động (ô dù) — **ĐÃ HỦY 2026-11-26**: tách xong sang 9a/9b, bỏ hẳn chấm bán tự động, audio/ghi âm dùng luồng chấm tay + đưa điểm vào lớp (không xây media audio) | Dọc | Đã hủy | — | — | — | slice-5 | `slices/slice-9-mo-rong.md` |
 | slice-9a | Chấm tay Speaking/Writing + import bảng điểm Excel | Dọc | Done | — | dev | 16 | slice-5 | `slices/slice-9a-cham-tay.md` |
 | slice-9b | Thông báo tự động (in-app + outbox) | Dọc | Done | — | dev | 18 | slice-5 | `slices/slice-9b-thong-bao.md` |
 | slice-10 | Giao diện chung (AppShell, điều hướng theo role) | Dọc | Done | — | dev | 15 | slice-1 | `slices/slice-10-giao-dien-chung.md` |

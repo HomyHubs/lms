@@ -11,7 +11,7 @@ the implemented building blocks are listed under "Implemented catalogue" (ADR 00
 | Area | What it shows | LMS equivalent |
 | --- | --- | --- |
 | Left sidebar | Logo; nav with icon + label (Dashboard, My Classes, Students, Attendance, Lesson Plans, Assignments, AI Quiz Builder, Results & Grades, Timetable, Homework, Communication, Library, Reports & Analytics, Leave Management, Fees, Settings); active item = blue filled pill; promo card "Meet Nova AI" at the bottom | Role-filtered nav replacing the HomePage link row |
-| Top bar | Search with `⌘K` hint, notification bell with count badge, messages icon, avatar + name + role | Search later; bell for slice-9 notifications; avatar = phone + role |
+| Top bar | Search with `⌘K` hint, notification bell with count badge, messages icon, avatar + name + role | Search later; bell shipped in slice-9b; avatar = phone + role |
 | Greeting hero | "Good morning, Ms. Ria!" + "3 classes today and 12 pending tasks", primary button "View My Classes", illustration on the right, soft blue gradient | Per-role greeting with today's counts |
 | AI cards | "AI Lesson Planner", "AI Content Generator" tiles with short text + action | Entry to `/ai-questions` (slice-4.5) |
 | Stat cards (4) | Label, big number, small trend/sparkline, tinted square icon (Today's Classes 3, Student Count 128, Assignments to Grade 12, Pending Leave Requests 2) | `StatCard` (already in `WorkHoursPage`) |
@@ -61,4 +61,4 @@ Use these before writing a new class string; a string repeated on two pages beco
 | Layout | `AppShell` | `src/components/layout/AppShell.tsx` | Sidebar + top bar around every protected route |
 | Nav SSoT | `NAV_ITEMS`, `navItemsFor`, `ROLE_LABELS` | `src/components/layout/nav.ts` | Sidebar, dashboard shortcuts and route role guards |
 
-Not built yet: search box, notification bell (slice-9b), calendar/timetable widgets, charts beyond the slice-7 CSS bars.
+Not built yet: search box, calendar/timetable widgets, charts beyond the slice-7 CSS bars. (The notification bell shipped in slice-9b.)

@@ -677,6 +677,8 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-17 (nợ) | Widget calendar in-house + test lọc ngày cho điểm danh | Dọc | Done | a3efab5 | 2026-11-26 |
 | slice-dashboard-movements | Lịch sử vào/ra ghi danh, biểu đồ thanh+tròn cho thi/điểm danh/công/xếp loại, admin chấm công giáo viên (audit + concurrency) | Dọc | Done | (nhiều commit, phần 3–4 đóng 2026-11-26) | 2026-11-26 |
 
+**Đã hủy, không làm (không tính vào rollup Done):** `slice-9` — hủy 2026-11-26. Ô dù này đã tách xong sang `slice-9a` + `slice-9b` (cả hai Done); phần "chấm bán tự động" bỏ hẳn; audio/ghi âm cho Listening/Speaking **không xây trong LMS** mà dùng luồng "giáo viên tự chấm + đưa kết quả vào lớp" đã có (`slice-9a` + `slice-22`). Chi tiết + lý do: `docs/tasks/slices/slice-9-mo-rong.md`.
+
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
 **Cơ chế triển khai đang dùng (mục 3):** [x] Lát cắt dọc — [ ] Lát cắt ngang — [ ] Hỗn hợp theo milestone
