@@ -669,7 +669,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-1.1 | Bảo toàn lịch sử ghi danh (thay đổi slice-1) | Dọc | Done | 38 | 2026-11-24 |
 | slice-10.1 | Menu quản lý thi: menu cha + menu con theo vai trò, trang chọn chức năng | Dọc | Done | 34 | 2026-11-24 |
 | slice-23 | Mã học viên chuẩn hóa, tách khỏi SĐT (ADR 0014-student-code, migration + backfill) | Dọc | Done | 39 | 2026-11-25 |
-| slice-30 | Menu Học viên: tìm kiếm + hồ sơ chi tiết (điểm, giờ học, chuyên cần, thi, học lực) | Dọc | Done | 40 | 2026-11-25 |
+| slice-30 | Menu Học viên: tìm kiếm + hồ sơ chi tiết (điểm, giờ học, chuyên cần, thi, học lực); gia cố 2026-11-26: mã HV thật từ slice-23, panel thời gian học, tìm theo mã, +20 test | Dọc | Done | 40 | 2026-11-26 |
 | slice-27 | Trung tâm & cơ sở: sửa thông tin inline (tên trung tâm, tên + địa chỉ cơ sở) | Dọc | Done | fd67f7d | 2026-11-26 |
 | slice-28 | Chương trình học: chặn xoá lớp còn học viên (409), sơ đồ lộ trình cấp độ, cột khoá học | Dọc | Done | f052224 | 2026-11-26 |
 | slice-29 | Ghi danh & Quản lý: 2 panel (HV/GV theo lớp, quản lý theo cơ sở) | Dọc | Done | 51de9c3 | 2026-11-26 |

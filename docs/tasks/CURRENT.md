@@ -7,11 +7,11 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (chỉ còn slice-9 ở trạng thái Hoãn — chờ chủ dự án quyết).
 - Cập nhật ngày: 2026-11-26
 - Nhánh: `dev`
-- Trạng thái: Đóng `slice-dashboard-movements` (phần 3–4).
+- Trạng thái: Đóng gia cố `slice-30` (mã học viên + panel thời gian học + test).
 
 ### Việc trước đó
 
-- ID Slice/Task: slice-25 (Ngày công & giờ dạy chi tiết theo giáo viên/tháng + theo lớp + chart)
+- ID Slice/Task: slice-dashboard-movements (phần 3–4: biểu đồ tổng hợp, chấm công GV nâng cao)
 - Cập nhật ngày: 2026-11-26
 - Nhánh: `dev`
 - PR: — (commit trực tiếp trên `dev` theo thực tế repo local)
@@ -27,10 +27,13 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - slice-25: `work-hours-detail.ts` (thuần) + chi tiết theo giáo viên, bảng/biểu đồ giờ dạy theo lớp, test.
 - slice-dashboard-movements phần 3: rà 4 nhóm báo cáo; bổ sung biểu đồ thanh + tròn cho điểm danh (`TodayBarChart` theo ngày đang chọn, `TodayAttendanceBoard` theo bộ lọc cơ sở) + test đổi theo bộ lọc.
 - slice-dashboard-movements phần 4: xác minh đã triển khai từ `d6190a3` (admin chấm công thay GV, `recorded_by` + `now()` trong `shift_events`, unique index chống trùng ca, 404 ngoài phạm vi, lịch sử thời điểm + người thao tác) — chỉ cập nhật tài liệu, không cần code thêm.
+- Gia cố slice-30: `studentCode` lấy thật từ `users.student_code` (hết hardcode `null`), tìm kiếm theo mã học viên, panel "Thời gian học" (`study`: số buổi + tổng phút, chỉ tính buổi `present`/`late`), cột "Mã HV" ở danh sách; thêm `routes.test.ts` (14 case) + component test `StudentsPage` (3) / `StudentDetailPage` (3); stub `ResizeObserver` toàn cục trong `src/test/setup.ts` để recharts chạy được dưới jsdom.
+- Cổng sau gia cố: API typecheck + eslint sạch, 282 pass / 22 skip; Web typecheck + eslint sạch, 113 pass; `vite build` OK (cảnh báo chunk >500 kB là có sẵn).
 
 ## Bước tiếp theo
 
 1. Chạy cổng gác đầy đủ `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` trên `dev` trước khi release.
-2. Kiểm tra giao diện thật trên trình duyệt/màn hình hẹp cho các biểu đồ mới (mới chỉ test jsdom).
+2. Kiểm tra giao diện thật trên trình duyệt/màn hình hẹp cho các biểu đồ mới (mới chỉ test jsdom — `ResponsiveContainer` không đo được kích thước trong jsdom nên test chỉ assert số liệu/nhãn).
 3. `slice-9` (chấm bán tự động Speaking/Writing nâng cao + thông báo) vẫn Hoãn — cần chủ dự án chốt phạm vi.
 4. Cân nhắc mở PR cho các commit trực tiếp trên `dev` nếu repo chuyển sang luồng review bắt buộc.
+5. Đồng bộ công thức xếp loại học lực giữa `students/service.ts` và `reports/service.ts` khi slice-7 chốt (đang ghi nợ `TODO(slice-30)`).
