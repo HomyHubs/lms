@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AttendanceStatus, TodayAttendance } from '@lms/shared'
 import { Button } from '@/components/ui/button'
+import { ReportCharts } from '@/features/reports/ReportCharts'
 import { getTodayAttendance, markSessionAttendance } from '@/lib/api'
 
 type TodaySession = TodayAttendance['sessions'][number]
@@ -93,14 +94,45 @@ export function TodayAttendanceBoard(): React.ReactElement {
   const [branchId, setBranchId] = useState('')
   const sessions = today.data?.sessions ?? []
   const branches = [...new Map(sessions.map((s) => [s.branchId, s.branchName])).entries()]
+  const visible = sessions.filter((s) => !branchId || s.branchId === branchId)
+
+  // slice-dashboard-movements (mục 3): biểu đồ thanh + tròn theo bộ lọc cơ sở đang chọn.
+  // Các nhóm rời nhau (chưa điểm danh không nằm trong có mặt/muộn/vắng/phép).
+  const counts = visible.reduce(
+    (acc, s) => {
+      for (const r of s.attendance.roster) {
+        if (r.status === 'present') acc.present += 1
+        else if (r.status === 'late') acc.late += 1
+        else if (r.status === 'absent') acc.absent += 1
+        else if (r.status === 'excused') acc.excused += 1
+        else acc.notMarked += 1
+      }
+      return acc
+    },
+    { present: 0, late: 0, absent: 0, excused: 0, notMarked: 0 },
+  )
+
   return <section className="flex flex-col gap-3">
     <h2 className="c-section-title">Điểm danh các lớp hôm nay</h2>
     <p>Danh sách thể hiện điểm danh đã ghi nhận, không xác nhận học viên còn ở lớp. Ghi chú khi học viên về sớm.</p>
-    <p>Đã ghi nhận {sessions.filter((s) => !branchId || s.branchId === branchId).reduce((n, s) => n + s.attendance.roster.filter((r) => r.status === 'present' || r.status === 'late').length, 0)} lượt học viên có mặt trong các buổi học.</p>
+    <p>Đã ghi nhận {counts.present + counts.late} lượt học viên có mặt trong các buổi học.</p>
     <label>Cơ sở{' '}<select className="c-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}><option value="">Tất cả cơ sở</option>{branches.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+    {today.data && visible.length > 0 && (
+      <ReportCharts
+        title="Biểu đồ điểm danh các lớp hôm nay"
+        unit="lượt"
+        items={[
+          { label: 'Có mặt', value: counts.present },
+          { label: 'Đi muộn', value: counts.late },
+          { label: 'Vắng', value: counts.absent },
+          { label: 'Có phép', value: counts.excused },
+          { label: 'Chưa điểm danh', value: counts.notMarked },
+        ]}
+      />
+    )}
     {today.isLoading && <p>Đang tải…</p>}
     {today.isError && <p role="alert">{(today.error as Error).message}</p>}
-    {today.data && sessions.filter((s) => !branchId || s.branchId === branchId).length === 0 && <p>Không có buổi học hôm nay tại cơ sở này.</p>}
-    {sessions.filter((s) => !branchId || s.branchId === branchId).map((s) => <SessionBoard key={s.attendance.session.id} item={s} />)}
+    {today.data && visible.length === 0 && <p>Không có buổi học hôm nay tại cơ sở này.</p>}
+    {visible.map((s) => <SessionBoard key={s.attendance.session.id} item={s} />)}
   </section>
 }

@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardTitle, PageHeader } from '@/components/ui/card'
 import { DatePicker } from '@/components/ui/date-picker'
+import { ReportCharts } from '@/features/reports/ReportCharts'
 import { useSession } from '@/features/auth/useAuth'
 import { TodayAttendanceBoard } from './TodayAttendanceBoard'
 import {
@@ -504,6 +505,20 @@ function TodayBarChart(): React.ReactElement {
   }
   const branches = [...branchMap.entries()].map(([branchId, v]) => ({ branchId, ...v }))
 
+  // slice-dashboard-movements (mục 3): tổng hợp trạng thái của ngày đang chọn để vẽ biểu đồ
+  // thanh + tròn. Năm nhóm rời nhau (có mặt / muộn / vắng / phép / chưa điểm danh) nên an toàn
+  // khi đưa vào một biểu đồ tỷ trọng.
+  const totals = classes.reduce(
+    (acc, c) => ({
+      present: acc.present + c.present,
+      late: acc.late + c.late,
+      absent: acc.absent + c.absent,
+      excused: acc.excused + c.excused,
+      notMarked: acc.notMarked + c.notMarked,
+    }),
+    { present: 0, late: 0, absent: 0, excused: 0, notMarked: 0 },
+  )
+
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -535,6 +550,17 @@ function TodayBarChart(): React.ReactElement {
         <p className="text-sm text-slate-500">Không có lớp nào có buổi học trong ngày này.</p>
       ) : (
         <div className="flex flex-col gap-6 pt-2">
+          <ReportCharts
+            title="Biểu đồ điểm danh theo ngày"
+            unit="lượt"
+            items={[
+              { label: 'Có mặt', value: totals.present },
+              { label: 'Đi muộn', value: totals.late },
+              { label: 'Vắng', value: totals.absent },
+              { label: 'Có phép', value: totals.excused },
+              { label: 'Chưa điểm danh', value: totals.notMarked },
+            ]}
+          />
           {branches.map((branch) => (
             <div key={branch.branchId} className="flex flex-col gap-3">
               <CardTitle className="text-base font-semibold text-slate-700">{branch.branchName}</CardTitle>

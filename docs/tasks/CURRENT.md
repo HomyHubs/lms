@@ -4,10 +4,10 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 
 ## Đang làm
 
-- ID Slice/Task: không còn slice nào ở trạng thái "Chưa bắt đầu"/"Đang làm" trong backlog (trừ slice-9 Hoãn và slice-dashboard-movements đang dở theo đặc tả riêng).
+- ID Slice/Task: không còn slice nào mở trong backlog (chỉ còn slice-9 ở trạng thái Hoãn — chờ chủ dự án quyết).
 - Cập nhật ngày: 2026-11-26
 - Nhánh: `dev`
-- Trạng thái: Đã đóng 4 slice (27, 28, 29, 25) + trả nợ slice-17 + đồng bộ tài liệu.
+- Trạng thái: Đóng `slice-dashboard-movements` (phần 3–4).
 
 ### Việc trước đó
 
@@ -25,9 +25,12 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - slice-28: chặn xoá lớp còn học viên (409), `LevelRoadmap` (Starter→Mover→Flyer), cột khoá học, test API + FE.
 - slice-29: trang "Ghi danh & Quản lý" 2 panel (HV/GV theo lớp, quản lý theo cơ sở), đổi nhãn menu, test.
 - slice-25: `work-hours-detail.ts` (thuần) + chi tiết theo giáo viên, bảng/biểu đồ giờ dạy theo lớp, test.
+- slice-dashboard-movements phần 3: rà 4 nhóm báo cáo; bổ sung biểu đồ thanh + tròn cho điểm danh (`TodayBarChart` theo ngày đang chọn, `TodayAttendanceBoard` theo bộ lọc cơ sở) + test đổi theo bộ lọc.
+- slice-dashboard-movements phần 4: xác minh đã triển khai từ `d6190a3` (admin chấm công thay GV, `recorded_by` + `now()` trong `shift_events`, unique index chống trùng ca, 404 ngoài phạm vi, lịch sử thời điểm + người thao tác) — chỉ cập nhật tài liệu, không cần code thêm.
 
 ## Bước tiếp theo
 
-1. `slice-9` (Hoãn) và `slice-dashboard-movements` (phần 3–4: biểu đồ tổng hợp, chấm công giáo viên nâng cao) — cần chủ dự án chốt phạm vi trước khi làm.
-2. Chạy lại cổng gác đầy đủ `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` trên `dev` trước khi release.
-3. Cân nhắc mở PR cho các commit trực tiếp trên `dev` nếu repo chuyển sang luồng review bắt buộc.
+1. Chạy cổng gác đầy đủ `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` trên `dev` trước khi release.
+2. Kiểm tra giao diện thật trên trình duyệt/màn hình hẹp cho các biểu đồ mới (mới chỉ test jsdom).
+3. `slice-9` (chấm bán tự động Speaking/Writing nâng cao + thông báo) vẫn Hoãn — cần chủ dự án chốt phạm vi.
+4. Cân nhắc mở PR cho các commit trực tiếp trên `dev` nếu repo chuyển sang luồng review bắt buộc.

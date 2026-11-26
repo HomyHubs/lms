@@ -675,6 +675,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-29 | Ghi danh & Quản lý: 2 panel (HV/GV theo lớp, quản lý theo cơ sở) | Dọc | Done | 51de9c3 | 2026-11-26 |
 | slice-25 | Ngày công & giờ dạy: chi tiết theo giáo viên + theo lớp + biểu đồ giờ dạy theo lớp | Dọc | Done | 8ce890a | 2026-11-26 |
 | slice-17 (nợ) | Widget calendar in-house + test lọc ngày cho điểm danh | Dọc | Done | a3efab5 | 2026-11-26 |
+| slice-dashboard-movements | Lịch sử vào/ra ghi danh, biểu đồ thanh+tròn cho thi/điểm danh/công/xếp loại, admin chấm công giáo viên (audit + concurrency) | Dọc | Done | (nhiều commit, phần 3–4 đóng 2026-11-26) | 2026-11-26 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

@@ -92,6 +92,57 @@ it('marks several classes without fabricating arrival, supporting lateness and e
 
 describe('AttendancePage', () => {
 
+  it('shows a bar+pie chart of today attendance by status and follows the branch filter', async () => {
+    const branchA = '20000000-0000-0000-0000-00000000000a'
+    const branchB = '20000000-0000-0000-0000-00000000000b'
+    const rosterA = [
+      { studentId: '80000000-0000-0000-0000-000000000001', phoneNumber: '0900000001', firstName: null, lastName: null, status: 'present', note: null },
+      { studentId: '80000000-0000-0000-0000-000000000002', phoneNumber: '0900000002', firstName: null, lastName: null, status: 'late', note: null },
+      { studentId: '80000000-0000-0000-0000-000000000003', phoneNumber: '0900000003', firstName: null, lastName: null, status: 'absent', note: null },
+    ]
+    const rosterB = [
+      { studentId: '80000000-0000-0000-0000-000000000004', phoneNumber: '0900000004', firstName: null, lastName: null, status: 'excused', note: null },
+      { studentId: '80000000-0000-0000-0000-000000000005', phoneNumber: '0900000005', firstName: null, lastName: null, status: null, note: null },
+    ]
+    const fetchMock = vi.fn(async () =>
+      json({
+        sessions: [
+          { className: 'Lớp A', branchId: branchA, branchName: 'Cơ sở A', teachers: [], attendance: { session, roster: rosterA } },
+          {
+            className: 'Lớp B',
+            branchId: branchB,
+            branchName: 'Cơ sở B',
+            teachers: [],
+            attendance: { session: { ...session, id: '90000000-0000-0000-0000-000000000002' }, roster: rosterB },
+          },
+        ],
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <TodayAttendanceBoard />
+      </QueryClientProvider>,
+    )
+
+    const chart = await screen.findByRole('region', { name: 'Biểu đồ điểm danh các lớp hôm nay' })
+    expect(chart.textContent).toContain('Có mặt: 1 lượt')
+    expect(chart.textContent).toContain('Đi muộn: 1 lượt')
+    expect(chart.textContent).toContain('Có phép: 1 lượt')
+    expect(chart.textContent).toContain('Chưa điểm danh: 1 lượt')
+
+    // Doi bo loc co so -> bieu do tinh lai theo du lieu dang hien thi.
+    fireEvent.change(screen.getByLabelText('Cơ sở'), { target: { value: branchA } })
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: 'Biểu đồ điểm danh các lớp hôm nay' }).textContent).toContain(
+        'Có phép: 0 lượt',
+      ),
+    )
+    expect(screen.getByRole('region', { name: 'Biểu đồ điểm danh các lớp hôm nay' }).textContent).toContain(
+      'Chưa điểm danh: 0 lượt',
+    )
+  })
+
   it('lets a teacher mark a session of an assigned class and sends the chosen statuses', async () => {
     const fetchMock = stubTeacherFetch()
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -178,6 +229,10 @@ describe('AttendancePage', () => {
       ).toBe(true),
     )
     expect(await screen.findByText(/Điểm danh theo ngày — 2026-11-10/)).toBeInTheDocument()
+
+    // slice-dashboard-movements (mục 3): biểu đồ thanh + tròn theo ngày đang chọn.
+    const chart = screen.getByRole('region', { name: 'Biểu đồ điểm danh theo ngày' })
+    expect(chart.textContent).toContain('Có mặt: 1 lượt')
 
     // The dated fetch used the ?date= query param (no client-supplied "today").
     const datedCall = fetchMock.mock.calls.find(([u]) => String(u).includes('today-summary?date='))

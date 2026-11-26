@@ -56,7 +56,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-1.1 | Bảo toàn lịch sử ghi danh (thay đổi slice-1) | Dọc | Done | — | feature/enrollment-history | 38 | slice-1, slice-6.1 | `slices/slice-1.1-lich-su-ghi-danh.md` |
 | slice-6.1 | Điểm danh nhiều lớp và hiện diện (thay đổi slice-6) | Dọc | Done | — | feature/slice-6.1-diem-danh-hien-dien | 3185e7d | slice-6, slice-8 | `slices/slice-6.1-diem-danh-hien-dien.md` |
 | slice-10.1 | Menu quản lý thi: menu cha + menu con theo vai trò, trang chọn chức năng (thay đổi slice-10) | Dọc | Done | — | feature/exam-management-menu | 34 | slice-10, slice-11a, slice-13 | `slices/slice-10.1-menu-quan-ly-thi.md` |
-| slice-dashboard-movements | Dashboard: lịch sử vào/ra ghi danh, biểu đồ, admin chấm công giáo viên (mục 1–4 sau slice-1.1) | Dọc | Đang làm | — | — | — | slice-1.1 | `slices/slice-dashboard-movements.md` |
+| slice-dashboard-movements | Dashboard: lịch sử vào/ra ghi danh, biểu đồ, admin chấm công giáo viên (mục 1–4 sau slice-1.1) | Dọc | Done | — | dev | — | slice-1.1 | `slices/slice-dashboard-movements.md` |
 
 ## Trạng thái hợp lệ
 
