@@ -7,9 +7,9 @@ import { makeRbac } from '../access/index.js'
 import { userBranchesRoutes } from './routes.js'
 import type { BranchRow, UserBranchesStore } from './service.js'
 
-const BRANCH_1 = '20000000-0000-0000-0000-000000000001'
-const BRANCH_2 = '20000000-0000-0000-0000-000000000002'
-const TARGET_USER = '30000000-0000-0000-0000-000000000001'
+const BRANCH_1 = '20000000-0000-4000-8000-000000000001'
+const BRANCH_2 = '20000000-0000-4000-8000-000000000002'
+const TARGET_USER = '30000000-0000-4000-8000-000000000001'
 
 function makeFakeAuthStore(sessionUser: UserRecord | null): AuthStore {
   return {
@@ -124,7 +124,7 @@ describe('user-branches routes', () => {
     app = await buildTestApp(ADMIN)
     const missingUser = await app.inject({
       method: 'PUT',
-      url: '/users/99999999-9999-9999-9999-999999999999/branches',
+      url: '/users/99999999-9999-4999-8999-999999999999/branches',
       headers: { cookie: COOKIE },
       payload: { branchIds: [BRANCH_1] },
     })
@@ -134,7 +134,7 @@ describe('user-branches routes', () => {
       method: 'PUT',
       url: `/users/${TARGET_USER}/branches`,
       headers: { cookie: COOKIE },
-      payload: { branchIds: ['99999999-9999-9999-9999-999999999999'] },
+      payload: { branchIds: ['99999999-9999-4999-8999-999999999999'] },
     })
     expect(badBranch.statusCode).toBe(400)
   })

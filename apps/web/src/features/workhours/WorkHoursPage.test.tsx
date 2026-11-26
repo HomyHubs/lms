@@ -6,9 +6,9 @@ import type { MyTimesheet, StaffShift, WorkHoursReport } from '@lms/shared'
 import { workHoursToSheets } from './work-hours-export'
 import { WorkHoursPage } from './WorkHoursPage'
 
-const TEACHER_ID = '70000000-0000-0000-0000-000000000001'
-const SESSION_ID = '90000000-0000-0000-0000-000000000001'
-const CLASS_ID = '50000000-0000-0000-0000-000000000001'
+const TEACHER_ID = '70000000-0000-4000-8000-000000000001'
+const SESSION_ID = '90000000-0000-4000-8000-000000000001'
+const CLASS_ID = '50000000-0000-4000-8000-000000000001'
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body })
 

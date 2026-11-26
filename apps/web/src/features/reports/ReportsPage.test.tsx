@@ -18,10 +18,10 @@ vi.mock('recharts', async () => {
   }
 })
 
-const BRANCH_ID = '10000000-0000-0000-0000-000000000001'
-const LEVEL_ID = '20000000-0000-0000-0000-000000000001'
-const CLASS_ID = '50000000-0000-0000-0000-000000000001'
-const STUDENT_ID = '80000000-0000-0000-0000-000000000001'
+const BRANCH_ID = '10000000-0000-4000-8000-000000000001'
+const LEVEL_ID = '20000000-0000-4000-8000-000000000001'
+const CLASS_ID = '50000000-0000-4000-8000-000000000001'
+const STUDENT_ID = '80000000-0000-4000-8000-000000000001'
 
 const passFail = { passed: 2, failed: 1 }
 const report: StudentReport = {
@@ -127,7 +127,7 @@ describe('ReportsPage', () => {
       ranking: Array.from({ length: 25 }, (_, i) => ({
         ...report.ranking[0]!,
         rank: i + 1,
-        studentId: `80000000-0000-0000-0000-0000000000${String(i).padStart(2, '0')}`,
+        studentId: `80000000-0000-4000-8000-0000000000${String(i).padStart(2, '0')}`,
         phoneNumber: `090000${String(i).padStart(4, '0')}`,
         studentName: `HV ${String(i).padStart(2, '0')}`,
       })),

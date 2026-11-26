@@ -4,8 +4,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CentersPage } from './CentersPage'
 
-const CENTER_ID = '11111111-1111-1111-1111-111111111111'
-const BRANCH_ID = '22222222-2222-2222-2222-222222222222'
+const CENTER_ID = '11111111-1111-4111-8111-111111111111'
+const BRANCH_ID = '22222222-2222-4222-8222-222222222222'
 
 /** Fetch gia lap tra ve mot trung tam va mot co so. */
 function stubFetch() {

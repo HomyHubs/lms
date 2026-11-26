@@ -7,9 +7,9 @@ import { ExamsPage } from './ExamsPage'
 // slice-20: xem ca manager (admin) de co bo loc + xem truoc + nut tai mau.
 vi.mock('@/features/auth/useAuth', () => ({ useSession: () => ({ user: { role: 'admin' } }) }))
 
-const SET_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-const LEVEL_ID = '33333333-3333-3333-3333-333333333333'
-const USER_ID = '44444444-4444-4444-4444-444444444444'
+const SET_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const LEVEL_ID = '33333333-3333-4333-8333-333333333333'
+const USER_ID = '44444444-4444-4444-8444-444444444444'
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -27,8 +27,8 @@ function exam(id: string, title: string, levelCode: string, skill: string, mode:
 }
 
 const EXAMS = [
-  exam('11111111-1111-1111-1111-111111111111', 'Starter Reading', 'starter', 'reading', 'random'),
-  exam('22222222-2222-2222-2222-222222222222', 'Mover Listening', 'mover', 'listening', 'fixed_set'),
+  exam('11111111-1111-4111-8111-111111111111', 'Starter Reading', 'starter', 'reading', 'random'),
+  exam('22222222-2222-4222-8222-222222222222', 'Mover Listening', 'mover', 'listening', 'fixed_set'),
 ]
 
 const EXAM_SET_DETAIL = {

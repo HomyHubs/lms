@@ -9,17 +9,17 @@ import type { BranchScope } from '../userbranches/index.js'
 import { workHoursRoutes } from './routes.js'
 import type { ShiftEventRow, ShiftRow, WorkHoursStore, WorkSessionRow } from './service.js'
 
-const BRANCH_1 = '20000000-0000-0000-0000-000000000001'
-const BRANCH_2 = '20000000-0000-0000-0000-000000000002'
+const BRANCH_1 = '20000000-0000-4000-8000-000000000001'
+const BRANCH_2 = '20000000-0000-4000-8000-000000000002'
 const NOW = new Date('2026-11-20T03:00:00Z')
 
 function user(id: string, role: string): UserRecord {
   return { id, phone_number: `09${id.slice(-8)}`, password_hash: 'x', role }
 }
-const ADMIN_B1 = user('60000000-0000-0000-0000-000000000001', 'admin')
-const TEACHER = user('70000000-0000-0000-0000-000000000001', 'teacher')
-const STAFF = user('90000000-0000-0000-0000-000000000001', 'staff')
-const STUDENT = user('80000000-0000-0000-0000-000000000001', 'student')
+const ADMIN_B1 = user('60000000-0000-4000-8000-000000000001', 'admin')
+const TEACHER = user('70000000-0000-4000-8000-000000000001', 'teacher')
+const STAFF = user('90000000-0000-4000-8000-000000000001', 'staff')
+const STUDENT = user('80000000-0000-4000-8000-000000000001', 'student')
 const COOKIE = { cookie: `${SESSION_COOKIE}=any-token` }
 
 function makeFakeAuthStore(sessionUser: UserRecord): AuthStore {
@@ -49,8 +49,8 @@ function makeFakeStore(): WorkHoursStore {
   const shifts: ShiftRow[] = []
   const events: (ShiftEventRow & { user_id: string })[] = []
   const session: WorkSessionRow = {
-    id: 'a0000000-0000-0000-0000-000000000001',
-    class_id: 'b0000000-0000-0000-0000-000000000001',
+    id: 'a0000000-0000-4000-8000-000000000001',
+    class_id: 'b0000000-0000-4000-8000-000000000001',
     class_name: 'Starter A',
     session_date: '2026-11-10',
     starts_at: '18:00',
@@ -74,7 +74,7 @@ function makeFakeStore(): WorkHoursStore {
   return {
     async checkIn(userId, recordedBy = userId, branchId) {
       if (shifts.some((s) => s.user_id === userId && !s.check_out_at)) return undefined
-      const row = { id: `c000000${shifts.length}-0000-0000-0000-000000000001`, user_id: userId, check_in_at: new Date('2026-11-20T01:00:00Z'), check_out_at: null, work_date: '2026-11-20' }
+      const row = { id: `c000000${shifts.length}-0000-4000-8000-000000000001`, user_id: userId, check_in_at: new Date('2026-11-20T01:00:00Z'), check_out_at: null, work_date: '2026-11-20' }
       shifts.push(row)
       events.push({ user_id: userId, shift_id: row.id, event_type: 'check_in', occurred_at: row.check_in_at, recorded_by: recordedBy, branch_id: branchId ?? null })
       return row

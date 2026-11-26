@@ -407,7 +407,7 @@ describe('exams routes — tao de (admin/teacher)', () => {
   })
 
   // classIds trong contract phai la UUID — dung UUID that cho cac test duoi.
-  const CLASS_A = '40000000-0000-0000-0000-00000000000a'
+  const CLASS_A = '40000000-0000-4000-8000-00000000000a'
 
   it('slice-14: staff tao de + gan lop trong co so minh (201)', async () => {
     const store = makeFakeExamsStore({

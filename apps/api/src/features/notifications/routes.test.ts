@@ -8,11 +8,11 @@ import { makeRbac } from '../access/index.js'
 import { notificationsRoutes } from './routes.js'
 import type { NotificationRow, NotificationsStore, ReminderRunner } from './service.js'
 
-const ADMIN: UserRecord = { id: '60000000-0000-0000-0000-000000000001', phone_number: '0901234567', password_hash: 'x', role: 'admin' }
-const STUDENT: UserRecord = { id: '80000000-0000-0000-0000-000000000001', phone_number: '0933000001', password_hash: 'x', role: 'student' }
-const TEACHER: UserRecord = { id: '70000000-0000-0000-0000-000000000001', phone_number: '0911000001', password_hash: 'x', role: 'teacher' }
-const NOTE_ID = 'a0000000-0000-0000-0000-000000000001'
-const OTHER_ID = 'a0000000-0000-0000-0000-000000000002'
+const ADMIN: UserRecord = { id: '60000000-0000-4000-8000-000000000001', phone_number: '0901234567', password_hash: 'x', role: 'admin' }
+const STUDENT: UserRecord = { id: '80000000-0000-4000-8000-000000000001', phone_number: '0933000001', password_hash: 'x', role: 'student' }
+const TEACHER: UserRecord = { id: '70000000-0000-4000-8000-000000000001', phone_number: '0911000001', password_hash: 'x', role: 'teacher' }
+const NOTE_ID = 'a0000000-0000-4000-8000-000000000001'
+const OTHER_ID = 'a0000000-0000-4000-8000-000000000002'
 const COOKIE = { cookie: `${SESSION_COOKIE}=any-token` }
 
 function makeFakeAuthStore(sessionUser: UserRecord): AuthStore {

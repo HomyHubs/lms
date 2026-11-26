@@ -14,7 +14,7 @@ import { verifyPassword } from './service.js'
 /** Store + dispatcher gia lap trong bo nho de test logic ma khong can Postgres. */
 function makeHarness(opts: { email?: string } = {}) {
   const email = opts.email ?? 'admin@example.com'
-  const userId = '11111111-1111-1111-1111-111111111111'
+  const userId = '11111111-1111-4111-8111-111111111111'
   const otps: OtpRecord[] = []
   const passwords = new Map<string, string>()
   const createdChannels: string[] = []

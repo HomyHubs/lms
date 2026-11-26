@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AttendancePage } from './AttendancePage'
 import { TodayAttendanceBoard } from './TodayAttendanceBoard'
 
-const CLASS_ID = '50000000-0000-0000-0000-000000000001'
-const SESSION_ID = '90000000-0000-0000-0000-000000000001'
-const STUDENT_ID = '80000000-0000-0000-0000-000000000001'
+const CLASS_ID = '50000000-0000-4000-8000-000000000001'
+const SESSION_ID = '90000000-0000-4000-8000-000000000001'
+const STUDENT_ID = '80000000-0000-4000-8000-000000000001'
 
 const session = {
   id: SESSION_ID,
@@ -31,7 +31,7 @@ function stubTeacherFetch() {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
     if (url.endsWith('/api/auth/me')) {
-      return json({ user: { id: '70000000-0000-0000-0000-000000000001', phoneNumber: '0900000011', role: 'teacher' } })
+      return json({ user: { id: '70000000-0000-4000-8000-000000000001', phoneNumber: '0900000011', role: 'teacher' } })
     }
     if (url.endsWith('/api/attendance/classes')) {
       return json({ classes: [{ id: CLASS_ID, courseId: CLASS_ID, branchId: CLASS_ID, name: 'Starter A' }] })
@@ -59,13 +59,13 @@ afterEach(() => {
 })
 
 it('marks several classes without fabricating arrival, supporting lateness and early-leave notes', async () => {
-  const teacherId = '70000000-0000-0000-0000-000000000001'
-  const studentB = '80000000-0000-0000-0000-000000000002'
-  const studentC = '80000000-0000-0000-0000-000000000003'
+  const teacherId = '70000000-0000-4000-8000-000000000001'
+  const studentB = '80000000-0000-4000-8000-000000000002'
+  const studentC = '80000000-0000-4000-8000-000000000003'
   const roster = [STUDENT_ID, studentB, studentC].map((studentId, i) => ({ studentId, phoneNumber: `090000000${i + 1}`, status: null, note: null }))
   const item = { className: 'Lớp A', branchId: CLASS_ID, branchName: 'Cơ sở A', teachers: [{ classId: CLASS_ID, teacherId, phoneNumber: '0900000011' }], attendance: { session, roster } }
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    if (String(input).endsWith('/api/attendance/today')) return json({ sessions: [item, { ...item, className: 'Lớp B', attendance: { session: { ...session, id: '90000000-0000-0000-0000-000000000002' }, roster: [] } }] })
+    if (String(input).endsWith('/api/attendance/today')) return json({ sessions: [item, { ...item, className: 'Lớp B', attendance: { session: { ...session, id: '90000000-0000-4000-8000-000000000002' }, roster: [] } }] })
     if (init?.method === 'PUT') return json({ session, roster: roster.map((r, i) => ({ ...r, status: i ? 'absent' : 'late' })) })
     throw new Error('Unexpected request')
   })
@@ -93,16 +93,16 @@ it('marks several classes without fabricating arrival, supporting lateness and e
 describe('AttendancePage', () => {
 
   it('shows a bar+pie chart of today attendance by status and follows the branch filter', async () => {
-    const branchA = '20000000-0000-0000-0000-00000000000a'
-    const branchB = '20000000-0000-0000-0000-00000000000b'
+    const branchA = '20000000-0000-4000-8000-00000000000a'
+    const branchB = '20000000-0000-4000-8000-00000000000b'
     const rosterA = [
-      { studentId: '80000000-0000-0000-0000-000000000001', phoneNumber: '0900000001', firstName: null, lastName: null, status: 'present', note: null },
-      { studentId: '80000000-0000-0000-0000-000000000002', phoneNumber: '0900000002', firstName: null, lastName: null, status: 'late', note: null },
-      { studentId: '80000000-0000-0000-0000-000000000003', phoneNumber: '0900000003', firstName: null, lastName: null, status: 'absent', note: null },
+      { studentId: '80000000-0000-4000-8000-000000000001', phoneNumber: '0900000001', firstName: null, lastName: null, status: 'present', note: null },
+      { studentId: '80000000-0000-4000-8000-000000000002', phoneNumber: '0900000002', firstName: null, lastName: null, status: 'late', note: null },
+      { studentId: '80000000-0000-4000-8000-000000000003', phoneNumber: '0900000003', firstName: null, lastName: null, status: 'absent', note: null },
     ]
     const rosterB = [
-      { studentId: '80000000-0000-0000-0000-000000000004', phoneNumber: '0900000004', firstName: null, lastName: null, status: 'excused', note: null },
-      { studentId: '80000000-0000-0000-0000-000000000005', phoneNumber: '0900000005', firstName: null, lastName: null, status: null, note: null },
+      { studentId: '80000000-0000-4000-8000-000000000004', phoneNumber: '0900000004', firstName: null, lastName: null, status: 'excused', note: null },
+      { studentId: '80000000-0000-4000-8000-000000000005', phoneNumber: '0900000005', firstName: null, lastName: null, status: null, note: null },
     ]
     const fetchMock = vi.fn(async () =>
       json({
@@ -113,7 +113,7 @@ describe('AttendancePage', () => {
             branchId: branchB,
             branchName: 'Cơ sở B',
             teachers: [],
-            attendance: { session: { ...session, id: '90000000-0000-0000-0000-000000000002' }, roster: rosterB },
+            attendance: { session: { ...session, id: '90000000-0000-4000-8000-000000000002' }, roster: rosterB },
           },
         ],
       }),
@@ -193,7 +193,7 @@ describe('AttendancePage', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.endsWith('/api/auth/me')) {
-        return json({ user: { id: '70000000-0000-0000-0000-0000000000aa', phoneNumber: '0900000099', role: 'admin' } })
+        return json({ user: { id: '70000000-0000-4000-8000-0000000000aa', phoneNumber: '0900000099', role: 'admin' } })
       }
       if (url.endsWith('/api/attendance/classes')) {
         return json({ classes: [{ id: CLASS_ID, courseId: CLASS_ID, branchId: CLASS_ID, name: 'Starter A' }] })

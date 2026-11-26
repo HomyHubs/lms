@@ -4,11 +4,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AssignmentsPage } from './AssignmentsPage'
 
-const ADMIN = '30000000-0000-0000-0000-00000000000a'
-const TEACHER = '30000000-0000-0000-0000-00000000000b'
-const STUDENT = '30000000-0000-0000-0000-00000000000c'
-const BRANCH = '20000000-0000-0000-0000-000000000001'
-const CLASS = '50000000-0000-0000-0000-000000000001'
+const ADMIN = '30000000-0000-4000-8000-00000000000a'
+const TEACHER = '30000000-0000-4000-8000-00000000000b'
+const STUDENT = '30000000-0000-4000-8000-00000000000c'
+const BRANCH = '20000000-0000-4000-8000-000000000001'
+const CLASS = '50000000-0000-4000-8000-000000000001'
 
 function user(id: string, phoneNumber: string, role: string, firstName: string | null, lastName: string | null) {
   return {
@@ -38,18 +38,18 @@ function stubFetch() {
     }
     if (init?.method === 'PUT' && url.includes('/branches')) {
       return ok({
-        branches: [{ id: BRANCH, centerId: '60000000-0000-0000-0000-000000000001', name: 'Cơ sở 1', address: null, createdAt: '2026-09-16T00:00:00.000Z' }],
+        branches: [{ id: BRANCH, centerId: '60000000-0000-4000-8000-000000000001', name: 'Cơ sở 1', address: null, createdAt: '2026-09-16T00:00:00.000Z' }],
       })
     }
     if (url.includes('/enrollments')) return ok({ enrollments: [] })
     if (url.includes('/teachers')) return ok({ teachers: [] })
     if (url.includes('/classes')) {
-      return ok({ classes: [{ id: CLASS, courseId: '40000000-0000-0000-0000-000000000001', branchId: BRANCH, name: 'Lớp A', createdAt: '2026-09-16T00:00:00.000Z' }] })
+      return ok({ classes: [{ id: CLASS, courseId: '40000000-0000-4000-8000-000000000001', branchId: BRANCH, name: 'Lớp A', createdAt: '2026-09-16T00:00:00.000Z' }] })
     }
     // Co so dang gan cho 1 user: ban dau rong de test tick moi.
     if (url.startsWith('/api/users/') && url.endsWith('/branches')) return ok({ branches: [] })
     if (url.includes('/branches')) {
-      return ok({ branches: [{ id: BRANCH, centerId: '60000000-0000-0000-0000-000000000001', name: 'Cơ sở 1', address: null, createdAt: '2026-09-16T00:00:00.000Z' }] })
+      return ok({ branches: [{ id: BRANCH, centerId: '60000000-0000-4000-8000-000000000001', name: 'Cơ sở 1', address: null, createdAt: '2026-09-16T00:00:00.000Z' }] })
     }
     if (url.includes('/users')) {
       return ok({

@@ -162,7 +162,7 @@ describe('centers routes — Center + Branch CRUD (admin only)', () => {
       method: 'POST',
       url: '/branches',
       headers: { cookie: COOKIE },
-      payload: { centerId: '11111111-1111-1111-1111-111111111111', name: 'CS1' },
+      payload: { centerId: '11111111-1111-4111-8111-111111111111', name: 'CS1' },
     })
     expect(res.statusCode).toBe(400)
   })
@@ -198,7 +198,7 @@ describe('centers routes — Center + Branch CRUD (admin only)', () => {
       method: 'POST',
       url: '/branches',
       headers: { cookie: COOKIE },
-      payload: { centerId: '11111111-1111-1111-1111-111111111111', name: 'CS1' },
+      payload: { centerId: '11111111-1111-4111-8111-111111111111', name: 'CS1' },
     })
     expect(res.statusCode).toBe(403)
   })

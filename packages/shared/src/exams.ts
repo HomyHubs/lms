@@ -13,13 +13,13 @@ import { QuestionSkill, QuestionType } from './questions.js'
 const Title = z.string().trim().min(1, 'Ten de khong duoc de trong').max(200)
 
 const QuestionCount = z.coerce
-  .number({ invalid_type_error: 'So cau phai la so' })
+  .number({ error: 'So cau phai la so' })
   .int('So cau phai la so nguyen')
   .min(1, 'It nhat 1 cau')
   .max(200, 'Toi da 200 cau')
 
 const DurationMinutes = z.coerce
-  .number({ invalid_type_error: 'Thoi luong phai la so' })
+  .number({ error: 'Thoi luong phai la so' })
   .int('Thoi luong phai la so nguyen')
   .min(1, 'Thoi luong toi thieu 1 phut')
   .max(600, 'Thoi luong toi da 600 phut')
@@ -32,19 +32,19 @@ const DateTimeString = z
   .refine((s) => !Number.isNaN(Date.parse(s)), 'Thoi diem khong hop le')
 
 const PassPercent = z.coerce
-  .number({ invalid_type_error: 'Nguong dat phai la so' })
+  .number({ error: 'Nguong dat phai la so' })
   .int('Nguong dat phai la so nguyen')
   .min(0, 'Nguong dat tu 0 den 100')
   .max(100, 'Nguong dat tu 0 den 100')
 
 const MaxAttempts = z.coerce
-  .number({ invalid_type_error: 'So lan thi toi da phai la so' })
+  .number({ error: 'So lan thi toi da phai la so' })
   .int('So lan thi toi da phai la so nguyen')
   .min(1, 'It nhat 1 lan thi')
   .max(20, 'Toi da 20 lan thi')
 
 const RetakeCooldownMinutes = z.coerce
-  .number({ invalid_type_error: 'Thoi gian cho phai la so' })
+  .number({ error: 'Thoi gian cho phai la so' })
   .int('Thoi gian cho phai la so nguyen')
   .min(0, 'Thoi gian cho khong am')
   .max(43_200, 'Thoi gian cho toi da 30 ngay')

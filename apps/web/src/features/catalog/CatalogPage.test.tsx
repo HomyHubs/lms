@@ -4,11 +4,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CatalogPage } from './CatalogPage'
 
-const LEVEL = '10000000-0000-0000-0000-000000000001'
-const COURSE = '40000000-0000-0000-0000-000000000001'
-const BRANCH = '20000000-0000-0000-0000-000000000001'
-const CLASS = '50000000-0000-0000-0000-000000000001'
-const CENTER = '60000000-0000-0000-0000-000000000001'
+const LEVEL = '10000000-0000-4000-8000-000000000001'
+const COURSE = '40000000-0000-4000-8000-000000000001'
+const BRANCH = '20000000-0000-4000-8000-000000000001'
+const CLASS = '50000000-0000-4000-8000-000000000001'
+const CENTER = '60000000-0000-4000-8000-000000000001'
 
 /** Fetch gia lap tra ve du du lieu cho cac query cua trang. */
 function stubFetch(opts: { blockDelete?: boolean } = {}) {
@@ -61,7 +61,7 @@ function stubFetch(opts: { blockDelete?: boolean } = {}) {
         return body({
           users: [
             {
-              id: '30000000-0000-0000-0000-000000000001',
+              id: '30000000-0000-4000-8000-000000000001',
               phoneNumber: '0900000009',
               email: null,
               role: 'student',

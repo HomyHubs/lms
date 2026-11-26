@@ -4,8 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { StudentsPage } from './StudentsPage'
 
-const STUDENT_1 = '30000000-0000-0000-0000-000000000001'
-const STUDENT_2 = '30000000-0000-0000-0000-000000000002'
+const STUDENT_1 = '30000000-0000-4000-8000-000000000001'
+const STUDENT_2 = '30000000-0000-4000-8000-000000000002'
 
 /** Fetch gia lap cho GET /students?q= — hai hoc vien, mot ban ghi cu chua co ma. */
 function stubFetch() {

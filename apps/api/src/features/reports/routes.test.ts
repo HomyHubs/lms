@@ -10,19 +10,19 @@ import { examHistoryRoutes, type ExamHistoryStore, type HistoryAttemptRow } from
 import { reportsRoutes } from './routes.js'
 import type { EnrollmentRow, GradedAttemptRow, PolicyRow, ReportsStore } from './service.js'
 
-const LEVEL = '10000000-0000-0000-0000-000000000001'
-const BRANCH_1 = '20000000-0000-0000-0000-000000000001'
-const BRANCH_2 = '20000000-0000-0000-0000-000000000002'
-const CLASS_1 = '50000000-0000-0000-0000-000000000001'
-const CLASS_2 = '50000000-0000-0000-0000-000000000002'
-const STUDENT_1 = '80000000-0000-0000-0000-000000000001'
-const STUDENT_2 = '80000000-0000-0000-0000-000000000002'
+const LEVEL = '10000000-0000-4000-8000-000000000001'
+const BRANCH_1 = '20000000-0000-4000-8000-000000000001'
+const BRANCH_2 = '20000000-0000-4000-8000-000000000002'
+const CLASS_1 = '50000000-0000-4000-8000-000000000001'
+const CLASS_2 = '50000000-0000-4000-8000-000000000002'
+const STUDENT_1 = '80000000-0000-4000-8000-000000000001'
+const STUDENT_2 = '80000000-0000-4000-8000-000000000002'
 
 function user(id: string, role: string): UserRecord {
   return { id, phone_number: `09${id.slice(-8)}`, password_hash: 'x', role }
 }
-const ADMIN_B1 = user('60000000-0000-0000-0000-000000000001', 'admin')
-const TEACHER = user('70000000-0000-0000-0000-000000000001', 'teacher')
+const ADMIN_B1 = user('60000000-0000-4000-8000-000000000001', 'admin')
+const TEACHER = user('70000000-0000-4000-8000-000000000001', 'teacher')
 const COOKIE = { cookie: `${SESSION_COOKIE}=any-token` }
 
 function makeFakeAuthStore(sessionUser: UserRecord): AuthStore {
@@ -211,8 +211,8 @@ describe('exam history routes', () => {
   })
 
   const row: HistoryAttemptRow = {
-    id: '90000000-0000-0000-0000-000000000001',
-    exam_id: '90000000-0000-0000-0000-000000000002',
+    id: '90000000-0000-4000-8000-000000000001',
+    exam_id: '90000000-0000-4000-8000-000000000002',
     exam_title: 'Starter reading',
     level_code: 'starter',
     skill: 'reading',
@@ -239,7 +239,7 @@ describe('exam history routes', () => {
   // A failed attempt by the same student in the same branch/class/level (slice-24 aggregation).
   const rowFailed: HistoryAttemptRow = {
     ...row,
-    id: '90000000-0000-0000-0000-000000000003',
+    id: '90000000-0000-4000-8000-000000000003',
     attempt_number: 1,
     started_at: new Date('2026-10-15T17:30:00Z'),
     submitted_at: new Date('2026-10-15T18:00:00Z'),
@@ -311,8 +311,8 @@ describe('exam history routes', () => {
     ])
     // Both attempts fit in one 50-row page → no next cursor, newest first.
     expect(body.attempts.map((a) => a.attemptId)).toEqual([
-      '90000000-0000-0000-0000-000000000001',
-      '90000000-0000-0000-0000-000000000003',
+      '90000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000003',
     ])
     expect(body.nextCursor).toBeNull()
     // A branch outside the admin's scope → 404.

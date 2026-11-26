@@ -32,7 +32,7 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
           json: async () => ({
             users: [
               {
-                id: '11111111-1111-1111-1111-111111111111',
+                id: '11111111-1111-4111-8111-111111111111',
                 phoneNumber: '0901234567',
                 email: 'admin@example.com',
                 role: 'admin',
@@ -49,7 +49,7 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
               },
               {
                 // slice-23: hoc vien co ma hoc vien (read-only) de kiem tra cot "Mã học viên".
-                id: '22222222-2222-2222-2222-222222222222',
+                id: '22222222-2222-4222-8222-222222222222',
                 phoneNumber: '0911111111',
                 email: null,
                 role: 'student',
@@ -65,7 +65,7 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
               },
               // slice-26: hoc vien co tuoi; SDT hien nho duoi ho ten.
               {
-                id: '22222222-2222-2222-2222-222222222222',
+                id: '22222222-2222-4222-8222-222222222222',
                 phoneNumber: '0902222222',
                 email: null,
                 role: 'student',
@@ -80,7 +80,7 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
               },
               // slice-26: giao vien co birthYear nhung KHONG hien tuoi (age=null tu API).
               {
-                id: '33333333-3333-3333-3333-333333333333',
+                id: '33333333-3333-4333-8333-333333333333',
                 phoneNumber: '0903333333',
                 email: null,
                 role: 'teacher',

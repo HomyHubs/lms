@@ -82,12 +82,12 @@ function makeFakeStore(seed: FakeStudent[]): StudentsStore {
   }
 }
 
-const HN = '10000000-0000-0000-0000-000000000001'
-const HCM = '10000000-0000-0000-0000-000000000002'
+const HN = '10000000-0000-4000-8000-000000000001'
+const HCM = '10000000-0000-4000-8000-000000000002'
 
 const SEED: FakeStudent[] = [
   {
-    id: '20000000-0000-0000-0000-000000000001',
+    id: '20000000-0000-4000-8000-000000000001',
     phone_number: '0900000001',
     student_code: 'HN0001',
     full_name: 'Nguyễn An',
@@ -99,7 +99,7 @@ const SEED: FakeStudent[] = [
     study: { sessions_attended: 9, study_minutes: 810 },
   },
   {
-    id: '20000000-0000-0000-0000-000000000002',
+    id: '20000000-0000-4000-8000-000000000002',
     phone_number: '0900000002',
     // Hoc vien cu chua duoc backfill ma (slice-23) -> null.
     student_code: null,

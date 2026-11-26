@@ -24,7 +24,7 @@ describe('LoginRequest contract', () => {
 describe('PublicUser contract', () => {
   it('accepts a valid public user', () => {
     const parsed = PublicUser.parse({
-      id: '11111111-1111-1111-1111-111111111111',
+      id: '11111111-1111-4111-8111-111111111111',
       phoneNumber: '0901234567',
       role: 'admin',
     })
@@ -34,7 +34,7 @@ describe('PublicUser contract', () => {
   it('rejects an unknown role', () => {
     expect(() =>
       PublicUser.parse({
-        id: '11111111-1111-1111-1111-111111111111',
+        id: '11111111-1111-4111-8111-111111111111',
         phoneNumber: '0901234567',
         role: 'superuser',
       }),

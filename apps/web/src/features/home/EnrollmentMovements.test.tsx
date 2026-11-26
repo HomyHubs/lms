@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { afterEach, expect, it, vi } from 'vitest'
 import { EnrollmentMovements } from './EnrollmentMovements'
 
-const BRANCH = '10000000-0000-0000-0000-000000000001'
+const BRANCH = '10000000-0000-4000-8000-000000000001'
 
 afterEach(() => vi.unstubAllGlobals())
 

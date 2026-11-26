@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { StudentDetailPage } from './StudentDetailPage'
 
-const STUDENT_1 = '30000000-0000-0000-0000-000000000001'
+const STUDENT_1 = '30000000-0000-4000-8000-000000000001'
 
 /** Ho so day du: co ma hoc vien + ca 4 panel (slice-30). */
 const FULL_PROFILE = {

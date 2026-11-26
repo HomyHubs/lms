@@ -15,10 +15,10 @@ import type {
   StudentStudyAggRow,
 } from './service.js'
 
-const BRANCH_1 = '20000000-0000-0000-0000-000000000001'
-const BRANCH_2 = '20000000-0000-0000-0000-000000000002'
-const STUDENT_1 = '30000000-0000-0000-0000-000000000001'
-const STUDENT_2 = '30000000-0000-0000-0000-000000000002'
+const BRANCH_1 = '20000000-0000-4000-8000-000000000001'
+const BRANCH_2 = '20000000-0000-4000-8000-000000000002'
+const STUDENT_1 = '30000000-0000-4000-8000-000000000001'
+const STUDENT_2 = '30000000-0000-4000-8000-000000000002'
 
 const ADMIN_A: UserRecord = { id: 'admin-a', phone_number: '0900000001', password_hash: 'x', role: 'admin' }
 const ADMIN_B: UserRecord = { id: 'admin-b', phone_number: '0900000002', password_hash: 'x', role: 'admin' }
@@ -350,7 +350,7 @@ describe('students routes — ho so tong hop (slice-30)', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/students/30000000-0000-0000-0000-0000000000ff/profile',
+      url: '/students/30000000-0000-4000-8000-0000000000ff/profile',
       headers: { cookie: COOKIE },
     })
     expect(res.statusCode).toBe(404)
