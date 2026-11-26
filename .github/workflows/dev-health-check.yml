@@ -22,8 +22,6 @@ on:
   push:
     branches:
       - dev
-      # TAM THOI: de verify config Postgres tren nhanh rieng truoc khi vao dev.
-      - chore/dev-health-check-postgres
 
 jobs:
   health-check:
