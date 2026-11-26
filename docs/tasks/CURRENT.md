@@ -32,8 +32,9 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 
 ## Bước tiếp theo
 
-1. Chạy cổng gác đầy đủ `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` trên `dev` trước khi release.
+1. ~~Chạy cổng gác đầy đủ `pnpm -r build && pnpm -r lint && pnpm -r typecheck && pnpm -r test` trên `dev` trước khi release.~~ **Đã chạy 2026-11-26: build 3/3, lint 4/4, typecheck 5/5, test 5/5 — tất cả PASS** (API 282 pass / 22 skip do cần Postgres; web 113 pass; shared pass).
 2. Kiểm tra giao diện thật trên trình duyệt/màn hình hẹp cho các biểu đồ mới (mới chỉ test jsdom — `ResponsiveContainer` không đo được kích thước trong jsdom nên test chỉ assert số liệu/nhãn).
 3. `slice-9` (chấm bán tự động Speaking/Writing nâng cao + thông báo) vẫn Hoãn — cần chủ dự án chốt phạm vi.
 4. Cân nhắc mở PR cho các commit trực tiếp trên `dev` nếu repo chuyển sang luồng review bắt buộc.
 5. Đồng bộ công thức xếp loại học lực giữa `students/service.ts` và `reports/service.ts` khi slice-7 chốt (đang ghi nợ `TODO(slice-30)`).
+6. (Tùy chọn, ngoài phạm vi slice) Bundle web còn 1 chunk ~1.06 MB — có thể `manualChunks` tách recharts/vendor nếu muốn hết cảnh báo >500 kB.
