@@ -33,6 +33,8 @@ import {
   type Course,
   type CreateBranchRequest,
   type CreateCenterRequest,
+  type UpdateBranchRequest,
+  type UpdateCenterRequest,
   type CreateClassRequest,
   type CreateCourseRequest,
   type CreateEnrollmentRequest,
@@ -276,6 +278,18 @@ export async function deleteCenter(id: string): Promise<void> {
   if (!res.ok) throw new ApiError(res.status, 'Xoa trung tam that bai')
 }
 
+/** slice-27: doi ten trung tam (PATCH /centers/:id, chi Admin). */
+export async function updateCenter(id: string, input: UpdateCenterRequest): Promise<Center> {
+  const res = await fetch(`/api/centers/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Cap nhat trung tam that bai')
+  return CenterResponse.parse(await res.json()).center
+}
+
 export async function listBranches(): Promise<Branch[]> {
   const res = await fetch('/api/branches', { credentials: 'include' })
   if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach co so')
@@ -296,6 +310,18 @@ export async function createBranch(input: CreateBranchRequest): Promise<Branch> 
 export async function deleteBranch(id: string): Promise<void> {
   const res = await fetch(`/api/branches/${id}`, { method: 'DELETE', credentials: 'include' })
   if (!res.ok) throw new ApiError(res.status, 'Xoa co so that bai')
+}
+
+/** slice-27: sua ten/dia chi co so (PATCH /branches/:id, it nhat 1 truong, chi Admin). */
+export async function updateBranch(id: string, input: UpdateBranchRequest): Promise<Branch> {
+  const res = await fetch(`/api/branches/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Cap nhat co so that bai')
+  return BranchResponse.parse(await res.json()).branch
 }
 
 /**
