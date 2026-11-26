@@ -4,31 +4,29 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 
 ## Đang làm
 
-- ID Slice/Task: slice-22 (Chấm bài — mục 5.2, 5.3)
-- Cập nhật ngày: 2026-11-21
-- Nhánh: `dev` (PR #31 đã merge; nhánh `feature/slice-22-cham-bai` đã xóa sau merge)
-- PR: 31
-- Trạng thái: Done — code đã merge vào `dev`; đóng sổ trạng thái ở `MVP-BACKLOG.md` + rollup `AGENTS.md` gốc.
+- ID Slice/Task: slice-27 (Trung tâm cơ sở — cho sửa thông tin cơ sở, mục 10)
+- Cập nhật ngày: 2026-11-26
+- Nhánh: `dev`
+- PR: — (commit trực tiếp trên `dev` theo thực tế repo local)
+- Trạng thái: Đang làm — sau khi đóng nợ slice-17 và đồng bộ backlog.
 
 ### Việc trước đó
 
-- ID Slice/Task: postman-setup (Bộ tài nguyên Postman cho LMS API)
-- Cập nhật ngày: 2026-11-12
+- ID Slice/Task: slice-17 (Điểm danh view — trả nợ widget calendar + test lọc ngày)
+- Cập nhật ngày: 2026-11-26
 - Nhánh: `dev`
-- PR: — (commit trực tiếp `aa80a74`, đã push lên `origin/dev`)
-- Trạng thái: Done — đã commit & push.
+- PR: — (commit trực tiếp)
+- Trạng thái: Done — thêm `components/ui/date-picker.tsx`, thay `<input type="date">` trong `TodayBarChart`, bổ sung test lọc ngày; slice-17 chuyển từ "Done (còn nợ)" sang Done.
 
 ## Đã làm
 
-- Quét toàn bộ backend `apps/api` (16 feature) để liệt kê ~95 endpoint.
-- Tạo collection "LMS API" tại `postman/collections/` gồm 16 folder theo feature, URL dùng `{{base_url}}`, path variable, body JSON mẫu; auth theo cookie session (`lms_session`).
-- Tạo environment "LMS Local" (`base_url=http://localhost:3000`, `phone_number`, `password` secret, `import_token`).
-- Tạo OpenAPI 3.0.3 spec `postman/specs/lms-api.yaml` (hợp lệ, lint 0 lỗi).
-- Cập nhật `.gitignore`: theo dõi `postman/` nhưng vẫn bỏ qua `postman/globals/` (chứa secret).
-- Commit `aa80a74` (117 file) và push lên `origin/dev`.
+- Rà backlog so với `git log`: slice-23 (#39), slice-30 (#40), slice-1.1 (#38), slice-6.1 (3185e7d), slice-10.1 (#34) đã merge nhưng backlog còn ghi Chưa bắt đầu/Đang làm → đã cập nhật trạng thái + rollup `AGENTS.md`.
+- Thêm dòng backlog cho `slice-10.1` và `slice-dashboard-movements` (file đã tồn tại nhưng thiếu dòng chỉ mục).
+- Đóng nợ slice-17: widget calendar in-house + test lọc theo ngày (typecheck/lint/vitest PASS).
 
 ## Bước tiếp theo
 
-1. (Tùy chọn) Thêm test script (status code + schema) cho các request trong collection.
-2. (Tùy chọn) Chạy thử xác thực: `GET /health` và `POST /auth/login` với tài khoản seed demo.
-3. Thông báo team pull `dev` để nhận bộ tài nguyên Postman mới.
+1. slice-27: PATCH cập nhật cơ sở + form sửa trên `CentersPage`.
+2. slice-28: tạo lớp chọn cơ sở, chặn xóa lớp còn học viên, sơ đồ lộ trình cấp độ.
+3. slice-29: Ghi danh & Quản lý — 2 panel (HV/GV theo lớp, quản lý theo cơ sở).
+4. slice-25: Ngày công & giờ dạy chi tiết theo giáo viên/tháng + theo lớp + chart.

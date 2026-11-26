@@ -648,7 +648,7 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-14 | Bài thi theo lớp | Dọc | Done | — | 2026-11-10 |
 | slice-15 | Đồng bộ hiển thị họ tên học viên | Dọc | Done | e24a0f9, 3c4aee6, c703d8b, 7bbbbec, 438c25e, f5e4675 | 2026-11-11 |
 | slice-16 | Dashboard Tổng quan (nhãn số/màu cột, nhãn pie, điểm danh theo cơ sở + trang chi tiết) | Dọc | Done | 5d390b2 | 2026-11-13 |
-| slice-17 | Điểm danh (view): lọc theo ngày thật (`listSessionsOnDate` dùng `dateIso`), nhóm theo cơ sở, chart trạng thái, bộ chọn ngày + preset | Dọc | Done (còn nợ: widget calendar, test lọc ngày) | — | 2026-11-13 |
+| slice-17 | Điểm danh (view): lọc theo ngày thật (`listSessionsOnDate` dùng `dateIso`), nhóm theo cơ sở, chart trạng thái, bộ chọn ngày + preset, widget calendar in-house + test lọc ngày | Dọc | Done (nợ widget calendar/test đã trả 2026-11-26) | — | 2026-11-13 |
 | slice-19 | Phân quyền sửa câu hỏi theo role (settings bật/tắt trong quản lý user; ADR 0015) | Dọc | Done | d332cd2 | 2026-11-13 |
 | slice-11b | Import bộ đề từ Word/Excel | Dọc | Done | 21 | 2026-11-14 |
 | slice-12 | Hình ảnh câu hỏi / bộ đề | Dọc | Done | 22 | 2026-11-14 |
@@ -665,6 +665,11 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-24 | Báo cáo thi & xếp loại (phân trang 50/trang, chọn 20/50, dashboard pass/fail theo cơ sở/trung tâm/cấp độ; mục 6, 8) | Dọc | Done | 2cf6306 | 2026-11-20 |
 | slice-26 | Người dùng: SĐT nhỏ dưới họ tên, làm lại cột tuổi học viên (mục 9.1-hiển thị, 9.2) | Dọc | Done | 32 | 2026-11-20 |
 | slice-22 | Chấm bài: link tải mẫu, nút bắt đầu chấm, sửa kết quả, đưa điểm vào lớp + preview trước khi import (mục 5.2, 5.3) | Dọc | Done | 31 | 2026-11-21 |
+| slice-6.1 | Điểm danh nhiều lớp và hiện diện (thay đổi slice-6; ADR 0014-multiclass) | Dọc | Done | 3185e7d | 2026-11-22 |
+| slice-1.1 | Bảo toàn lịch sử ghi danh (thay đổi slice-1) | Dọc | Done | 38 | 2026-11-24 |
+| slice-10.1 | Menu quản lý thi: menu cha + menu con theo vai trò, trang chọn chức năng | Dọc | Done | 34 | 2026-11-24 |
+| slice-23 | Mã học viên chuẩn hóa, tách khỏi SĐT (ADR 0014-student-code, migration + backfill) | Dọc | Done | 39 | 2026-11-25 |
+| slice-30 | Menu Học viên: tìm kiếm + hồ sơ chi tiết (điểm, giờ học, chuyên cần, thi, học lực) | Dọc | Done | 40 | 2026-11-25 |
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 
