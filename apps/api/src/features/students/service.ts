@@ -4,6 +4,7 @@ import type {
   StudentExamPanel,
   StudentProfile,
   StudentSearchResult,
+  StudentStudyPanel,
 } from '@lms/shared'
 
 /**
@@ -15,6 +16,8 @@ import type {
 export interface StudentSearchRow {
   id: string
   phone_number: string
+  /** Ma hoc vien (slice-23); null voi du lieu cu chua backfill. */
+  student_code: string | null
   full_name: string | null
   branch_name: string | null
   level_code: string | null
@@ -24,6 +27,7 @@ export interface StudentSearchRow {
 export interface StudentIdentityRow {
   id: string
   phone_number: string
+  student_code: string | null
   full_name: string | null
   branch_name: string | null
   level_code: string | null
@@ -46,6 +50,12 @@ export interface StudentAttendanceAggRow {
   excused: number
 }
 
+/** Tong hop thoi gian hoc: so buoi duoc ghi nhan co mat/di muon + tong phut. */
+export interface StudentStudyAggRow {
+  sessions_attended: number
+  study_minutes: number
+}
+
 export interface StudentsStore {
   /**
    * Tim hoc vien theo ten / SDT (khong phan biet hoa thuong), gioi han theo co so.
@@ -61,6 +71,7 @@ export interface StudentsStore {
   // gop/truy van theo lo khi do thay cham thuc te.
   loadExamAgg: (studentId: string) => Promise<StudentExamAggRow>
   loadAttendanceAgg: (studentId: string) => Promise<StudentAttendanceAggRow>
+  loadStudyAgg: (studentId: string) => Promise<StudentStudyAggRow>
 }
 
 const round1 = (n: number): number => Math.round(n * 10) / 10
@@ -68,8 +79,7 @@ const round1 = (n: number): number => Math.round(n * 10) / 10
 function toSearchResult(row: StudentSearchRow): StudentSearchResult {
   return {
     id: row.id,
-    // slice-30: ma hoc vien co sau khi slice-23 merge; hien null (xem store TODO).
-    studentCode: null,
+    studentCode: row.student_code,
     fullName: row.full_name,
     phoneNumber: row.phone_number,
     branchName: row.branch_name,
@@ -111,6 +121,15 @@ function toAttendancePanel(agg: StudentAttendanceAggRow): StudentAttendancePanel
 }
 
 /**
+ * Panel thoi gian hoc: null khi chua co buoi nao duoc ghi nhan co mat/di muon.
+ * Chi dem buoi hoc vien thuc su co mat (present/late) — khong suy tu lich hoc.
+ */
+function toStudyPanel(agg: StudentStudyAggRow): StudentStudyPanel | null {
+  if (agg.sessions_attended === 0) return null
+  return { sessionsAttended: agg.sessions_attended, studyMinutes: agg.study_minutes }
+}
+
+/**
  * Xep loai hoc luc o slice nay giu don gian (read-only tong hop): dung diem thi trung binh
  * lam diem tong tam thoi. Cong thuc xep loai day du (trong so thi/chuyen can) thuoc slice-7
  * va co the gan sau; de null khi chua co diem thi.
@@ -132,9 +151,10 @@ export async function loadStudentProfile(
   const identity = await store.findStudentIdentity(id, branchIds)
   if (!identity) return null
 
-  const [examAgg, attendanceAgg] = await Promise.all([
+  const [examAgg, attendanceAgg, studyAgg] = await Promise.all([
     store.loadExamAgg(id),
     store.loadAttendanceAgg(id),
+    store.loadStudyAgg(id),
   ])
   const exam = toExamPanel(examAgg)
   const attendance = toAttendancePanel(attendanceAgg)
@@ -142,13 +162,14 @@ export async function loadStudentProfile(
 
   return {
     id: identity.id,
-    studentCode: null,
+    studentCode: identity.student_code,
     fullName: identity.full_name,
     phoneNumber: identity.phone_number,
     branchName: identity.branch_name,
     levelCode: identity.level_code,
     exam,
     attendance,
+    study: toStudyPanel(studyAgg),
     classification,
   }
 }

@@ -16,3 +16,16 @@ beforeEach(() => {
     Element.prototype.scrollIntoView = () => {}
   }
 })
+
+// jsdom cũng không có `ResizeObserver`. recharts (ResponsiveContainer) tạo observer trong
+// useEffect -> ném ReferenceError và Vitest coi là "unhandled error" (fail cả file dù
+// assertion đều pass). Stub no-op: chart không đo được kích thước trong jsdom nên chỉ
+// render khung rỗng — test nên assert vào số liệu/nhãn, không assert vào SVG.
+if (!('ResizeObserver' in globalThis)) {
+  class ResizeObserverStub {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver
+}

@@ -5,6 +5,7 @@ import type {
   StudentExamAggRow,
   StudentIdentityRow,
   StudentSearchRow,
+  StudentStudyAggRow,
   StudentsStore,
 } from './service.js'
 
@@ -35,12 +36,14 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
             eb(sql<string>`lower(coalesce(u.last_name, ''))`, 'like', like),
             eb(sql<string>`lower(coalesce(u.first_name, ''))`, 'like', like),
             eb(sql<string>`lower(coalesce(concat_ws(' ', u.last_name, u.first_name), ''))`, 'like', like),
+            eb(sql<string>`lower(coalesce(u.student_code, ''))`, 'like', like),
             eb('u.phone_number', 'like', `%${q}%`),
           ]),
         )
         .select([
           'u.id',
           'u.phone_number',
+          'u.student_code',
           fullName.as('full_name'),
           'b.name as branch_name',
           'l.code as level_code',
@@ -66,6 +69,7 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
         .select([
           'u.id',
           'u.phone_number',
+          'u.student_code',
           fullName.as('full_name'),
           'b.name as branch_name',
           'l.code as level_code',
@@ -118,6 +122,24 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
         late: Number(row.late),
         excused: Number(row.excused),
       } satisfies StudentAttendanceAggRow
+    },
+
+    async loadStudyAgg(studentId) {
+      // Chi tinh buoi hoc vien duoc ghi nhan co mat / di muon; phut = thoi luong buoi hoc that.
+      const row = await db
+        .selectFrom('attendance_records as r')
+        .innerJoin('class_sessions as s', 's.id', 'r.session_id')
+        .where('r.student_id', '=', studentId)
+        .where('r.status', 'in', ['present', 'late'])
+        .select([
+          sql<number>`count(*)::int`.as('sessions_attended'),
+          sql<number>`coalesce(sum(s.duration_minutes), 0)::int`.as('study_minutes'),
+        ])
+        .executeTakeFirstOrThrow()
+      return {
+        sessions_attended: Number(row.sessions_attended),
+        study_minutes: Number(row.study_minutes),
+      } satisfies StudentStudyAggRow
     },
   }
 }

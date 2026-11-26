@@ -16,7 +16,7 @@ export type StudentSearchQuery = z.infer<typeof StudentSearchQuery>
 /** Mot dong ket qua tim kiem hoc vien (toi gian de hien danh sach). */
 export const StudentSearchResult = z.object({
   id: z.string().uuid(),
-  // slice-30: ma hoc vien se co sau khi slice-23 merge; hien de null (xem store TODO).
+  // Ma hoc vien (slice-23, ADR 0014) — null voi du lieu cu chua backfill.
   studentCode: z.string().nullable(),
   fullName: z.string().nullable(),
   phoneNumber: PhoneNumber,
@@ -60,6 +60,17 @@ export const StudentClassificationPanel = z.object({
 export type StudentClassificationPanel = z.infer<typeof StudentClassificationPanel>
 
 /**
+ * Panel Thoi gian hoc: chi tinh cac buoi hoc hoc vien duoc ghi nhan co mat / di muon
+ * (khong tinh buoi vang, co phep hay chua diem danh). Phut hoc = tong duration_minutes
+ * cua cac buoi do. Null khi chua co buoi nao.
+ */
+export const StudentStudyPanel = z.object({
+  sessionsAttended: z.number().int(),
+  studyMinutes: z.number().int(),
+})
+export type StudentStudyPanel = z.infer<typeof StudentStudyPanel>
+
+/**
  * Ho so hoc vien tong hop (GET /students/:id/profile). READ-ONLY.
  * Cac panel cho phep null khi chua co nguon du lieu (FE render panel "dang cap nhat").
  */
@@ -72,6 +83,7 @@ export const StudentProfile = z.object({
   levelCode: z.string().nullable(),
   exam: StudentExamPanel.nullable(),
   attendance: StudentAttendancePanel.nullable(),
+  study: StudentStudyPanel.nullable(),
   classification: StudentClassificationPanel.nullable(),
 })
 export type StudentProfile = z.infer<typeof StudentProfile>

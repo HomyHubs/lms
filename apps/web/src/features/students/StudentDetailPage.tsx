@@ -15,6 +15,9 @@ const CLASSIFICATION_LABEL: Record<string, string> = {
   weak: 'Yếu',
 }
 
+/** Phút -> giờ, 1 chữ số thập phân (vd 135 -> "2.3 giờ"). */
+const hoursLabel = (minutes: number): string => `${Math.round((minutes / 60) * 10) / 10} giờ`
+
 function ExamPanelCard({ panel }: { panel: StudentExamPanel }): React.ReactElement {
   const data = [
     { name: 'Đạt', value: panel.passed },
@@ -109,7 +112,7 @@ export function StudentDetailPage(): React.ReactElement {
         <PageHeader
           icon={GraduationCap}
           title={profile.fullName ?? profile.phoneNumber}
-          description={[profile.branchName, profile.levelCode].filter(Boolean).join(' · ')}
+          description={[profile.studentCode, profile.branchName, profile.levelCode].filter(Boolean).join(' · ')}
         />
       </div>
 
@@ -131,6 +134,27 @@ export function StudentDetailPage(): React.ReactElement {
             <p className="text-sm text-slate-400">Chưa có dữ liệu điểm danh.</p>
           </Card>
         )}
+
+        <Card className="space-y-2">
+          <CardTitle>Thời gian học</CardTitle>
+          {profile.study ? (
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div>
+                <p className="text-2xl font-semibold text-slate-900">{profile.study.sessionsAttended}</p>
+                <p className="text-xs text-slate-500">Buổi đã học</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-slate-900">{hoursLabel(profile.study.studyMinutes)}</p>
+                <p className="text-xs text-slate-500">Giờ học</p>
+              </div>
+              <p className="col-span-2 text-xs text-slate-400">
+                Chỉ tính buổi được ghi nhận có mặt hoặc đi muộn, theo thời lượng buổi học.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">Chưa có buổi học nào được điểm danh.</p>
+          )}
+        </Card>
 
         <Card className="space-y-2">
           <CardTitle>Xếp loại học lực</CardTitle>
