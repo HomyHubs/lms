@@ -10,6 +10,7 @@ import {
 } from '@lms/shared'
 import { Button } from '@/components/ui/button'
 import { Card, CardTitle, PageHeader } from '@/components/ui/card'
+import { DatePicker } from '@/components/ui/date-picker'
 import { useSession } from '@/features/auth/useAuth'
 import { TodayAttendanceBoard } from './TodayAttendanceBoard'
 import {
@@ -508,16 +509,12 @@ function TodayBarChart(): React.ReactElement {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <CardTitle>Điểm danh theo ngày{today.data?.date ? ` — ${today.data.date}` : ''}</CardTitle>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex items-center">
-            <CalendarCheck className="pointer-events-none absolute left-2.5 h-4 w-4 text-slate-400" aria-hidden />
-            <input
-              type="date"
-              aria-label="Chọn ngày điểm danh"
-              className="c-input rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-          </div>
+          <DatePicker
+            ariaLabel="Chọn ngày điểm danh"
+            placeholder="Hôm nay"
+            value={selectedDate}
+            onChange={setSelectedDate}
+          />
           <Button
             size="sm"
             variant={selectedDate === '' ? 'default' : 'outline'}

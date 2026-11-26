@@ -53,7 +53,10 @@ function stubTeacherFetch() {
   return fetchMock
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
 
 it('marks several classes without fabricating arrival, supporting lateness and early-leave notes', async () => {
   const teacherId = '70000000-0000-0000-0000-000000000001'
@@ -111,5 +114,81 @@ describe('AttendancePage', () => {
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Đã lưu điểm danh.'))
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')
     expect(JSON.parse(String(put?.[1]?.body))).toEqual({ records: [{ studentId: STUDENT_ID, status: 'absent' }] })
+  })
+
+  it('admin picks a date from the calendar → today-summary is fetched with ?date and "Hôm nay" clears it', async () => {
+    // Pin the clock so the calendar opens on November 2026 (day 10 is present) and
+    // the default "today" matches the stub. Only Date is faked so async still runs.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-21T03:00:00.000Z') })
+    const todaySummary = (date: string | null) => ({
+      date: date ?? '2026-11-21',
+      classes: [
+        {
+          classId: CLASS_ID,
+          className: 'Starter A',
+          startsAt: '18:00',
+          branchId: CLASS_ID,
+          branchName: 'Cơ sở A',
+          present: 1,
+          late: 0,
+          absent: 0,
+          excused: 0,
+          notMarked: 0,
+          total: 1,
+          ratePercent: 100,
+        },
+      ],
+    })
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) {
+        return json({ user: { id: '70000000-0000-0000-0000-0000000000aa', phoneNumber: '0900000099', role: 'admin' } })
+      }
+      if (url.endsWith('/api/attendance/classes')) {
+        return json({ classes: [{ id: CLASS_ID, courseId: CLASS_ID, branchId: CLASS_ID, name: 'Starter A' }] })
+      }
+      if (url.includes('/api/attendance/today-summary')) {
+        const match = /[?&]date=(\d{4}-\d{2}-\d{2})/.exec(url)
+        return json(todaySummary(match?.[1] ?? null))
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <AttendancePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    // Default load (no date): "Hôm nay".
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/api/attendance/today-summary'))).toBe(true),
+    )
+
+    // Open the in-house calendar popover and pick 2026-11-10.
+    fireEvent.click(screen.getByLabelText('Chọn ngày điểm danh'))
+    fireEvent.click(await screen.findByLabelText('2026-11-10'))
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([u]) => String(u).includes('/api/attendance/today-summary?date=2026-11-10')),
+      ).toBe(true),
+    )
+    expect(await screen.findByText(/Điểm danh theo ngày — 2026-11-10/)).toBeInTheDocument()
+
+    // The dated fetch used the ?date= query param (no client-supplied "today").
+    const datedCall = fetchMock.mock.calls.find(([u]) => String(u).includes('today-summary?date='))
+    expect(String(datedCall?.[0])).toContain('date=2026-11-10')
+
+    // "Hôm nay" clears the selected date → back to the server-decided default day.
+    fireEvent.click(screen.getByRole('button', { name: 'Hôm nay' }))
+    expect(await screen.findByText(/Điểm danh theo ngày — 2026-11-21/)).toBeInTheDocument()
+    // No new dated request is issued once the date is cleared.
+    expect(fetchMock.mock.calls.filter(([u]) => String(u).includes('today-summary?date=')).length).toBe(1)
+
+    vi.useRealTimers()
   })
 })

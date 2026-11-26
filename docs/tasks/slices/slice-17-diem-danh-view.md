@@ -40,7 +40,7 @@ Branch-scope (admin chỉ thấy cơ sở được phân quyền — slice-1) v�
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
 | PERF(slice-17) | `buildTodaySummary` (`apps/api/src/features/attendance/service.ts`) | Gọi `store.listRecords` theo từng buổi (N query); gom thành một query nếu nhiều lớp | Khi số lớp/ngày lớn |
-| UI(slice-17) | `TodayBarChart` (`apps/web/src/features/attendance/AttendancePage.tsx`) | Bộ chọn ngày dùng `<input type="date">` gốc + preset Hôm nay/Hôm qua; chưa có widget calendar/popover vì `apps/web/src/components/ui/` chưa có `calendar.tsx`/`popover.tsx` (không thêm thư viện ngoài theo quy tắc) | Khi bổ sung primitive calendar/popover vào design system |
+| ~~UI(slice-17)~~ | ~~`TodayBarChart`~~ | **Đã trả 2026-11-26**: thay `<input type="date">` bằng `DatePicker` in-house (`apps/web/src/components/ui/date-picker.tsx` — popover + lưới tháng, chỉ React + Tailwind, không thêm thư viện ngoài); có điều hướng tháng, chọn ngày, nút "Xoá ngày", đóng bằng click ngoài/Escape, `aria-label` từng ngày | Đã trả |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 
@@ -48,6 +48,7 @@ Branch-scope (admin chỉ thấy cơ sở được phân quyền — slice-1) v�
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Thêm | Tạo slice | Yêu cầu màn xem điểm danh: lịch chọn ngày, nhóm theo cơ sở, GUI đẹp (mục 2.1–2.3) | — |
 | 2026-11-13 | Sửa | Hoàn thiện slice: sửa `listSessionsOnDate` để `dateIso` thật sự lọc theo ngày (`session_date = ${dateIso}::date`, bỏ `TODO(slice-16)` hardcode hôm nay); nâng bộ chọn ngày (icon calendar + preset Hôm nay/Hôm qua); các task 2–6 (nhóm theo cơ sở, chart trạng thái, Card/TONE, branch join, shared type) đã có sẵn từ trước. Typecheck + lint (`--max-warnings=0`) PASS. | Chọn ngày trên lịch trước đây chỉ là cosmetic — API luôn trả hôm nay (nghiệm thu #2 chưa đạt). | — |
+| 2026-11-26 | Sửa | Trả nợ cuối: thêm `components/ui/date-picker.tsx` (calendar popover in-house) và thay `<input type="date">` trong `TodayBarChart`; bổ sung test `AttendancePage.test.tsx` "admin picks a date from the calendar → today-summary is fetched with ?date và Hôm nay clears it" (stub đúng schema `TodayClassSummary`, có `startsAt`). Typecheck + lint + vitest PASS. | Đóng nợ "widget calendar, test lọc ngày" để slice-17 chuyển Done. | — |
 
 ## Cách nghiệm thu
 
@@ -55,6 +56,6 @@ Branch-scope (admin chỉ thấy cơ sở được phân quyền — slice-1) v�
 2. [x] Chọn một ngày khác trên lịch → dữ liệu đổi theo ngày (đã sửa `listSessionsOnDate` lọc theo `dateIso`); nút "Hôm nay" đưa về hôm nay, thêm preset "Hôm qua".
 3. [x] GV chỉ thấy cơ sở trong phạm vi được phân quyền (branch-scope giữ nguyên); ngày sai định dạng → API trả 400 (validate ở `routes.ts`).
 4. [x] Giao diện gọn, rõ, hiển thị tốt ở màn hình hẹp (Card/CardTitle + lưới responsive + TONE màu trạng thái).
-5. [ ] Test tự động: `AttendancePage.test.tsx` + `routes.test.ts` + `store.integration.test.ts` — chưa bổ sung case lọc theo `dateIso`/preset trong phiên này (typecheck + lint `--max-warnings=0` đã PASS). Nợ test ghi ở mục Nợ kỹ thuật nếu cần bổ sung.
+5. [x] Test tự động: `AttendancePage.test.tsx` có case lọc theo ngày qua `DatePicker` (chọn 2026-11-10 → gọi `today-summary?date=2026-11-10`, tiêu đề đổi theo ngày; bấm "Hôm nay" xoá ngày → không phát sinh request có `?date=` mới). `routes.test.ts` + `store.integration.test.ts` giữ nguyên từ trước.
 
 ## Bàn giao phiên gần nhất
