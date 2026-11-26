@@ -7,15 +7,14 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-26
 - Nhánh: `dev`
-- Trạng thái: Hủy `slice-9` theo quyết định chủ sở hữu (chỉ sửa tài liệu + comment).
+- Trạng thái: Vá lỗ hổng phụ thuộc (Dependabot) — `pnpm audit` 82 advisory → 0. Xem ADR 0016.
 
 ### Việc trước đó
 
-- ID Slice/Task: slice-dashboard-movements (phần 3–4: biểu đồ tổng hợp, chấm công GV nâng cao)
+- ID Slice/Task: vá lỗ hổng phụ thuộc theo cảnh báo Dependabot (ADR 0016)
 - Cập nhật ngày: 2026-11-26
 - Nhánh: `dev`
-- PR: — (commit trực tiếp trên `dev` theo thực tế repo local)
-- Trạng thái: Done.
+- Trạng thái: Done — `pnpm audit` không còn advisory nào.
 
 ## Đã làm (phiên 2026-11-26)
 
@@ -30,6 +29,7 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - Gia cố slice-30: `studentCode` lấy thật từ `users.student_code` (hết hardcode `null`), tìm kiếm theo mã học viên, panel "Thời gian học" (`study`: số buổi + tổng phút, chỉ tính buổi `present`/`late`), cột "Mã HV" ở danh sách; thêm `routes.test.ts` (14 case) + component test `StudentsPage` (3) / `StudentDetailPage` (3); stub `ResizeObserver` toàn cục trong `src/test/setup.ts` để recharts chạy được dưới jsdom.
 - Cổng sau gia cố: API typecheck + eslint sạch, 282 pass / 22 skip; Web typecheck + eslint sạch, 113 pass; `vite build` OK (cảnh báo chunk >500 kB là có sẵn).
 - **Hủy `slice-9`** theo quyết định chủ sở hữu: bỏ hẳn chấm bán tự động; audio/ghi âm cho Listening/Speaking **không xây trong LMS** — giáo viên tự chấm và đưa kết quả vào lớp bằng luồng đã có (`slice-9a` chấm tay/import Excel + `slice-22` đưa điểm vào lớp). Trạng thái backlog `Hoãn` → `Đã hủy`; gỡ marker `TODO(slice-9)` ở migration `20260921000000_questions.sql` và 4 slice doc (`slice-3`, `slice-5`, `slice-6`, `slice-12`); cập nhật ADR 0003/0013, `AGENTS.md`, `HANDOFF-BY-CATEGORY.md`, `design/ui-reference.md`. Không sửa code nghiệp vụ.
+- **Vá lỗ hổng phụ thuộc (ADR 0016)**: `pnpm audit` 82 advisory (5 critical, 28 high) → **0**. Nâng `fastify` 5.0.0→5.12.8, `kysely` 0.27.4→0.28.17, `react-router-dom` 7.1.1→7.18.7, `zod` 3.23.8→4.6.7; `vite` 5.4.8→7.3.8, `@vitejs/plugin-react` 4.3.2→5.2.0, `vitest` 2.1.2→4.1.12, `postcss` 8.4.47→8.5.33, `turbo` 2.1.3→2.11.13, `tsx` 4.19.1→4.23.15; ghim phụ thuộc gián tiếp trong `pnpm-workspace.yaml` (pnpm 11 bỏ `pnpm.overrides` ở `package.json`). Sửa kèm: 7 chỗ `invalid_type_error`→`error` (zod 4 bỏ tham số này), 142 UUID fixture không đúng RFC 4122 (zod 4 kiểm tra version/variant chặt), thêm `vitest.config.ts` cho `apps/api` và `packages/shared` để Vitest 4 không nhặt `dist/**/*.test.js` (gây chạy test 2 lần: API 282→564).
 
 ## Bước tiếp theo
 
@@ -40,3 +40,6 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 5. Đồng bộ công thức xếp loại học lực giữa `students/service.ts` và `reports/service.ts` khi slice-7 chốt (đang ghi nợ `TODO(slice-30)`).
 6. (Tùy chọn, ngoài phạm vi slice) Bundle web còn 1 chunk ~1.06 MB — có thể `manualChunks` tách recharts/vendor nếu muốn hết cảnh báo >500 kB.
 7. Nếu sau này cần nhắc điểm danh tự động hoặc audio trong LMS: **mở slice mới** (ID slice-9 không tái sử dụng), trả lời 3 câu ở mục "Nếu sau này muốn mở lại" trong `slices/slice-9-mo-rong.md`.
+8. Sau khi push, mở lại trang Dependabot của repo để xác nhận GitHub đã đóng cảnh báo (GitHub đếm theo từng đường dẫn nên số trên web khác số của `pnpm audit`).
+9. Kiểm thử tay trên trình duyệt sau khi nâng Vite 7 / vitest 4 / zod 4: luồng tạo đề (parse body số câu/thời lượng), trang báo cáo, và dev server `pnpm dev` (Vite 7 đổi một số mặc định về `server.fs`).
+10. Bộ ba `vite` 7 / `vitest` 4 / `zod` 4.6 còn rất mới — nếu gặp lỗi lạ khi dev, nghi vấn đầu tiên nên là chúng. Đường lùi: revert commit vá phụ thuộc rồi `pnpm install` (lockfile đi kèm commit).
