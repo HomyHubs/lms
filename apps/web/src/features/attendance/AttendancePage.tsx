@@ -520,6 +520,7 @@ function TodayBarChart(): React.ReactElement {
   )
 
   return (
+    <>
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <CardTitle>Điểm danh theo ngày{today.data?.date ? ` — ${today.data.date}` : ''}</CardTitle>
@@ -550,17 +551,6 @@ function TodayBarChart(): React.ReactElement {
         <p className="text-sm text-slate-500">Không có lớp nào có buổi học trong ngày này.</p>
       ) : (
         <div className="flex flex-col gap-6 pt-2">
-          <ReportCharts
-            title="Biểu đồ điểm danh theo ngày"
-            unit="lượt"
-            items={[
-              { label: 'Có mặt', value: totals.present },
-              { label: 'Đi muộn', value: totals.late },
-              { label: 'Vắng', value: totals.absent },
-              { label: 'Có phép', value: totals.excused },
-              { label: 'Chưa điểm danh', value: totals.notMarked },
-            ]}
-          />
           {branches.map((branch) => (
             <div key={branch.branchId} className="flex flex-col gap-3">
               <CardTitle className="text-base font-semibold text-slate-700">{branch.branchName}</CardTitle>
@@ -576,6 +566,20 @@ function TodayBarChart(): React.ReactElement {
         </div>
       )}
     </Card>
+    {!today.isLoading && !today.isError && branches.length > 0 && (
+      <ReportCharts
+        title="Biểu đồ điểm danh theo ngày"
+        unit="lượt"
+        items={[
+          { label: 'Có mặt', value: totals.present },
+          { label: 'Đi muộn', value: totals.late },
+          { label: 'Vắng', value: totals.absent },
+          { label: 'Có phép', value: totals.excused },
+          { label: 'Chưa điểm danh', value: totals.notMarked },
+        ]}
+      />
+    )}
+    </>
   )
 }
 
