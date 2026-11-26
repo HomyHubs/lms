@@ -22,7 +22,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 - Sinh mã tự động khi tạo học viên (`createUser`): chỉ role `student`, tiền tố theo cơ sở (`branches.code`, fallback `HV`) + số thứ tự zero-pad 4 (vd `HN0001`/`HV0001`); role khác giữ `student_code = null`. `store.ts` thêm `student_code` vào `SAFE_COLUMNS`, `findUserByStudentCode`, `nextStudentCode`, `setStudentCode`, `branchCodeForUser`.
-- `toAdminUser` map `studentCode` (read-only). Migration `20261120000000_users_student_code.sql` + rollback gate `scripts/student-code.integration.mjs` (up/down/up trên PG18 container).
+- `toAdminUser` map `studentCode` (read-only). Migration `20261120000001_users_student_code.sql` + rollback gate `scripts/student-code.integration.mjs` (up/down/up trên PG18 container).
 
 **Đang làm dở**
 - Hiển thị mã ở FE là read-only; chưa có UI sửa/nhập tay mã học viên (để slice sau).

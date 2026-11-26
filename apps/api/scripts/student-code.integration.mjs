@@ -51,7 +51,7 @@ try {
   assert.equal(Math.floor(Number(version.rows[0].server_version_num) / 10_000), 18)
   console.log('PASS isolated PostgreSQL major version 18')
 
-  const target = '20261120000000_users_student_code.sql'
+  const target = '20261120000001_users_student_code.sql'
   const dir = new URL('../../../db/migrations/', import.meta.url)
   const files = readdirSync(dir)
     .filter((file) => file.endsWith('.sql'))
