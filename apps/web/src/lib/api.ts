@@ -951,9 +951,12 @@ export async function updateClassificationPolicy(
   return ClassificationPolicy.parse(await res.json())
 }
 
-function queryString(query: Record<string, string | undefined>): string {
+function queryString(query: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
+  for (const [key, value] of Object.entries(query)) {
+    // `0` là giá trị hợp lệ (vd pageSize) nên phải so với undefined, không dùng truthy.
+    if (value !== undefined && value !== '') params.set(key, String(value))
+  }
   return params.toString()
 }
 

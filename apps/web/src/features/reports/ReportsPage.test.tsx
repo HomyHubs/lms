@@ -52,6 +52,8 @@ const report: StudentReport = {
       pendingRetakes: 1,
     },
   ],
+  // slice-24: server trả một trang + metadata phân trang.
+  rankingPage: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
 }
 const policy = { levelId: LEVEL_ID, levelCode: 'starter', levelName: 'Starter', examWeight: 90, attendanceWeight: 10, excellentMin: 85, goodMin: 70, averageMin: 50, passMin: 50 }
 
@@ -120,26 +122,38 @@ describe('ReportsPage', () => {
     expect(ranking[1]).toEqual([1, 'Nguyễn Văn A', '0900000021', 'Starter A', 'Cơ sở 1', 'starter', 80, 100, 82, 'Khá', 'Đậu', 2, 1, 3, 1, 1])
   })
 
-  it('paginates the ranking 20/50 per page and keeps the search filter (slice-24)', async () => {
-    const many: StudentReport = {
-      ...report,
-      totals: { ...report.totals, students: 25 },
-      ranking: Array.from({ length: 25 }, (_, i) => ({
-        ...report.ranking[0]!,
-        rank: i + 1,
-        studentId: `80000000-0000-4000-8000-0000000000${String(i).padStart(2, '0')}`,
-        phoneNumber: `090000${String(i).padStart(4, '0')}`,
-        studentName: `HV ${String(i).padStart(2, '0')}`,
-      })),
-    }
+  it('phân trang và tìm kiếm do server lo — mỗi thao tác gửi tham số lên API (slice-24)', async () => {
+    const allRows = Array.from({ length: 25 }, (_, i) => ({
+      ...report.ranking[0]!,
+      rank: i + 1,
+      studentId: `80000000-0000-4000-8000-0000000000${String(i).padStart(2, '0')}`,
+      phoneNumber: `090000${String(i).padStart(4, '0')}`,
+      studentName: `HV ${String(i).padStart(2, '0')}`,
+    }))
+    // Server giả: cắt trang theo `page`/`pageSize`, lọc theo `q` — đúng như API thật.
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input)
-      if (url.endsWith('/api/branches')) return json({ branches: [] })
-      if (url.endsWith('/api/levels')) return json({ levels: [] })
-      if (url.endsWith('/api/classes')) return json({ classes: [] })
-      if (url.includes('/api/reports/students')) return json(many)
-      if (url.endsWith('/api/reports/classification-policies')) return json({ policies: [] })
-      throw new Error(`unexpected fetch: ${url}`)
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname === '/api/branches') return json({ branches: [] })
+      if (url.pathname === '/api/levels') return json({ levels: [] })
+      if (url.pathname === '/api/classes') return json({ classes: [] })
+      if (url.pathname === '/api/reports/classification-policies') return json({ policies: [] })
+      if (url.pathname === '/api/reports/students') {
+        const page = Number(url.searchParams.get('page') ?? '1')
+        const pageSize = Number(url.searchParams.get('pageSize') ?? '20')
+        const term = (url.searchParams.get('q') ?? '').toLowerCase()
+        const filtered = term
+          ? allRows.filter((r) => (r.studentName ?? '').toLowerCase().includes(term))
+          : allRows
+        const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+        const safePage = Math.min(page, totalPages)
+        return json({
+          ...report,
+          totals: { ...report.totals, students: 25 },
+          ranking: filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+          rankingPage: { page: safePage, pageSize, total: filtered.length, totalPages },
+        })
+      }
+      throw new Error(`unexpected fetch: ${url.pathname}`)
     })
     vi.stubGlobal('fetch', fetchMock)
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -151,25 +165,33 @@ describe('ReportsPage', () => {
       </QueryClientProvider>,
     )
 
-    // Default page size 20: first row visible, row 21 (HV 20) not yet.
+    // Trang 1 mặc định 20 dòng: dòng đầu có, dòng 21 chưa có (server chỉ trả 20 dòng).
     expect(await screen.findByText('HV 00')).toBeInTheDocument()
     expect(screen.queryByText('HV 20')).not.toBeInTheDocument()
     expect(screen.getByText(/Trang 1\/2/)).toBeInTheDocument()
 
-    // Next page shows the remaining 5.
+    // Sang trang 2: server trả 5 dòng còn lại.
     fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }))
     expect(await screen.findByText('HV 20')).toBeInTheDocument()
     expect(screen.queryByText('HV 00')).not.toBeInTheDocument()
+    expect(
+      fetchMock.mock.calls.some(([u]) => new URL(String(u), 'http://localhost').searchParams.get('page') === '2'),
+    ).toBe(true)
 
-    // Switch to 50/page: everyone on one page, back to page 1.
+    // Đổi 50 dòng/trang: về trang 1, đủ 25 dòng trong một trang.
     fireEvent.change(screen.getByLabelText('Số dòng mỗi trang'), { target: { value: '50' } })
     expect(await screen.findByText('HV 00')).toBeInTheDocument()
     expect(screen.getByText('HV 24')).toBeInTheDocument()
     expect(screen.getByText(/Trang 1\/1/)).toBeInTheDocument()
 
-    // Search narrows + resets to page 1 without losing the filter.
+    // Tìm kiếm: debounce rồi gửi `q` lên server, không lọc client trên trang hiện tại.
     fireEvent.change(screen.getByLabelText('Tìm theo tên hoặc mã học sinh'), { target: { value: 'HV 24' } })
     expect(await screen.findByText('HV 24')).toBeInTheDocument()
-    expect(screen.queryByText('HV 00')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('HV 00')).not.toBeInTheDocument())
+    expect(
+      fetchMock.mock.calls.some(
+        ([u]) => new URL(String(u), 'http://localhost').searchParams.get('q') === 'HV 24',
+      ),
+    ).toBe(true)
   })
 })

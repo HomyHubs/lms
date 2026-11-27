@@ -79,8 +79,25 @@ export const StudentReportQuery = z.object({
   classId: z.string().uuid().optional(),
   from: SessionDate.optional(),
   to: SessionDate.optional(),
+  /** slice-24: tìm theo tên hoặc SĐT/mã HS — áp SAU khi tính thứ hạng, trước khi cắt trang. */
+  q: z.string().trim().max(100).optional(),
+  /** slice-24: phân trang bảng xếp hạng phía server (mặc định 1/20 do route áp). */
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(200).optional(),
 })
 export type StudentReportQuery = z.infer<typeof StudentReportQuery>
+
+/**
+ * slice-24: thông tin phân trang của bảng xếp hạng. `total` là số dòng KHỚP BỘ LỌC (sau `q`),
+ * không phải số dòng trong trang; `rank` trong từng dòng vẫn tính trên toàn bộ phạm vi.
+ */
+export const RankingPage = z.object({
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1),
+  total: z.number().int(),
+  totalPages: z.number().int(),
+})
+export type RankingPage = z.infer<typeof RankingPage>
 
 /** One student in one class (an enrollment), ranked by final score. */
 export const StudentRankingRow = z.object({
@@ -156,6 +173,8 @@ export const StudentReport = z.object({
   byClass: z.array(ClassReport),
   byLevel: z.array(LevelReport),
   byMonth: z.array(MonthReport),
+  /** Chỉ là MỘT trang của bảng xếp hạng; tổng số dòng khớp bộ lọc nằm ở `rankingPage.total`. */
   ranking: z.array(StudentRankingRow),
+  rankingPage: RankingPage,
 })
 export type StudentReport = z.infer<typeof StudentReport>

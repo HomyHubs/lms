@@ -139,3 +139,58 @@ describe('buildStudentReport', () => {
     expect(report.classifications).toEqual({ excellent: 0, good: 1, average: 0, weak: 1, unranked: 1 })
   })
 })
+
+describe('buildStudentReport — phân trang xếp hạng (slice-24)', () => {
+  const input = {
+    policies: [POLICY],
+    enrollments: [
+      enrollment(A, '0900000001'),
+      enrollment(B, '0900000002'),
+      enrollment(C, '0900000003'),
+    ],
+    attempts: [attempt(A, 'e1', 9, true, '2026-11'), attempt(B, 'e1', 3, false, '2026-11')],
+    attendance: [],
+  }
+
+  it('không truyền trang (dùng cho export) -> trả toàn bộ trong một trang', () => {
+    const full = buildStudentReport(input)
+    expect(full.ranking).toHaveLength(3)
+    expect(full.rankingPage).toEqual({ page: 1, pageSize: 3, total: 3, totalPages: 1 })
+  })
+
+  it('cắt trang SAU khi xếp hạng nên rank vẫn đúng toàn cục', () => {
+    const page2 = buildStudentReport(input, { page: 2, pageSize: 2 })
+    expect(page2.ranking).toHaveLength(1)
+    // Dòng duy nhất của trang 2 vẫn giữ rank toàn cục (không đánh lại số từ 1).
+    expect(page2.ranking[0]).toMatchObject({ studentId: C, rank: null })
+    expect(page2.rankingPage).toEqual({ page: 2, pageSize: 2, total: 3, totalPages: 2 })
+  })
+
+  it('trang vượt phạm vi được kẹp về trang cuối thay vì trả rỗng', () => {
+    const far = buildStudentReport(input, { page: 99, pageSize: 2 })
+    expect(far.rankingPage.page).toBe(2)
+    expect(far.ranking).toHaveLength(1)
+  })
+
+  it('q lọc sau khi xếp hạng: rank giữ nguyên và các panel tổng hợp không đổi', () => {
+    const found = buildStudentReport(input, { page: 1, pageSize: 20, q: '0900000003' })
+    expect(found.ranking).toHaveLength(1)
+    expect(found.ranking[0]).toMatchObject({ studentId: C })
+    expect(found.rankingPage).toMatchObject({ total: 1, totalPages: 1 })
+    // Tim kiem chi anh huong bang xep hang, khong lam thay doi so lieu tong hop.
+    expect(found.totals.students).toBe(3)
+    expect(found.classifications).toEqual({
+      excellent: 1,
+      good: 0,
+      average: 0,
+      weak: 1,
+      unranked: 1,
+    })
+  })
+
+  it('q không khớp ai -> trang rỗng nhưng vẫn có metadata hợp lệ', () => {
+    const none = buildStudentReport(input, { page: 1, pageSize: 20, q: 'khong-ton-tai' })
+    expect(none.ranking).toEqual([])
+    expect(none.rankingPage).toEqual({ page: 1, pageSize: 20, total: 0, totalPages: 1 })
+  })
+})

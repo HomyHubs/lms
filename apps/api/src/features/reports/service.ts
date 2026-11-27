@@ -3,6 +3,7 @@ import type {
   ClassificationPolicy,
   LevelReport,
   MonthReport,
+  RankingPage,
   StudentRankingRow,
   StudentReport,
   UpdateClassificationPolicyRequest,
@@ -187,7 +188,35 @@ function passFail(rows: readonly StudentRankingRow[]): { passed: number; failed:
   return { passed, failed: taken - passed }
 }
 
-export function buildStudentReport(input: ReportInput): StudentReport {
+/** slice-24: yêu cầu phân trang bảng xếp hạng (thứ hạng vẫn tính trên toàn bộ phạm vi). */
+export interface RankingPageRequest {
+  page: number
+  pageSize: number
+  /** Tìm theo tên hoặc SĐT — áp SAU khi xếp hạng, TRƯỚC khi cắt trang. */
+  q?: string
+}
+
+/** Một dòng có khớp ô tìm kiếm không (tên đã ghép họ + tên, hoặc SĐT). */
+function matchesRankingQuery(row: StudentRankingRow, needle: string): boolean {
+  return (
+    (row.studentName ?? '').toLowerCase().includes(needle) ||
+    row.phoneNumber.toLowerCase().includes(needle)
+  )
+}
+
+function toRankingPage(total: number, request?: RankingPageRequest): RankingPage {
+  // Không yêu cầu phân trang (export) -> coi như một trang chứa toàn bộ.
+  if (!request) return { page: 1, pageSize: total === 0 ? 1 : total, total, totalPages: 1 }
+  const totalPages = Math.max(1, Math.ceil(total / request.pageSize))
+  return {
+    page: Math.min(request.page, totalPages),
+    pageSize: request.pageSize,
+    total,
+    totalPages,
+  }
+}
+
+export function buildStudentReport(input: ReportInput, request?: RankingPageRequest): StudentReport {
   const policyByLevel = new Map(input.policies.map((p) => [p.level_id, toPolicyDto(p)]))
   const attemptsByStudentLevel = groupBy(input.attempts, (a) => pairKey(a.student_id, a.level_id))
   const statusesByEnrollment = groupBy(input.attendance, (r) => pairKey(r.class_id, r.student_id))
@@ -263,6 +292,18 @@ export function buildStudentReport(input: ReportInput): StudentReport {
   for (const r of ranking) classifications[r.classification ?? 'unranked'] += 1
 
   const totalsPassFail = passFail(ranking)
+  // slice-24: lọc tìm kiếm + cắt trang SAU khi đã tính thứ hạng và các số tổng hợp,
+  // nên `rank` vẫn đúng toàn cục và các panel không đổi khi người dùng gõ tìm.
+  const needle = request?.q?.trim().toLowerCase()
+  const filteredRanking =
+    needle && needle !== ''
+      ? ranking.filter((r: StudentRankingRow) => matchesRankingQuery(r, needle))
+      : ranking
+  const rankingPage = toRankingPage(filteredRanking.length, request)
+  const pagedRanking = request
+    ? filteredRanking.slice((rankingPage.page - 1) * rankingPage.pageSize, rankingPage.page * rankingPage.pageSize)
+    : filteredRanking
+
   return {
     totals: {
       students: new Set(ranking.map((r) => r.studentId)).size,
@@ -278,7 +319,8 @@ export function buildStudentReport(input: ReportInput): StudentReport {
     byClass,
     byLevel,
     byMonth,
-    ranking,
+    ranking: pagedRanking,
+    rankingPage,
   }
 }
 
@@ -287,6 +329,7 @@ export async function loadStudentReport(
   store: ReportsStore,
   filter: EnrollmentFilter,
   range: DateRange,
+  request?: RankingPageRequest,
 ): Promise<StudentReport> {
   const enrollments = await store.listEnrollments(filter)
   const studentIds = [...new Set(enrollments.map((e) => e.student_id))]
@@ -297,5 +340,5 @@ export async function loadStudentReport(
     store.listGradedAttempts(studentIds, levelIds, range),
     store.listAttendanceStatuses(classIds, range),
   ])
-  return buildStudentReport({ policies, enrollments, attempts, attendance })
+  return buildStudentReport({ policies, enrollments, attempts, attendance }, request)
 }

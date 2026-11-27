@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BarChart3, FileSpreadsheet, Printer } from 'lucide-react'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import {
@@ -224,27 +224,29 @@ export function ReportsPage(): React.ReactElement {
   const [query, setQuery] = useState<StudentReportQuery>({})
   const report = useStudentReport(query)
   const set = (key: keyof StudentReportQuery) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setQuery((q) => ({ ...q, [key]: e.target.value || undefined }))
+    // Đổi bộ lọc thì quay về trang 1, tránh rơi vào trang trống.
+    setQuery((q) => ({ ...q, [key]: e.target.value || undefined, page: 1 }))
   const data = report.data
 
-  // Tìm theo tên hoặc mã HS (SĐT) — lọc phía client trên bảng xếp hạng.
+  // slice-24: phân trang + tìm kiếm do SERVER lo — thứ hạng tính trên toàn bộ phạm vi rồi mới
+  // cắt trang, nên `rank` không bị đánh lại theo từng trang và tìm kiếm không bỏ sót học viên.
+  // Ô tìm giữ state riêng và debounce 300ms để không bắn một request cho mỗi lần gõ.
   const [search, setSearch] = useState('')
-  // slice-24 (8.1): phân trang phía client bảng xếp hạng, chọn 20/50 dòng/trang; thứ hạng vẫn tính toàn cục ở server.
-  const [pageSize, setPageSize] = useState<20 | 50>(20)
-  const [page, setPage] = useState(1)
-  const rankingRows = useMemo(() => {
-    const rows = data?.ranking ?? []
-    const term = search.trim().toLowerCase()
-    if (!term) return rows
-    return rows.filter(
-      (r) => (r.studentName ?? '').toLowerCase().includes(term) || r.phoneNumber.toLowerCase().includes(term),
+  const page = query.page ?? 1
+  const pageSize = query.pageSize ?? 20
+  const rankingRows = data?.ranking ?? []
+  const rankingPage = data?.rankingPage
+  const pageCount = rankingPage?.totalPages ?? 1
+
+  useEffect(() => {
+    const term = search.trim()
+    if ((query.q ?? '') === term) return
+    const timer = setTimeout(
+      () => setQuery((prev) => ({ ...prev, q: term || undefined, page: 1 })),
+      300,
     )
-  }, [data, search])
-  // Về trang 1 khi đổi bộ lọc, tìm kiếm hoặc cỡ trang để không rơi vào trang trống.
-  useEffect(() => setPage(1), [search, pageSize, query])
-  const pageCount = Math.max(1, Math.ceil(rankingRows.length / pageSize))
-  const safePage = Math.min(page, pageCount)
-  const pagedRanking = rankingRows.slice((safePage - 1) * pageSize, safePage * pageSize)
+    return () => clearTimeout(timer)
+  }, [search, query.q])
 
   const classificationPie = data
     ? [
@@ -378,32 +380,39 @@ export function ReportsPage(): React.ReactElement {
                   aria-label="Số dòng mỗi trang"
                   className="c-input"
                   value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value) as 20 | 50)}
+                  onChange={(e) =>
+                    setQuery((q) => ({ ...q, pageSize: Number(e.target.value), page: 1 }))
+                  }
                 >
                   <option value={20}>20 / trang</option>
                   <option value={50}>50 / trang</option>
                 </select>
               </div>
             </div>
-            <RankingTable rows={pagedRanking} />
-            {rankingRows.length > 0 && (
+            <RankingTable rows={rankingRows} />
+            {rankingPage && rankingPage.total > 0 && (
               <div className="mt-2 flex items-center justify-between gap-2 text-sm text-slate-600 print:hidden">
                 <span>
-                  Hiển thị {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, rankingRows.length)} /{' '}
-                  {rankingRows.length} học viên
+                  Hiển thị {(page - 1) * pageSize + 1}–{(page - 1) * pageSize + rankingRows.length} /{' '}
+                  {rankingPage.total} học viên
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={safePage <= 1}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuery((q) => ({ ...q, page: page - 1 }))}
+                    disabled={page <= 1}
+                  >
                     Trang trước
                   </Button>
                   <span>
-                    Trang {safePage}/{pageCount}
+                    Trang {page}/{pageCount}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={safePage >= pageCount}
+                    onClick={() => setQuery((q) => ({ ...q, page: page + 1 }))}
+                    disabled={page >= pageCount}
                   >
                     Trang sau
                   </Button>
