@@ -229,4 +229,54 @@ describe('ExamSetsPage slice-21 lien ket cau hoi', () => {
     expect(dialog.queryByText(/SECRET-ANSWER/)).toBeNull()
     expect(dialog.queryByText(/SECRET-EXPLANATION/)).toBeNull()
   })
+
+  // slice-21: kéo-thả để sắp xếp. jsdom không có DragEvent/DataTransfer thật nên phải tự dựng
+  // một đối tượng tối thiểu — component chỉ dùng setData/getData nên là đủ.
+  it('keo-tha cau de doi thu tu', async () => {
+    const { puts } = linkBackend()
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }, { timeout: 5000 }))
+    await screen.findByLabelText('Chọn: Apple fruit', undefined, { timeout: 5000 })
+    // Bộ đề có 1 câu -> thêm 1 câu nữa để có thứ tự mà đổi.
+    fireEvent.click(screen.getByLabelText('Chọn: Apple fruit'))
+    fireEvent.click(screen.getByRole('button', { name: /Thêm 1 câu đã chọn/ }))
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 5000 })
+
+    const list = within(screen.getByRole('list', { name: 'Câu hỏi trong bộ đề' }))
+    // `<li>` lồng nhau (danh sách lựa chọn) nên phải lấy dòng theo nhãn "Câu N." rồi lên `li` gần nhất.
+    const rowOf = (label: string): HTMLElement => {
+      const paragraph = list
+        .getAllByText(/^Câu \d\./)
+        .find((el) => el.textContent?.includes(label))
+      if (!paragraph) throw new Error(`khong tim thay dong "${label}"`)
+      return paragraph.closest('li')!
+    }
+
+    const dataTransfer = {
+      store: {} as Record<string, string>,
+      effectAllowed: '',
+      dropEffect: '',
+      setData(type: string, value: string) {
+        this.store[type] = value
+      },
+      getData(type: string) {
+        return this.store[type] ?? ''
+      },
+    }
+    fireEvent.dragStart(rowOf('Apple fruit'), { dataTransfer })
+    fireEvent.dragOver(rowOf('Cau trong bo de'), { dataTransfer })
+    fireEvent.drop(rowOf('Cau trong bo de'), { dataTransfer })
+
+    await waitFor(() => expect(puts[1]).toEqual([BANK_APPLE.id, IN_SET.id]), { timeout: 5000 })
+  })
+
+  // Quyết định khi trả nợ slice-21: GIỮ nút Lên/Xuống làm đường thao tác bằng bàn phím — kéo-thả
+  // một mình là không truy cập được. Test khoá lại để lần sau không ai xoá nhầm.
+  it('van giu nut Len/Xuong lam duong thao tac bang ban phim', async () => {
+    linkBackend()
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở' }, { timeout: 5000 }))
+    expect(await screen.findByRole('button', { name: 'Lên câu 1' }, { timeout: 5000 })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Xuống câu 1' })).toBeDisabled()
+  })
 })
