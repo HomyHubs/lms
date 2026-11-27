@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import type { PublicUser } from '@lms/shared'
+import type { PublicUser, UserRole } from '@lms/shared'
 
 /**
  * Logic Auth thuan (khong phu thuoc Fastify) de test duoc de dang.
@@ -15,7 +15,9 @@ export interface UserRecord {
   id: string
   phone_number: string
   password_hash: string
-  role: string
+  // slice-1 (ADR 0021): `UserRole` thay vi `string`. DB da rang buoc bang `users_role_check`
+  // (migration 20261117000000), nen de `string` o day chi lam mat thong tin va buoc phai cast.
+  role: UserRole
 }
 
 /** Cong ra DB ma service can — cho phep test bang cach tiem gia lap. */
@@ -51,8 +53,9 @@ function toPublicUser(user: UserRecord): PublicUser {
   return {
     id: user.id,
     phoneNumber: user.phone_number,
-    // Role duoc rang buoc boi migration; ep kieu ve union cua contract.
-    role: user.role as PublicUser['role'],
+    // slice-1 (ADR 0021): khong con cast. `UserRecord.role` va `UsersTable.role` deu la `UserRole`,
+    // nen neu DB them mot role ma contract chua biet thi day la loi COMPILE, khong phai du lieu la.
+    role: user.role,
   }
 }
 

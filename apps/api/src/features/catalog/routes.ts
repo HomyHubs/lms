@@ -46,11 +46,11 @@ interface CatalogRoutesDeps {
  */
 export async function catalogRoutes(app: FastifyInstance, deps: CatalogRoutesDeps): Promise<void> {
   const { rbac, catalogStore, branchScope } = deps
-  const requireAdmin = rbac.requireRole('admin')
+  const requireAdmin = rbac.requirePermission('catalog.manage')
   // Doc du lieu theo Branch: Admin/Teacher/Student/Staff deu duoc, nhung bi loc theo Branch gan.
-  const requireViewer = rbac.requireRole('admin', 'teacher', 'student', 'staff')
+  const requireViewer = rbac.requirePermission('catalog.read')
   // slice-14: danh muc chi-doc (levels/courses/classes) can cho nguoi tao de chon lop ap dung.
-  const requireCatalogReader = rbac.requireRole('admin', 'teacher', 'staff')
+  const requireCatalogReader = rbac.requirePermission('catalog.read.staff')
 
   const scopeOf = (request: FastifyRequest): Promise<string[]> =>
     branchScope.branchIdsForUser(getSessionUser(request).id)

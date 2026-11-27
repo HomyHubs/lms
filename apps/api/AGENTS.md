@@ -23,6 +23,24 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-27 — slice-1: quyền là ma trận role → năng lực (ADR 0021)
+
+- **Trả `TODO(slice-1)`** trong `platform/db.ts`. Phạm vi là hướng tối thiểu: không đổi schema, **không đổi hành vi phân quyền**.
+- `UsersTable.role` và `UserRecord.role` nay là `UserRole`; bỏ `user.role as PublicUser['role']` trong `toPublicUser`. Lệch DB ↔ contract thành lỗi compile. Gõ kiểu lộ ngay 6 chỗ dựa vào `role: string` (4 helper test, `WORKER_ROLES`, `seed-demo`) — đúng những chỗ cast cũ đã che.
+- `packages/shared/src/permissions.ts` (mới): `PERMISSIONS` (26 mã `<miền>.<hành động>`), `ROLE_PERMISSIONS` (ma trận duy nhất), `can()`, `isAllowed()`. `superadmin` lấy nguyên mảng `PERMISSIONS` nên thêm quyền mới không thể quên cấp cho superadmin.
+- `rbac.requirePermission(...)` thay `requireRole(...)` ở mọi route có phân quyền (nhiều quyền = AND). `requireRole` chỉ còn cho 2 route **chỉ cần đăng nhập**.
+- `access/scope.ts` (mới): `branchScopeOf(user, scope)` trả `undefined` cho superadmin. Thay biểu thức lặp lại ở `exams` (2 chỗ), `students` (2), `reports` (1).
+- `users/routes.ts`: bỏ `makeRequireAdmin` tự viết (bản sao thứ bảy của logic resolve phiên + so role), dùng `rbac.requirePermission('user.manage')`; deps nhận `rbac` thay `authStore`; `sessionRole` dùng `getSessionUser` thay cast.
+- Test: `shared/permissions.test.ts` 11 case (không mã trùng / không mã chết / không mã gõ sai / superadmin đủ / admin không export được…), `access/rbac.test.ts` 5 case.
+
+**Bài học**
+- Cast `as` để "cho qua" typecheck chính là chỗ giấu lỗi: bỏ nó ra là lộ ngay 6 chỗ dùng `string` thay vì union.
+- Khi một luật phải viết lại ở nhiều handler, hãy đưa luật đó thành hàm (`isAllowed`, `branchScopeOf`) trước khi thêm handler mới.
+
+**Bước tiếp theo**
+- `apps/web/src/components/layout/nav.ts` vẫn khai báo `roles` riêng cho menu — quyết định hiển thị, không phải kiểm soát truy cập. Gộp vào ma trận quyền cần bộ mã `nav.*` + đổi rộng FE; để slice riêng.
+- Chưa có bảng `permissions`/`role_permissions`: chỉ đáng làm khi cần cấp quyền lẻ từng người.
+
 ### 2026-11-27 — slice-23: bỏ hẳn fallback SĐT (ADR 0019)
 
 - **Đính chính mục 2026-11-14 bên dưới**: câu "`// TODO(slice-23)` gỡ khi 100% học viên có mã" **không còn đúng** — marker đó đã bị bỏ.

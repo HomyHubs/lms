@@ -7,7 +7,19 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-27
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Đã trả 8 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT→ADR 0019, `slice-23-b`→ADR 0020). Còn lại `slice-1` — đã chốt hướng tối thiểu A, đang làm.
+- Trạng thái: Đã trả **toàn bộ** marker nợ còn lại của phiên này: `slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT (ADR 0019), `slice-23-b` (ADR 0020), `slice-1` (ADR 0021). Không còn `TODO(<slice>)` nào trong code.
+
+## Đã làm (phiên 2026-11-27, phần 7)
+
+- **`slice-1` — quyền là ma trận role → năng lực (ADR 0021)**: hướng tối thiểu, **không đổi schema và không đổi hành vi phân quyền**.
+  - **Gõ kiểu `role`**: `UsersTable.role` và `UserRecord.role` nay là `UserRole`, bỏ hẳn `user.role as PublicUser['role']` trong `toPublicUser`. Lệch giữa DB và contract thành **lỗi compile** — đúng thứ cast cũ đã che. Việc gõ kiểu lập tức lộ 6 chỗ dựa vào `role: string`: 4 helper test, `WORKER_ROLES` (`string[]` lọt qua được), và tham số `role: string` của `seed-demo`.
+  - `packages/shared/src/permissions.ts` (mới): `PERMISSIONS` (26 mã `<miền>.<hành động>`), `ROLE_PERMISSIONS` (ma trận duy nhất), `can()`. `superadmin` lấy nguyên mảng `PERMISSIONS` thay vì liệt kê tay nên thêm quyền mới thì superadmin có ngay.
+  - `rbac.requirePermission(...)` thay `requireRole(...)` tại mọi route có phân quyền (nhiều quyền = AND); `requireRole` chỉ còn cho route **chỉ cần đăng nhập** (2 chỗ).
+  - `isAllowed(role, roles)` giữ luật "superadmin vượt mọi guard" ở một chỗ, dùng chung cho `requireRole` (BE) và `RequireAuth` (FE). `branchScopeOf(user, scope)` giữ luật superadmin vượt branch-scope, thay biểu thức lặp lại trong `exams`, `students`, `reports`.
+  - `users/routes.ts`: bỏ `makeRequireAdmin` tự viết (bản sao thứ bảy của logic resolve phiên + so role), dùng `rbac.requirePermission('user.manage')`; `UsersRoutesDeps` nhận `rbac` thay `authStore`; `sessionRole` dùng `getSessionUser` thay cast.
+  - Test: `packages/shared/src/permissions.test.ts` 11 case (không trùng mã, không mã chết, không mã gõ sai, superadmin đủ, admin không export được, teacher không import điểm được…) + `access/rbac.test.ts` 5 case (401 thiếu phiên, 401 phiên chết, 403 thiếu quyền, superadmin qua, route chỉ-cần-đăng-nhập).
+  - **Không làm** bảng `permissions`/`role_permissions`/`user_permissions`: chỉ đáng khi trung tâm cần cấp quyền lẻ từng người.
+
 
 ## Đã làm (phiên 2026-11-27, phần 6)
 

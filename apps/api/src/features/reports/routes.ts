@@ -7,7 +7,7 @@ import {
   type ClassificationPolicyList,
   type StudentReport,
 } from '@lms/shared'
-import { getSessionUser, type Rbac } from '../access/index.js'
+import { branchScopeOf, getSessionUser, type Rbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
 import { loadStudentReport, toPolicyDto, type ReportsStore } from './service.js'
 
@@ -24,7 +24,7 @@ interface ReportsRoutesDeps {
  */
 export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDeps): Promise<void> {
   const { rbac, reportsStore: store, branchScope } = deps
-  const requireAdmin = rbac.requireRole('admin')
+  const requireAdmin = rbac.requirePermission('report.read')
 
   app.get('/reports/classification-policies', { preHandler: requireAdmin }, async () => {
     const body: ClassificationPolicyList = { policies: (await store.listPolicies()).map(toPolicyDto) }
@@ -77,8 +77,8 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
     const { branchId, levelId, classId, from, to, page, pageSize, q } = parsed.data
     const user = getSessionUser(request)
     // superadmin vuot branch-scope: thay tat ca co so (branchIds = undefined).
-    const scoped =
-      user.role === 'superadmin' ? undefined : await branchScope.branchIdsForUser(user.id)
+    // `branchScopeOf` tra `undefined` cho superadmin — luat do nam mot cho (ADR 0021).
+    const scoped = await branchScopeOf(user, branchScope)
     if (branchId && scoped && !scoped.includes(branchId)) {
       reply.code(404)
       return { error: 'Khong tim thay co so' }
@@ -97,7 +97,7 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
   // superadmin vuot branch-scope nen export duoc toan bo.
   app.get(
     '/reports/students/export',
-    { preHandler: rbac.requireRole('superadmin') },
+    { preHandler: rbac.requirePermission('report.export') },
     async (request, reply) => {
       const parsed = StudentReportQuery.safeParse(request.query)
       if (!parsed.success) {

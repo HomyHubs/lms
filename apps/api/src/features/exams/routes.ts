@@ -18,7 +18,7 @@ import {
   type ManualGradingAttemptResponse,
   type ManualGradingQueue,
 } from '@lms/shared'
-import { getSessionUser, type Rbac } from '../access/index.js'
+import { branchScopeOf, getSessionUser, type Rbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
 import { ImportFileError } from '../examsets/import-zip.js'
 import { parseGradeImport } from './grade-import.js'
@@ -87,14 +87,14 @@ interface ExamsRoutesDeps {
  */
 export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): Promise<void> {
   const { rbac, examsStore, branchScope } = deps
-  const requireManager = rbac.requireRole('admin', 'teacher')
+  const requireManager = rbac.requirePermission('exam.manage')
   // slice-14: gan/tao de co the gan lop — cho phep admin + teacher + staff (superadmin tu vuot guard).
-  const requireExamAuthor = rbac.requireRole('admin', 'teacher', 'staff')
+  const requireExamAuthor = rbac.requirePermission('exam.assignClass')
   const requireLogin = rbac.requireRole()
-  const requireStudent = rbac.requireRole('student')
-  const requireAdmin = rbac.requireRole('admin')
+  const requireStudent = rbac.requirePermission('exam.take')
+  const requireAdmin = rbac.requirePermission('exam.administrate')
   // slice-9a (revised): nhap bang diem Speaking/Writing — Staff/Admin (superadmin vuot guard).
-  const requireGradeImporter = rbac.requireRole('admin', 'staff')
+  const requireGradeImporter = rbac.requirePermission('grading.import')
   // Luu y: content-type parser 'application/octet-stream' (raw body) da duoc examSetsRoutes
   // dang ky tren cung app instance; KHONG dang ky lai o day (tranh FST_ERR_CTP_ALREADY_PRESENT).
 
@@ -192,11 +192,11 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
 
       const user = getSessionUser(request)
       // ADR 0019: phạm vi chỉ theo mã học viên (SĐT không còn là khoá khớp).
-      let allowedStudentCodes: ReadonlySet<string> | undefined
-      if (user.role !== 'superadmin') {
-        const branchIds = await branchScope.branchIdsForUser(user.id)
-        allowedStudentCodes = new Set(await examsStore.listStudentCodesInBranches(branchIds))
-      }
+      // `branchScopeOf` tra `undefined` cho superadmin (khong gioi han) — luat do nam mot cho.
+      const branchIds = await branchScopeOf(user, branchScope)
+      const allowedStudentCodes = branchIds
+        ? new Set(await examsStore.listStudentCodesInBranches(branchIds))
+        : undefined
 
       const outcome = await previewImportGrades(
         examsStore,
@@ -255,11 +255,11 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
       // Branch-scope: superadmin xem toan bo; con lai chi duoc cham hoc vien trong co so minh phu trach.
       // ADR 0019: gioi han theo ma hoc vien (SDT khong con la khoa khop).
       const user = getSessionUser(request)
-      let allowedStudentCodes: ReadonlySet<string> | undefined
-      if (user.role !== 'superadmin') {
-        const branchIds = await branchScope.branchIdsForUser(user.id)
-        allowedStudentCodes = new Set(await examsStore.listStudentCodesInBranches(branchIds))
-      }
+      // `branchScopeOf` tra `undefined` cho superadmin (khong gioi han) — luat do nam mot cho.
+      const branchIds = await branchScopeOf(user, branchScope)
+      const allowedStudentCodes = branchIds
+        ? new Set(await examsStore.listStudentCodesInBranches(branchIds))
+        : undefined
 
       const outcome = await importGrades(
         examsStore,

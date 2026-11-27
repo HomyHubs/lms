@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import type { UserRole } from '@lms/shared'
+import { isAllowed, type UserRole } from '@lms/shared'
 import { useSession } from './useAuth'
 
 /**
@@ -24,8 +24,9 @@ export function RequireAuth({
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
   const roles = role === undefined ? [] : Array.isArray(role) ? role : [role]
-  // superadmin vuot moi guard role (thay het menu/route cua admin).
-  if (roles.length > 0 && user.role !== 'superadmin' && !roles.includes(user.role)) {
+  // slice-1 (ADR 0021): luat "superadmin vuot moi guard" nam trong `isAllowed` cua `@lms/shared`,
+  // dung chung voi guard phia API — FE khong con mot ban sao de lech.
+  if (!isAllowed(user.role, roles)) {
     return <Navigate to="/" replace />
   }
   return children

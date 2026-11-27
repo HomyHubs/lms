@@ -45,9 +45,9 @@ export async function questionsRoutes(
   deps: QuestionsRoutesDeps,
 ): Promise<void> {
   const { rbac, questionsStore, settingsStore } = deps
-  const requireManager = rbac.requireRole('admin', 'teacher')
+  const requireManager = rbac.requirePermission('question.edit')
   // Ai co the "cham toi" route ghi (role hop le se duoc loc tiep theo settings ben duoi).
-  const requireEditor = rbac.requireRole('admin', 'teacher', 'staff')
+  const requireEditor = rbac.requirePermission('question.read')
 
   /**
    * preHandler cho route GHI: sau khi xac thuc role hop le, doc settings quyen sua cau hoi

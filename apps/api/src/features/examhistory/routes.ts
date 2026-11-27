@@ -16,8 +16,8 @@ const StudentIdParam = z.object({ id: z.string().uuid() })
 /** Exam history (student: own; Admin/Teacher: students of their branches) + attempt report (slice-13). */
 export async function examHistoryRoutes(app: FastifyInstance, deps: ExamHistoryRoutesDeps): Promise<void> {
   const { rbac, examHistoryStore: store, branchScope } = deps
-  const requireStudent = rbac.requireRole('student')
-  const requireManager = rbac.requireRole('admin', 'teacher')
+  const requireStudent = rbac.requirePermission('exam.history.self')
+  const requireManager = rbac.requirePermission('exam.history.read')
 
   async function sendHistory(request: FastifyRequest, reply: FastifyReply, studentId: string) {
     const parsed = ExamHistoryQuery.safeParse(request.query)

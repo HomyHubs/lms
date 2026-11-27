@@ -3,6 +3,7 @@ import cookie from '@fastify/cookie'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { AuthStore, UserRecord } from '../auth/index.js'
+import type { UserRole } from '@lms/shared'
 import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
 import type { CreateQuestionFields } from '../questions/index.js'
@@ -14,7 +15,7 @@ const LEVEL_MOVER = '10000000-0000-4000-8000-000000000002'
 const SAMPLE_READING = '30000000-0000-4000-8000-000000000001'
 const SAMPLE_MOVER = '30000000-0000-4000-8000-000000000002'
 
-function user(id: string, phone: string, role: string): UserRecord {
+function user(id: string, phone: string, role: UserRole): UserRecord {
   return { id, phone_number: phone, password_hash: 'x', role }
 }
 const ADMIN = user('60000000-0000-4000-8000-000000000001', '0900000001', 'admin')

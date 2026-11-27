@@ -16,7 +16,7 @@ interface SettingsRoutesDeps {
  */
 export async function settingsRoutes(app: FastifyInstance, deps: SettingsRoutesDeps): Promise<void> {
   const { rbac, settingsStore } = deps
-  const requireAdmin = rbac.requireRole('admin')
+  const requireAdmin = rbac.requirePermission('setting.manage')
 
   app.get(
     '/settings/question-edit-permissions',

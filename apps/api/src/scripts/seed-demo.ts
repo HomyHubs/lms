@@ -1,6 +1,7 @@
 import { loadConfig } from '../platform/config.js'
 import { createDb, type AppDb } from '../platform/db.js'
 import { hashPassword } from '../features/auth/service.js'
+import type { UserRole } from '@lms/shared'
 import { makeQuestionsStore } from '../features/questions/store.js'
 import { makeExamsStore } from '../features/exams/store.js'
 import { createExam, startAttempt, submitAttempt, type ExamsStore } from '../features/exams/service.js'
@@ -93,7 +94,7 @@ async function insertUser(
   db: AppDb,
   phoneNumber: string,
   email: string,
-  role: string,
+  role: UserRole,
   passwordHash: string,
   // Ho so hoc vien (tuy chon): chi set khi seed student.
   profile?: {

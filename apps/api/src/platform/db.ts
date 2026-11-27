@@ -1,6 +1,7 @@
 import type { ColumnType, Generated } from 'kysely'
 import { Kysely, PostgresDialect } from 'kysely'
 import pg from 'pg'
+import type { UserRole } from '@lms/shared'
 
 /** Cot do Postgres sinh gia tri (default) va app khong ghi tay khi insert. */
 type Timestamp = ColumnType<Date, string | undefined, string | undefined>
@@ -12,8 +13,10 @@ export interface UsersTable {
   // Task 3 (slice-0): email de nhan OTP dat lai mat khau (nullable, unique khi co).
   email: ColumnType<string | null, string | null | undefined, string | null>
   password_hash: string
-  // TODO(slice-1): thay `role` text bang lien ket Branch/role day du.
-  role: ColumnType<string, string | undefined, string>
+  // slice-1 (ADR 0021): kieu `UserRole` thay vi `string`. DB da rang buoc bang `users_role_check`
+  // (migration 20261117000000_superadmin_role.sql), nen `string` o day chi lam mat thong tin va buoc
+  // `toPublicUser` phai cast — cast do da che mat viec them role o DB ma quen contract.
+  role: ColumnType<UserRole, UserRole | undefined, UserRole>
   // Slice ho so hoc vien: cac truong nullable (khong pha user cu / role khac).
   last_name: ColumnType<string | null, string | null | undefined, string | null>
   first_name: ColumnType<string | null, string | null | undefined, string | null>

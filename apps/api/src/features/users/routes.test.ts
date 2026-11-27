@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { AuthStore, UserRecord } from '../auth/index.js'
 import { SESSION_COOKIE } from '../auth/index.js'
+import { makeRbac } from '../access/index.js'
 import { usersRoutes } from './routes.js'
 import type { UserRow, UsersStore } from './service.js'
 
@@ -138,7 +139,8 @@ async function buildTestApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: false })
   await app.register(cookie)
-  await usersRoutes(app, { authStore: makeFakeAuthStore(authUser), usersStore })
+  const authStore = makeFakeAuthStore(authUser)
+  await usersRoutes(app, { rbac: makeRbac(authStore), usersStore })
   await app.ready()
   return app
 }

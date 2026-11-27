@@ -61,12 +61,12 @@ export async function attendanceRoutes(
   deps: AttendanceRoutesDeps,
 ): Promise<void> {
   const { rbac, attendanceStore: store, branchScope } = deps
-  const requireAdmin = rbac.requireRole('admin')
-  const requireTeacher = rbac.requireRole('teacher')
-  const requireStudent = rbac.requireRole('student')
-  const requireStaff = rbac.requireRole('admin', 'teacher')
-  const requireAttendance = rbac.requireRole('admin', 'teacher', 'staff')
-  const requireOffice = rbac.requireRole('admin', 'staff')
+  const requireAdmin = rbac.requirePermission('attendance.manage')
+  const requireTeacher = rbac.requirePermission('attendance.record')
+  const requireStudent = rbac.requirePermission('attendance.self')
+  const requireStaff = rbac.requirePermission('attendance.read')
+  const requireAttendance = rbac.requirePermission('attendance.team')
+  const requireOffice = rbac.requirePermission('attendance.office')
 
   const scopeOf = (request: FastifyRequest): Promise<string[]> =>
     branchScope.branchIdsForUser(getSessionUser(request).id)

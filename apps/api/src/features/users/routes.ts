@@ -1,14 +1,12 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
 import {
   CreateUserRequest,
   UpdateUserRequest,
   type AdminUserList,
   type AdminUserResponse,
-  type PublicUser,
   type UserRole,
 } from '@lms/shared'
-import type { AuthStore } from '../auth/index.js'
-import { resolveSession, SESSION_COOKIE } from '../auth/index.js'
+import { getSessionUser, type Rbac } from '../access/index.js'
 import type { UsersStore } from './service.js'
 import { createUser, deleteUser, getUser, listUsers, updateUser } from './service.js'
 
@@ -17,44 +15,20 @@ const PRIVILEGED_ROLES: readonly UserRole[] = ['admin', 'superadmin']
 const isPrivileged = (role: UserRole): boolean => PRIVILEGED_ROLES.includes(role)
 
 interface UsersRoutesDeps {
-  // Dung chung store voi authRoutes de resolve phien (RBAC guard).
-  authStore: AuthStore
+  // slice-1 (ADR 0021): guard lay tu `rbac` dung chung thay vi tu viet lai phan resolve phien.
+  rbac: Rbac
   usersStore: UsersStore
-}
-
-/**
- * Guard RBAC that: chi cho qua khi phien hop le VA role la 'admin' hoac 'superadmin'.
- * - 401 khi chua dang nhap / phien het han.
- * - 403 khi da dang nhap nhung khong du quyen.
- * Gan `request.sessionUser` de handler biet role phien (phan biet admin vs superadmin).
- * Khong duoc de mo (AGENTS slice-1: phan quyen phai la thuc).
- */
-function makeRequireAdmin(authStore: AuthStore) {
-  return async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const token = request.cookies[SESSION_COOKIE]
-    if (!token) {
-      return void reply.code(401).send({ error: 'Chua dang nhap' })
-    }
-    const user = await resolveSession(authStore, token)
-    if (!user) {
-      reply.clearCookie(SESSION_COOKIE, { path: '/' })
-      return void reply.code(401).send({ error: 'Phien khong hop le hoac da het han' })
-    }
-    if (user.role !== 'admin' && user.role !== 'superadmin') {
-      return void reply.code(403).send({ error: 'Khong du quyen (chi Admin)' })
-    }
-    request.sessionUser = user
-  }
 }
 
 /** Lay role phien (guard da gan truoc do). */
 function sessionRole(request: FastifyRequest): UserRole {
-  return (request.sessionUser as PublicUser).role
+  return getSessionUser(request).role
 }
 
 export async function usersRoutes(app: FastifyInstance, deps: UsersRoutesDeps): Promise<void> {
-  const { authStore, usersStore } = deps
-  const requireAdmin = makeRequireAdmin(authStore)
+  const { rbac, usersStore } = deps
+  // slice-1 (ADR 0021): quyen nam trong ma tran role -> quyen cua `@lms/shared`, khong viet lai o day.
+  const requireAdmin = rbac.requirePermission('user.manage')
 
   // GET /users — danh sach user (chi Admin).
   app.get('/users', { preHandler: requireAdmin }, async () => {

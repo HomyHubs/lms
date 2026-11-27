@@ -33,7 +33,7 @@ interface CentersRoutesDeps {
  */
 export async function centersRoutes(app: FastifyInstance, deps: CentersRoutesDeps): Promise<void> {
   const { rbac, centersStore } = deps
-  const requireAdmin = rbac.requireRole('admin')
+  const requireAdmin = rbac.requirePermission('center.manage')
 
   // ----- Centers (chi Admin) -----
 

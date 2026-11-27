@@ -19,7 +19,7 @@ export async function userBranchesRoutes(
   deps: UserBranchesRoutesDeps,
 ): Promise<void> {
   const { rbac, userBranchesStore } = deps
-  const requireAdmin = rbac.requireRole('admin')
+  const requireAdmin = rbac.requirePermission('user.manage')
 
   app.get('/users/:id/branches', { preHandler: requireAdmin }, async (request) => {
     const { id } = request.params as { id: string }
