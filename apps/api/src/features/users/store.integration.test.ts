@@ -122,11 +122,9 @@ describeWithPostgres('users store on real Postgres', () => {
 
     // Chưa gán cơ sở -> prefix mặc định 'HV'.
     //
-    // KHÔNG assert đúng 4 chữ số: `nextCode` lấy max(số thứ tự trong cùng prefix) + 1, nên số chữ
-    // số phụ thuộc dữ liệu có sẵn trong DB dùng chung. Một cơ sở có `code = 'HV1'` từng được backfill
-    // thành 'HV10001', và vì 'HV10001' khớp `like 'HV%'`, phép đếm nhảy lên 5 chữ số ('HV10002').
-    // Đó là hành vi đã biết của thiết kế sinh mã, không phải lỗi của slice này — nên chỉ kiểm phần
-    // thực sự có nghĩa: đúng prefix và tăng đúng 1 đơn vị.
+    // KHÔNG assert đúng 4 chữ số: bộ đếm dùng chung `lms_test` nên số thứ tự phụ thuộc dữ liệu có
+    // sẵn (học viên khác cũng mang prefix 'HV'). Chỉ kiểm phần thực sự có nghĩa: đúng prefix và
+    // tăng đúng 1 đơn vị.
     const sequenceOf = (code: string): number => Number(code.slice('HV'.length))
     expect(first.user.studentCode).toMatch(/^HV\d{4,}$/)
     expect(second.user.studentCode).toMatch(/^HV\d{4,}$/)
@@ -149,5 +147,48 @@ describeWithPostgres('users store on real Postgres', () => {
     const reassigned = await store.assignStudentCode(third.user.id, branchCode)
     // Prefix 'Q9' chưa từng xuất hiện trong DB test -> số thứ tự chắc chắn bắt đầu từ 1.
     expect(reassigned?.student_code).toBe('Q90001')
+  })
+
+  /**
+   * slice-23-b: hồi quy cho lỗi bộ đếm dùng chung khi tiền tố lồng nhau.
+   *
+   * Trước đây `nextCode` quét `student_code like '<prefix>%'` nên cơ sở 'Z7' và 'Z71' dùng chung một
+   * bộ đếm: mã 'Z710001' của cơ sở sau khớp `like 'Z7%'`, và số thứ tự của 'Z7' nhảy lên 10002.
+   * Nay bộ đếm khoá theo tiền tố nên hai cơ sở có dãy số riêng.
+   *
+   * Dùng cặp tiền tố 'Z7'/'Z71' không xuất hiện ở bất kỳ test nào khác, và xoá sạch bộ đếm của chúng
+   * trước khi chạy để assert được giá trị tuyệt đối (bảng `student_code_seq` không bị `cleanup` xoá
+   * vì nó không gắn với center/user).
+   */
+  it('keeps separate counters for nested branch prefixes (regression slice-23-b)', async () => {
+    const OUTER = '73000000-0000-4000-8000-000000000003'
+    const INNER = '73000000-0000-4000-8000-000000000004'
+    await db.deleteFrom('student_code_seq').where('prefix', 'in', ['Z7', 'Z71']).execute()
+    await db
+      .insertInto('branches')
+      .values([
+        { id: OUTER, center_id: CENTER_ID, name: 'Branch Z7', code: 'Z7' },
+        { id: INNER, center_id: CENTER_ID, name: 'Branch Z71', code: 'Z71' },
+      ])
+      .onConflict((oc) => oc.column('id').doNothing())
+      .execute()
+
+    /** Tạo học viên rồi gán vào cơ sở; trả về mã đã cấp. */
+    const studentIn = async (phone: string, branchId: string): Promise<string> => {
+      const created = await createUser(store, { phoneNumber: phone, password: 'secret12', role: 'student' }, TODAY)
+      if (!created.ok) throw new Error('setup failed')
+      await db.insertInto('user_branches').values({ user_id: created.user.id, branch_id: branchId }).execute()
+      const branchCode = await store.branchCodeForUser(created.user.id)
+      const assigned = await store.assignStudentCode(created.user.id, branchCode)
+      return assigned?.student_code ?? ''
+    }
+
+    expect(await studentIn('0900000737', OUTER)).toBe('Z70001')
+    expect(await studentIn('0900000738', INNER)).toBe('Z710001')
+    // Điểm mấu chốt: mã thứ hai của 'Z7' là Z70002, KHÔNG phải Z710002.
+    expect(await studentIn('0900000739', OUTER)).toBe('Z70002')
+    expect(await studentIn('0900000730', INNER)).toBe('Z710002')
+
+    await db.deleteFrom('student_code_seq').where('prefix', 'in', ['Z7', 'Z71']).execute()
   })
 })

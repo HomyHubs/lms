@@ -7,7 +7,15 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-27
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Đã trả 7 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT→ADR 0019). Còn 1 marker **cần chủ dự án quyết**: `slice-23-b` (định dạng mã học viên). `slice-1` (`role` text → RBAC đầy đủ) là việc kiến trúc, cần ADR trước khi viết code.
+- Trạng thái: Đã trả 8 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT→ADR 0019, `slice-23-b`→ADR 0020). Còn lại `slice-1` — đã chốt hướng tối thiểu A, đang làm.
+
+## Đã làm (phiên 2026-11-27, phần 6)
+
+- **`slice-23-b` — bộ đếm mã học viên có chỗ trú ngụ thật (ADR 0020)**: `nextCode` thôi quét `student_code like '<prefix>%'` (cách này khiến cơ sở `HV` và `HV1` dùng chung bộ đếm, đẩy số thứ tự của `HV` lên 10002) và chuyển sang bảng `student_code_seq` khoá theo **tiền tố**.
+  - Cấp số bằng một câu lệnh nguyên tử `insert … values (prefix, 2) on conflict (prefix) do update set next_value = next_value + 1 returning next_value` — không `select` trước nên hai request đồng thời không thể đọc cùng một giá trị. Giữ `assignCodeWithRetry` làm lưới an toàn.
+  - Khoá là **tiền tố** chứ không phải `branch_id`: tiền tố chính là thứ quyết định chuỗi mã, nên hai cơ sở tình cờ dùng chung `branches.code` **buộc phải** chung bộ đếm (tách ra thì chúng cấp trùng số và retry vô ích).
+  - **Không đổi định dạng mã đã cấp.** Phương án `HV-0001` bị loại: mã đã in trên phiếu/thẻ và nằm trong file Excel của trung tâm, mà sau ADR 0019 không còn fallback cứu. Migration seed quy mã cũ về đúng cơ sở của học viên (không dùng `like`), và **được phép đếm dư** — dư chỉ làm số bắt đầu cao, thiếu mới gây trùng.
+  - Test: `users/store.integration.test.ts` thêm ca hồi quy với cặp tiền tố lồng nhau `Z7`/`Z71` (assert tuyệt đối `Z70001`, `Z710001`, `Z70002` — không phải `Z710002`), xoá sạch bộ đếm của hai tiền tố đó trước khi chạy để tất định trên DB dùng chung.
 
 ## Đã làm (phiên 2026-11-27, phần 5)
 

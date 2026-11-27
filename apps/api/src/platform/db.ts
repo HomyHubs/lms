@@ -126,6 +126,20 @@ export interface UserBranchesTable {
   created_at: Timestamp
 }
 
+/**
+ * Bang `student_code_seq` — slice-23-b: bo dem so thu tu ma hoc vien theo TIEN TO.
+ *
+ * Khoa la tien to (vd 'HN'), khong phai branch_id, vi tien to chinh la thu quyet dinh chuoi ma:
+ * hai co so tinh co dung chung `branches.code` thi bat buoc phai dung chung bo dem, neu khong chung
+ * se cap trung so va retry thanh vo ich.
+ */
+export interface StudentCodeSeqTable {
+  prefix: string
+  /** So thu tu SE cap tiep theo (khoi tao 2 o lan cap dau -> cap ra 1). */
+  next_value: ColumnType<number, number | undefined, number>
+  updated_at: Timestamp
+}
+
 /** Bang `questions` — slice-3: ngan hang cau hoi theo Level/Skill/Type/Difficulty. */
 export interface QuestionsTable {
   id: Generated<string>
@@ -418,6 +432,7 @@ export interface Database {
   enrollments: EnrollmentsTable
   enrollment_events: EnrollmentEventsTable
   user_branches: UserBranchesTable
+  student_code_seq: StudentCodeSeqTable
   questions: QuestionsTable
   exams: ExamsTable
   exam_sets: ExamSetsTable

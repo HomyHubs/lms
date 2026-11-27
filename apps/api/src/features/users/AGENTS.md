@@ -30,7 +30,23 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Bước tiếp theo**
 - Grade-import (feature `exams`) khớp theo `student_code` là khoá DUY NHẤT — fallback SĐT đã bị gỡ (ADR 0019, 2026-11-27); xem `exams/AGENTS.md` mục slice-23.
-- Nợ: sinh số thứ tự khi tạo đồng thời cùng prefix có thể trùng (`TODO(slice-23)` trong `store.ts`) — cần advisory lock/retry khi phát sinh trùng thực tế. **ĐÃ TRẢ 2026-11-27**: gộp thành `assignStudentCode` dùng `assignCodeWithRetry` (sinh lại mã + thử lại tối đa 5 lần khi unique violation); marker đã bỏ, có `users/store.test.ts` 4 case. Nợ còn lại là `TODO(slice-23-b)` — tiền tố không có dấu phân cách nên hai cơ sở lồng nhau (`HV` vs `HV1`) dùng chung bộ đếm; sửa cần đổi định dạng mã + migrate mã đã cấp, chờ chủ dự án duyệt.
+- Nợ: sinh số thứ tự khi tạo đồng thời cùng prefix có thể trùng (`TODO(slice-23)` trong `store.ts`) — cần advisory lock/retry khi phát sinh trùng thực tế. **ĐÃ TRẢ 2026-11-27**: gộp thành `assignStudentCode` dùng `assignCodeWithRetry` (sinh lại mã + thử lại tối đa 5 lần khi unique violation); marker đã bỏ, có `users/store.test.ts` 4 case. `TODO(slice-23-b)` (bộ đếm dùng chung khi tiền tố lồng nhau) cũng **đã trả** — xem mục 2026-11-27 ở trên (ADR 0020).
+
+### 2026-11-27 — slice-23-b: bộ đếm mã khoá theo tiền tố (ADR 0020)
+
+**Đã xong**
+- `store.ts`: `nextCode` thôi quét `student_code like '<prefix>%'` (cách này khiến cơ sở `HV` và `HV1` dùng chung bộ đếm — mã `HV10001` của `HV1` khớp `like 'HV%'`). Nay cấp số bằng upsert nguyên tử trên bảng `student_code_seq`:
+  `insert … values (prefix, 2) on conflict (prefix) do update set next_value = next_value + 1 returning next_value`, rồi `padStart(4)`.
+- Migration `20261127000001_student_code_seq.sql`: tạo bảng + seed từ dữ liệu đã cấp. Seed quy mã về **đúng cơ sở của học viên** (cơ sở gán sớm nhất, giống `branchCodeForUser`) chứ không dùng `like`, và **được phép đếm dư** — dư chỉ làm số bắt đầu cao hơn, thiếu mới gây trùng.
+- `db.ts`: thêm `StudentCodeSeqTable` (khoá `prefix`, không phải `branch_id`).
+- **Không đổi định dạng mã đã cấp.** Phương án `HV-0001` bị loại vì mã đã in trên phiếu/thẻ và đang nằm trong file Excel của trung tâm; sau ADR 0019 file cũ dùng mã cũ sẽ thành `student_not_found`.
+
+**Vì sao khoá là tiền tố, không phải branch_id**
+- Tiền tố chính là thứ quyết định chuỗi mã. Hai cơ sở tình cờ dùng chung `branches.code` **buộc phải** chung bộ đếm; tách theo `branch_id` thì chúng cấp trùng số và vòng retry thành vô ích.
+
+**Bước tiếp theo**
+- Nếu đổi `branches.code` sau khi đã cấp mã, bộ đếm đi theo tiền tố mới (bắt đầu lại) còn mã cũ giữ tiền tố cũ → một cơ sở có thể có hai dãy số. Muốn chặn thì cấm đổi `branches.code` khi cơ sở đã có học viên (slice khác).
+- Chưa có unique constraint trên `branches.code`; dữ liệu thật có thể đang trùng nên phải khảo sát trước khi thêm.
 
 ### 2026-11-14 — slice-26 Hiển thị người dùng
 

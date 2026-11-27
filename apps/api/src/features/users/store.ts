@@ -75,29 +75,31 @@ export function makeUsersStore(db: AppDb): UsersStore {
     return db.selectFrom('users').select(SAFE_COLUMNS).where('id', '=', id).executeTakeFirst()
   }
 
-  /** Ma ke tiep theo tien to co so: max(so thu tu trong cung prefix) + 1, zero-pad. */
+  /**
+   * Ma ke tiep theo cho tien to co so: lay MOT so tu bo dem `student_code_seq`, zero-pad.
+   *
+   * slice-23-b: truoc day ham nay quet `student_code like '<prefix>%'` roi lay max so thu tu. Vi tien
+   * to khong co dau phan cach, hai co so co code long nhau dung chung bo dem (co so 'HV' va 'HV1':
+   * ma 'HV10001' cua co so sau van khop `like 'HV%'`). Bo dem nay khoa theo TIEN TO nen moi tien to
+   * co day so rieng, khong con suy tu chuoi.
+   *
+   * Upsert la mot cau lenh nguyen tu: `insert ... on conflict do update ... returning` cap so ma
+   * khong can SELECT truoc, nen hai request dong thoi khong the cung doc mot gia tri.
+   */
   const nextCode = async (branchCode: string | null): Promise<string> => {
-    const prefix = branchCode && branchCode.trim() !== '' ? branchCode : DEFAULT_CODE_PREFIX
-    const rows = await db
-      .selectFrom('users')
-      .select('student_code')
-      .where('role', '=', 'student')
-      .where('student_code', 'like', `${prefix}%`)
-      .execute()
-    let max = 0
-    for (const r of rows) {
-      const suffix = (r.student_code ?? '').slice(prefix.length)
-      // Chi nhan phan so thuan sau prefix (bo cac ma prefix khac tinh co trung dau).
-      if (!/^\d+$/.test(suffix)) continue
-      const n = Number.parseInt(suffix, 10)
-      if (n > max) max = n
-    }
-    // TODO(slice-23-b): prefix khong co dau phan cach nen hai co so ma code long nhau se dung chung
-    // bo dem. Vd co so 'HV' va co so 'HV1': ma 'HV10001' cua co so sau van khop `like 'HV%'`, nen
-    // bo dem cua 'HV' nhay tu 1 len 10002. Unique index van chan trung nen KHONG sinh ma trung,
-    // chi ra so thu tu xau va cap nhat ma hang loat sau nay kho. Sua can doi dinh dang ma
-    // (vd 'HV-0001') — viec cua mot slice rieng vi phai migrate ma da cap.
-    return `${prefix}${String(max + 1).padStart(CODE_SEQ_WIDTH, '0')}`
+    const prefix = branchCode && branchCode.trim() !== '' ? branchCode.trim() : DEFAULT_CODE_PREFIX
+    const row = await db
+      .insertInto('student_code_seq')
+      .values({ prefix, next_value: 2 })
+      .onConflict((oc) =>
+        oc.column('prefix').doUpdateSet((eb) => ({
+          next_value: eb('student_code_seq.next_value', '+', 1),
+          updated_at: sql<string>`now()`,
+        })),
+      )
+      .returning('next_value')
+      .executeTakeFirstOrThrow()
+    return `${prefix}${String(row.next_value - 1).padStart(CODE_SEQ_WIDTH, '0')}`
   }
 
   /** Ghi ma hoc vien; nem loi unique violation neu ma da bi nguoi khac lay. */
