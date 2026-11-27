@@ -29,6 +29,20 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 - PR slice-22 → dev.
 
+### 2026-11-27 — slice-23 hướng an toàn: hiện cảnh báo khi khớp bằng SĐT
+
+**Đã xong**
+- `PreviewTable` nhận `matchedBy`: dòng nào khớp bằng SĐT thay vì mã học viên được gắn nhãn `· khớp SĐT` ngay cạnh mã, cộng một dải cảnh báo `role="status"` phía trên bảng tóm tắt số dòng phải dựa vào SĐT.
+- `ImportResultSummary` hiện cảnh báo SAU khi nhập, liệt kê số dòng đã áp nhờ khớp SĐT (`GradeImportResult.matchedByPhone`). Nhờ vậy admin thấy ngay dữ liệu nào cần chuẩn hoá mã, thay vì im lặng tin vào SĐT.
+- Không đổi luồng thao tác: vẫn Xem trước → Xác nhận; file Excel cũ không có cột mã vẫn nhập được.
+- Test: `GradingPage.test.tsx` thêm ca preview có `matchedBy='phone'` → thấy cảnh báo; ca commit trả `matchedByPhone` → thấy cảnh báo sau nhập.
+
+**Ghi chú thiết kế**
+- Cảnh báo đặt trong `role="status"` (không phải `alert`) vì đây là thông tin bổ sung, không chặn thao tác — người dùng screen-reader vẫn được đọc nhưng không bị ngắt lời.
+
+**Bước tiếp theo**
+- Khi API gỡ hẳn fallback SĐT (chờ xác nhận 100% học viên có mã), xoá nhánh `matchedBy === 'phone'` ở đây cùng lúc.
+
 ## Bàn giao phiên
 
 Điền theo mẫu `../../ai-workflow/templates/session-handoff.md` khi dừng giữa chừng.

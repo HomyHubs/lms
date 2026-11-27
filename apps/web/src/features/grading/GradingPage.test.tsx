@@ -134,4 +134,46 @@ describe('GradingPage', () => {
     expect(await screen.findByText(/Đã nhập/)).toBeInTheDocument()
     expect(fetchMock.mock.calls.some(([u, i]) => String(u).includes('/api/grading/import?') && i?.method === 'POST')).toBe(true)
   })
+
+  // slice-23: khớp bằng SĐT vẫn nhập được nhưng phải CẢNH BÁO — trước đây việc này diễn ra âm thầm.
+  it('canh bao khi dong import khop bang so dien thoai thay vi ma hoc vien (slice-23)', { timeout: 15000 }, async () => {
+    const file = new File(['ma_hoc_vien,diem\n0933000001,8'], 'diem.csv', { type: 'text/csv' })
+    const preview = {
+      rows: [
+        {
+          row: 2, studentCode: '0933000001', studentName: 'Nguyễn Minh An',
+          score: 8, maxScore: 10, passed: true, willApply: true, reason: null, matchedBy: 'phone' as const,
+        },
+      ],
+      errors: [],
+      applicable: 1,
+    }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/api/grading/attempts')) return json({ attempts: [] })
+      if (url.includes('/api/grading/import/preview') && init?.method === 'POST') return json(preview)
+      if (url.includes('/api/grading/import') && init?.method === 'POST') {
+        return json({
+          applied: 1,
+          skipped: [],
+          errors: [],
+          matchedByPhone: [{ row: 2, studentCode: '0933000001' }],
+        })
+      }
+      return json({ error: 'unexpected' }, 500)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+
+    fireEvent.change(await screen.findByLabelText('Kỳ thi'), { target: { value: EXAM_ID } })
+    fireEvent.change(screen.getByLabelText('File bảng điểm'), { target: { files: [file] } })
+    fireEvent.click(screen.getByRole('button', { name: /Xem trước/ }))
+
+    // Cảnh báo ngay ở bước xem trước, trước khi bấm xác nhận.
+    expect(await screen.findByText(/Vẫn nhập được, nhưng nên cập nhật mã học viên/)).toBeInTheDocument()
+    expect(screen.getByText('· khớp SĐT')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Xác nhận đưa vào lớp \(1\)/ }))
+    expect(await screen.findByText(/để lần sau khớp chắc chắn/)).toBeInTheDocument()
+  })
 })

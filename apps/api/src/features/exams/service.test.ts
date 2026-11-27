@@ -818,7 +818,8 @@ describe('importGrades — khop theo ma hoc vien (chinh) va SDT (fallback) — s
       undefined,
       undefined,
     )
-    expect(out.ok && out.summary).toEqual({ applied: 1, skipped: [] })
+    // slice-23: khớp bằng mã học viên -> không có dòng nào phải dựa vào SĐT.
+    expect(out.ok && out.summary).toEqual({ applied: 1, skipped: [], matchedByPhone: [] })
   })
 
   it('fallback khop theo SDT khi gia tri khong phai ma hoc vien', async () => {
@@ -833,7 +834,12 @@ describe('importGrades — khop theo ma hoc vien (chinh) va SDT (fallback) — s
       undefined,
       undefined,
     )
-    expect(out.ok && out.summary).toEqual({ applied: 1, skipped: [] })
+    // slice-23: khớp được nhờ SĐT nhưng phải được BÁO LẠI để admin chuẩn hoá file.
+    expect(out.ok && out.summary).toEqual({
+      applied: 1,
+      skipped: [],
+      matchedByPhone: [{ row: 2, studentCode: 'phone-student-1' }],
+    })
   })
 
   it('gia tri khong khop ca ma lan SDT -> student_not_found', async () => {

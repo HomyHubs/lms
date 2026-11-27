@@ -53,3 +53,19 @@
 
 **Bước tiếp theo**
 - PR slice-22 → dev; sau MVP cân nhắc gộp preview+commit để tránh parse file 2 lần.
+
+### 2026-11-27 — slice-23 hướng an toàn: fallback SĐT không còn im lặng
+
+**Bối cảnh**
+- Chủ dự án chọn hướng an toàn thay vì gỡ fallback SĐT: chưa chứng minh được 100% học viên đã có `student_code`, nên gỡ fallback sẽ làm hỏng file Excel cũ của trung tâm. Thay vào đó, fallback được GIỮ nhưng phải LỘ RA.
+
+**Đã xong**
+- Tách `matchGradingRow(code, byCode, byPhone)` (export) trả `{ row, matchedBy } | null`; `importGrades` và `previewImportGrades` dùng CHUNG hàm này. Trước đây preview chỉ khớp SĐT nên file theo mã học viên hiện `student_not_found` ở bước xem-trước nhưng lại nhập được ở bước commit — một lời nói dối có sẵn, giờ đã hết.
+- `previewImportGrades` nhận tham số thứ 6 `allowedStudentCodes` và áp ĐÚNG scope kép (mã ∪ SĐT) như commit. `routes.ts` route preview dựng `allowedStudentCodes` giống route commit.
+- `GradeImportSummary` thêm `matchedByPhone: { row, studentCode }[]` — chỉ ghi khi dòng thực sự được áp (`won`), không ghi dòng bị bỏ qua vì lý do khác.
+- Contract shared: `GRADE_IMPORT_MATCHED_BY`, `GradeImportResult.matchedByPhone`, `GradeImportPreviewRow.matchedBy`.
+- `TODO(slice-23)` đổi nghĩa: không còn là "nợ phải gỡ fallback" mà là "fallback đang được giám sát"; xem ADR/ghi chú trong `docs/tasks/slices/slice-23-ma-hoc-vien.md`.
+
+**Bước tiếp theo**
+- Muốn gỡ hẳn fallback thì cần chủ dự án xác nhận dữ liệu thật: `select count(*) from users where role='student' and student_code is null` phải bằng 0 trên production. Không suy ra được từ code.
+- `TODO(slice-23-b)`: bộ đếm mã học viên dùng chung giữa tiền tố lồng nhau (`HV` và `HV1`) — cần đổi format có dấu phân cách (`HV-0001`) + migrate mã đã cấp. Chờ chủ dự án duyệt vì đổi mã đã in trên giấy tờ.

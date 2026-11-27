@@ -39,19 +39,28 @@ Ngoài ra: không stub việc khớp import (phải khớp thật theo `student_
 ## Nợ kỹ thuật
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
-| TODO(slice-23) | `apps/api/src/features/exams/service.ts` (import điểm) | Khớp theo SĐT chỉ là fallback chuyển tiếp; gỡ khi mọi học viên đã có `student_code` | Khi backfill phủ 100% học viên — **chưa trả** (xem ghi chú dưới) |
+| ~~TODO(slice-23)~~ | `apps/api/src/features/exams/service.ts` (import điểm) | ~~Khớp theo SĐT chỉ là fallback chuyển tiếp; gỡ khi mọi học viên đã có `student_code`~~ → **đã xử lý 2026-11-27 theo hướng an toàn**: fallback VẪN GIỮ (không phá file Excel cũ) nhưng không còn âm thầm — mỗi dòng khớp bằng SĐT được trả về trong `matchedByPhone` (kết quả nhập) và `matchedBy` (từng dòng xem trước), UI cảnh báo ngay trước khi xác nhận | Đã xử lý — gỡ hẳn fallback vẫn cần xác nhận dữ liệu thật phủ 100% `student_code` |
 | ~~TODO(slice-23)~~ | `apps/api/src/features/users/store.ts` | ~~Sinh số thứ tự theo cơ sở khi tạo đồng thời có thể đụng trùng; cần khóa/retry~~ → **đã trả 2026-11-27**: `assignCodeWithRetry` sinh lại mã và thử lại khi unique violation, tối đa 5 lần | Đã trả |
 | TODO(slice-23-b) | `apps/api/src/features/users/store.ts` (`nextCode`) | Tiền tố mã không có dấu phân cách nên hai cơ sở có `code` lồng nhau dùng chung bộ đếm: cơ sở `HV` và `HV1` → mã `HV10001` của cơ sở sau vẫn khớp `like 'HV%'`, bộ đếm của `HV` nhảy lên 10002. Unique index vẫn chặn trùng nên **không sinh mã trùng**, chỉ số thứ tự xấu đi | Cần đổi định dạng mã (vd `HV-0001`) + migrate mã đã cấp — slice riêng |
 
-> **Vì sao chưa gỡ fallback SĐT:** migration `20261120000001_users_student_code.sql` có backfill cho học viên cũ,
-> nhưng bỏ fallback là thay đổi hành vi của luồng import điểm (file Excel đang dùng SĐT ở cột mã sẽ báo
-> `student_not_found` thay vì khớp được). Cần xác nhận dữ liệu thật đã phủ 100% trước khi gỡ.
+> **Vì sao KHÔNG gỡ fallback SĐT (quyết định 2026-11-27):** migration `20261120000001_users_student_code.sql`
+> đã backfill cho học viên cũ, nhưng bỏ fallback là thay đổi hành vi của luồng import điểm: file Excel đang
+> dùng SĐT ở cột mã sẽ báo `student_not_found` thay vì khớp được. Không có cách nào xác nhận "100% học viên
+> đã có mã" từ phía code. Nên chọn hướng an toàn: **giữ fallback, nhưng làm nó lộ ra** —
+> `GradeImportResult.matchedByPhone` + `GradeImportPreviewRow.matchedBy`, UI cảnh báo ngay ở bước xem trước.
+> Khi nào chủ dự án xác nhận dữ liệu thật đã phủ 100% thì gỡ fallback chỉ còn là xoá nhánh `byPhone`.
+>
+> **Kèm theo — sửa một lỗi thật của bản xem trước:** `previewImportGrades` trước đây CHỈ tra theo SĐT và chỉ
+> soi phạm vi theo SĐT, nên file dùng **mã học viên** hiện `student_not_found`/`out_of_scope` ở bước xem trước
+> trong khi bước ghi vẫn nhập được — xem trước nói dối. Nay hai bước dùng chung `matchGradingRow` và cùng
+> nhận `allowedStudentCodes`, nên không thể lệch nhau nữa.
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Tạo | Khởi tạo file slice từ yêu cầu 5.1 + 9.1 (mã) và ADR 0014 | Lập kế hoạch thực thi | 0014 |
 | 2026-11-27 | Sửa | Gộp `nextStudentCode` + `setStudentCode` thành `assignStudentCode` có retry khi unique violation (`assignCodeWithRetry`); bỏ 2 method cũ khỏi `UsersStore` vì không còn nơi dùng | Trả nợ đụng trùng số thứ tự khi tạo đồng thời; tránh để lại method chết | 0014 |
+| 2026-11-27 | Mở rộng | Tách `matchGradingRow` dùng chung cho `importGrades` + `previewImportGrades`; thêm `GradeImportResult.matchedByPhone` và `GradeImportPreviewRow.matchedBy`; preview nhận `allowedStudentCodes` | Làm lộ việc khớp bằng SĐT (hướng an toàn thay vì gỡ fallback) + sửa lỗi preview chỉ khớp theo SĐT | — |
 
 ## Cách nghiệm thu
 - Thủ công: chạy `migrate up` → cột `student_code` tồn tại và học viên cũ có mã dạng `HN0001`; chạy `migrate down` → cột biến mất; chạy `up` lại → không lỗi.

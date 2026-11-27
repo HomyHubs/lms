@@ -91,14 +91,15 @@ describe('previewImportGrades (slice-22)', () => {
       ),
       NOW,
       undefined,
+      undefined,
     )
     expect(out.ok).toBe(true)
     if (!out.ok) return
     expect(out.applicable).toBe(1)
     expect(out.rows).toEqual([
-      { row: 2, studentCode: '0900000001', studentName: null, score: 8, maxScore: 10, passed: true, willApply: true, reason: null },
-      { row: 3, studentCode: '0900000099', studentName: null, score: null, maxScore: null, passed: null, willApply: false, reason: 'student_not_found' },
-      { row: 4, studentCode: '0900000001', studentName: null, score: null, maxScore: null, passed: null, willApply: false, reason: 'duplicate_in_file' },
+      { row: 2, studentCode: '0900000001', studentName: null, score: 8, maxScore: 10, passed: true, willApply: true, reason: null, matchedBy: 'phone' },
+      { row: 3, studentCode: '0900000099', studentName: null, score: null, maxScore: null, passed: null, willApply: false, reason: 'student_not_found', matchedBy: null },
+      { row: 4, studentCode: '0900000001', studentName: null, score: null, maxScore: null, passed: null, willApply: false, reason: 'duplicate_in_file', matchedBy: null },
     ])
     // Preview must not write.
     expect(saved).toEqual([])
@@ -116,6 +117,7 @@ describe('previewImportGrades (slice-22)', () => {
       ),
       NOW,
       new Set(['0900000001']), // branch scope excludes ...002
+      undefined,
     )
     expect(out.ok).toBe(true)
     if (!out.ok) return
@@ -131,6 +133,7 @@ describe('previewImportGrades (slice-22)', () => {
       rows({ row: 2, studentCode: '0900000001', score: 8, feedback: null }),
       NOW,
       undefined,
+      undefined,
     )
     expect(out).toEqual({ ok: false, reason: 'not_manual' })
   })
@@ -140,9 +143,76 @@ describe('previewImportGrades (slice-22)', () => {
     const queue = [gradingRow({ id: 'a1', student_phone: '0900000001' })]
     const input = rows({ row: 2, studentCode: '0900000001', score: 8, feedback: 'good' })
 
-    const preview = await previewImportGrades(makeStore({ queue, saved }), EXAM_ID, input, NOW, undefined)
+    const preview = await previewImportGrades(makeStore({ queue, saved }), EXAM_ID, input, NOW, undefined, undefined)
     const commit = await importGrades(makeStore({ queue, saved }), EXAM_ID, input, 'teacher-1', NOW, undefined, undefined)
     expect(preview.ok && preview.applicable).toBe(1)
     expect(commit.ok && commit.summary.applied).toBe(1)
+  })
+
+  // slice-23: TRƯỚC ĐÂY bản xem trước chỉ tra theo SĐT nên file dùng MÃ HỌC VIÊN hiện
+  // `student_not_found` ở bước xem trước, trong khi bước ghi vẫn nhập được — xem trước nói dối.
+  it('matches by student code first, in both preview and commit', async () => {
+    const saved: string[] = []
+    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })]
+    const input = rows({ row: 2, studentCode: 'HN0001', score: 8, feedback: null })
+
+    const preview = await previewImportGrades(makeStore({ queue, saved }), EXAM_ID, input, NOW, undefined, undefined)
+    expect(preview.ok && preview.applicable).toBe(1)
+    if (!preview.ok) return
+    expect(preview.rows[0]).toMatchObject({ willApply: true, matchedBy: 'student_code', reason: null })
+
+    const commit = await importGrades(makeStore({ queue, saved }), EXAM_ID, input, 'teacher-1', NOW, undefined, undefined)
+    expect(commit.ok && commit.summary.applied).toBe(1)
+    if (!commit.ok) return
+    // Khớp bằng mã học viên -> KHÔNG có cảnh báo "khớp bằng SĐT".
+    expect(commit.summary.matchedByPhone).toEqual([])
+  })
+
+  // slice-23: khớp bằng SĐT vẫn được nhập (không phá file cũ) nhưng phải được báo lại, không im lặng.
+  it('still accepts a phone match but reports it as a warning', async () => {
+    const saved: string[] = []
+    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })]
+    const input = rows({ row: 2, studentCode: '0900000001', score: 8, feedback: null })
+
+    const preview = await previewImportGrades(makeStore({ queue, saved }), EXAM_ID, input, NOW, undefined, undefined)
+    expect(preview.ok && preview.applicable).toBe(1)
+    if (!preview.ok) return
+    expect(preview.rows[0]).toMatchObject({ willApply: true, matchedBy: 'phone' })
+
+    const commit = await importGrades(makeStore({ queue, saved }), EXAM_ID, input, 'teacher-1', NOW, undefined, undefined)
+    expect(commit.ok && commit.summary.applied).toBe(1)
+    if (!commit.ok) return
+    expect(commit.summary.matchedByPhone).toEqual([{ row: 2, studentCode: '0900000001' }])
+  })
+
+  // slice-23: dòng khớp bằng SĐT nhưng bị bỏ qua ở bước sau thì KHÔNG tính vào cảnh báo.
+  it('does not report a phone match for a row that was skipped anyway', async () => {
+    const saved: string[] = []
+    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })]
+    const input = rows({ row: 2, studentCode: '0900000001', score: 20, feedback: null })
+
+    const commit = await importGrades(makeStore({ queue, saved }), EXAM_ID, input, 'teacher-1', NOW, undefined, undefined)
+    expect(commit.ok).toBe(true)
+    if (!commit.ok) return
+    expect(commit.summary.skipped.map((s) => s.reason)).toEqual(['score_exceeds_max'])
+    expect(commit.summary.matchedByPhone).toEqual([])
+  })
+
+  // slice-23: phạm vi xét theo cả mã học viên lẫn SĐT — học viên trong cơ sở theo MÃ không bị chặn oan.
+  it('does not mark a code-scoped student as out of scope', async () => {
+    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })]
+    const input = rows({ row: 2, studentCode: 'HN0001', score: 8, feedback: null })
+
+    const out = await previewImportGrades(
+      makeStore({ queue, saved: [] }),
+      EXAM_ID,
+      input,
+      NOW,
+      new Set(['0900000999']), // SĐT ngoài phạm vi
+      new Set(['HN0001']), // nhưng mã học viên thì trong phạm vi
+    )
+    expect(out.ok && out.applicable).toBe(1)
+    if (!out.ok) return
+    expect(out.rows[0]).toMatchObject({ willApply: true, matchedBy: 'student_code' })
   })
 })

@@ -347,11 +347,29 @@ export const GradeImportError = z.object({
 })
 export type GradeImportError = z.infer<typeof GradeImportError>
 
+/**
+ * slice-23: một dòng import điểm khớp học viên bằng khoá nào. `student_code` là khoá chính;
+ * `phone` chỉ là fallback chuyển tiếp cho file Excel cũ dùng số điện thoại ở cột mã học viên.
+ * Có trường này để lần khớp bằng SĐT không còn diễn ra ÂM THẦM — UI cảnh báo được.
+ */
+export const GRADE_IMPORT_MATCHED_BY = ['student_code', 'phone'] as const
+export const GradeImportMatchedBy = z.enum(GRADE_IMPORT_MATCHED_BY)
+export type GradeImportMatchedBy = z.infer<typeof GradeImportMatchedBy>
+
+/** slice-23: một dòng đã nhập mà phải khớp qua số điện thoại (dữ liệu cần chuẩn hoá). */
+export const GradeImportMatchedByPhone = z.object({
+  row: z.number().int(),
+  studentCode: z.string(),
+})
+export type GradeImportMatchedByPhone = z.infer<typeof GradeImportMatchedByPhone>
+
 /** Ket qua nhap diem: so dong da ap, danh sach bo qua (kem ly do) va loi dinh dang. */
 export const GradeImportResult = z.object({
   applied: z.number().int(),
   skipped: z.array(GradeImportSkipped),
   errors: z.array(GradeImportError),
+  // .default([]): payload cu (truoc slice-23) khong kem truong nay van parse duoc.
+  matchedByPhone: z.array(GradeImportMatchedByPhone).default([]),
 })
 export type GradeImportResult = z.infer<typeof GradeImportResult>
 
@@ -369,6 +387,9 @@ export const GradeImportPreviewRow = z.object({
   passed: z.boolean().nullable(),
   willApply: z.boolean(),
   reason: GradeImportSkipReason.nullable(),
+  // slice-23: dòng này khớp bằng mã học viên hay bằng số điện thoại (null khi không khớp được).
+  // .default(null): payload cũ vẫn parse được.
+  matchedBy: GradeImportMatchedBy.nullable().default(null),
 })
 export type GradeImportPreviewRow = z.infer<typeof GradeImportPreviewRow>
 

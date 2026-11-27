@@ -162,6 +162,15 @@ function ImportResultSummary({ result }: { result: GradeImportResult }): React.R
       <p className="flex items-center gap-2 text-success-700">
         <CheckCircle2 className="h-4 w-4" /> Đã nhập <strong>{result.applied}</strong> điểm.
       </p>
+      {/* slice-23: khớp bằng SĐT vẫn nhập được (không phá file cũ) nhưng phải nói ra, không im lặng. */}
+      {result.matchedByPhone.length > 0 && (
+        <p role="status" className="rounded-md bg-warning-50 p-2 text-warning-900">
+          {result.matchedByPhone.length} dòng khớp bằng <strong>số điện thoại</strong> chứ không phải mã
+          học viên (file đang dùng SĐT ở cột mã): dòng{' '}
+          {result.matchedByPhone.map((m) => m.row).join(', ')}. Nên cập nhật mã học viên trong file để
+          lần sau khớp chắc chắn.
+        </p>
+      )}
       {result.skipped.length > 0 && (
         <div>
           <p className="font-medium text-slate-700">Bỏ qua {result.skipped.length} dòng:</p>
@@ -190,8 +199,16 @@ function ImportResultSummary({ result }: { result: GradeImportResult }): React.R
 
 /** slice-22: bang XEM TRUOC tung dong truoc khi dua diem vao lop (chua ghi gi). */
 function PreviewTable({ preview }: { preview: GradeImportPreview }): React.ReactElement {
+  // slice-23: dòng phải khớp qua SĐT — nói trước khi bấm xác nhận, không đợi tới kết quả.
+  const phoneMatches = preview.rows.filter((r) => r.matchedBy === 'phone')
   return (
     <div className="space-y-2">
+      {phoneMatches.length > 0 && (
+        <p role="status" className="rounded-md bg-warning-50 p-2 text-sm text-warning-900">
+          {phoneMatches.length} dòng khớp bằng <strong>số điện thoại</strong> chứ không phải mã học viên
+          (file đang dùng SĐT ở cột mã). Vẫn nhập được, nhưng nên cập nhật mã học viên trong file.
+        </p>
+      )}
       <table className="c-table" aria-label="Xem trước bảng điểm">
         <thead>
           <tr>
@@ -216,6 +233,9 @@ function PreviewTable({ preview }: { preview: GradeImportPreview }): React.React
                   </Badge>
                 ) : (
                   <span className="text-danger-600">{SKIP_REASON_LABELS[r.reason ?? ''] ?? r.reason}</span>
+                )}
+                {r.matchedBy === 'phone' && (
+                  <span className="ml-1 text-xs text-warning-800">· khớp SĐT</span>
                 )}
               </td>
             </tr>

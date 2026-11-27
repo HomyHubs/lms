@@ -7,6 +7,7 @@ import {
   type ExamMode,
   type ExamResult,
   type GradeAttemptRequest,
+  type GradeImportMatchedBy,
   type GradeImportPreviewRow,
   type GradingPolicy,
   type LevelCode,
@@ -1089,6 +1090,30 @@ export interface GradeImportSkipped {
 export interface GradeImportSummary {
   applied: number
   skipped: GradeImportSkipped[]
+  /** slice-23: các dòng đã nhập nhưng phải khớp qua SĐT thay vì mã học viên. */
+  matchedByPhone: { row: number; studentCode: string }[]
+}
+
+/**
+ * slice-23: khớp một dòng import với lượt chờ chấm.
+ *
+ * `student_code` là khoá CHÍNH. Số điện thoại chỉ là fallback chuyển tiếp cho file Excel cũ dùng SĐT
+ * ở cột mã học viên — không gỡ được cho tới khi mọi file thật dùng mã. Điểm khác so với trước: hàm
+ * trả kèm `matchedBy` để caller CẢNH BÁO được những dòng phải dựa vào fallback, thay vì khớp âm thầm.
+ *
+ * Tách ra để `importGrades` và `previewImportGrades` dùng chung — trước đây bản preview tự viết lại
+ * và chỉ khớp theo SĐT, nên file dùng mã học viên hiện "không tìm thấy" ở bước xem trước nhưng vẫn
+ * nhập được ở bước ghi.
+ */
+export function matchGradingRow(
+  code: string,
+  byCode: ReadonlyMap<string, GradingRow>,
+  byPhone: ReadonlyMap<string, GradingRow>,
+): { row: GradingRow; matchedBy: GradeImportMatchedBy } | null {
+  const byStudentCode = byCode.get(code)
+  if (byStudentCode) return { row: byStudentCode, matchedBy: 'student_code' }
+  const byPhoneNumber = byPhone.get(code)
+  return byPhoneNumber ? { row: byPhoneNumber, matchedBy: 'phone' } : null
 }
 
 export type ImportGradesOutcome =
@@ -1130,7 +1155,7 @@ export async function importGrades(
     if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
   }
 
-  const summary: GradeImportSummary = { applied: 0, skipped: [] }
+  const summary: GradeImportSummary = { applied: 0, skipped: [], matchedByPhone: [] }
   const seen = new Set<string>()
 
   for (const input of rows) {
@@ -1150,12 +1175,14 @@ export async function importGrades(
       continue
     }
     // slice-23: khop theo student_code TRUOC (khoa chinh), roi moi fallback sang SDT.
-    // TODO(slice-23): Khop theo SDT chi la fallback chuyen tiep; go khi moi hoc vien da co student_code.
-    const target = byCode.get(code) ?? byPhone.get(code)
-    if (!target) {
+    const match = matchGradingRow(code, byCode, byPhone)
+    if (!match) {
       summary.skipped.push({ row: input.row, studentCode: code, reason: 'student_not_found' })
       continue
     }
+    // Khớp bằng SĐT vẫn được nhập (không phá file cũ) nhưng phải để lại dấu vết cho UI cảnh báo.
+    const matchedByPhone = match.matchedBy === 'phone'
+    const target = match.row
 
     // Chot luot qua gio (giong loadGradable) de co snapshot cuoi cung.
     const loaded = await loadGradable(store, target.id, now)
@@ -1185,8 +1212,11 @@ export async function importGrades(
       feedback: input.feedback,
     })
     const won = saved.graded_by === graderId && saved.graded_at != null && toIso(saved.graded_at) === gradedAt
-    if (won) summary.applied += 1
-    else summary.skipped.push({ row: input.row, studentCode: code, reason: 'already_graded' })
+    if (won) {
+      summary.applied += 1
+      // Chỉ báo những dòng THỰC SỰ đã nhập — dòng bị bỏ qua ở bước sau không tính.
+      if (matchedByPhone) summary.matchedByPhone.push({ row: input.row, studentCode: code })
+    } else summary.skipped.push({ row: input.row, studentCode: code, reason: 'already_graded' })
   }
 
   return { ok: true, summary }
@@ -1208,6 +1238,7 @@ export async function previewImportGrades(
   rows: readonly GradeImportInputRow[],
   now: Date,
   allowedPhones: ReadonlySet<string> | undefined,
+  allowedStudentCodes: ReadonlySet<string> | undefined,
 ): Promise<PreviewImportGradesOutcome> {
   const exam = await store.findExamById(examId)
   if (!exam) return { ok: false, reason: 'exam_not_found' }
@@ -1225,15 +1256,23 @@ export async function previewImportGrades(
   const queue = (await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString())).filter(
     (r) => r.exam_id === examId,
   )
+  // slice-23: PHẢI có cả bảng tra theo mã học viên, nếu không bản xem trước sẽ báo
+  // `student_not_found` cho đúng những file dùng mã học viên (bước ghi thì vẫn khớp được).
+  const byCode = new Map<string, GradingRow>()
   const byPhone = new Map<string, GradingRow>()
-  for (const r of queue) if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
+  for (const r of queue) {
+    if (r.student_code && !byCode.has(r.student_code)) byCode.set(r.student_code, r)
+    if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
+  }
 
   const out: GradeImportPreviewRow[] = []
   const seen = new Set<string>()
 
   for (const input of rows) {
     const code = input.studentCode
-    const target = byPhone.get(code)
+    const match = matchGradingRow(code, byCode, byPhone)
+    const target = match?.row
+    const matchedBy = match?.matchedBy ?? null
     const name = target
       ? [target.student_last_name, target.student_first_name].filter(Boolean).join(' ').trim() || null
       : null
@@ -1252,6 +1291,7 @@ export async function previewImportGrades(
         passed: reason === null ? passed : null,
         willApply: reason === null,
         reason,
+        matchedBy: reason === null ? matchedBy : null,
       })
     }
 
@@ -1261,7 +1301,11 @@ export async function previewImportGrades(
     }
     seen.add(code)
 
-    if (effectiveAllowed && !effectiveAllowed.has(code)) {
+    // slice-23: phạm vi xét theo CẢ mã học viên lẫn SĐT, giống bước ghi — chỉ chặn khi ngoài cả hai.
+    const inCodeScope = allowedStudentCodes?.has(code) ?? false
+    const inPhoneScope = effectiveAllowed?.has(code) ?? false
+    const scoped = allowedStudentCodes !== undefined || effectiveAllowed !== undefined
+    if (scoped && !inCodeScope && !inPhoneScope) {
       push('out_of_scope')
       continue
     }
