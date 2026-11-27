@@ -191,13 +191,10 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
       }
 
       const user = getSessionUser(request)
-      let allowedPhones: ReadonlySet<string> | undefined
-      // slice-23: bản xem trước phải soi phạm vi giống bước ghi, nếu không sẽ báo `out_of_scope`
-      // cho đúng những học viên mà bước ghi vẫn nhập được (theo mã học viên).
+      // ADR 0019: phạm vi chỉ theo mã học viên (SĐT không còn là khoá khớp).
       let allowedStudentCodes: ReadonlySet<string> | undefined
       if (user.role !== 'superadmin') {
         const branchIds = await branchScope.branchIdsForUser(user.id)
-        allowedPhones = new Set(await examsStore.listStudentPhonesInBranches(branchIds))
         allowedStudentCodes = new Set(await examsStore.listStudentCodesInBranches(branchIds))
       }
 
@@ -206,7 +203,6 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
         query.data.examId,
         parsed.rows,
         new Date(),
-        allowedPhones,
         allowedStudentCodes,
       )
       if (!outcome.ok) {
@@ -257,16 +253,12 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
       }
 
       // Branch-scope: superadmin xem toan bo; con lai chi duoc cham hoc vien trong co so minh phu trach.
-      // slice-23: gioi han theo ca ma hoc vien (khoa chinh) lan SDT (fallback) trong pham vi co so.
+      // ADR 0019: gioi han theo ma hoc vien (SDT khong con la khoa khop).
       const user = getSessionUser(request)
-      let allowedPhones: ReadonlySet<string> | undefined
       let allowedStudentCodes: ReadonlySet<string> | undefined
       if (user.role !== 'superadmin') {
         const branchIds = await branchScope.branchIdsForUser(user.id)
-        const phones = await examsStore.listStudentPhonesInBranches(branchIds)
-        allowedPhones = new Set(phones)
-        const codes = await examsStore.listStudentCodesInBranches(branchIds)
-        allowedStudentCodes = new Set(codes)
+        allowedStudentCodes = new Set(await examsStore.listStudentCodesInBranches(branchIds))
       }
 
       const outcome = await importGrades(
@@ -275,7 +267,6 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
         parsed.rows,
         user.id,
         new Date(),
-        allowedPhones,
         allowedStudentCodes,
       )
       if (!outcome.ok) {
@@ -291,7 +282,6 @@ export async function examsRoutes(app: FastifyInstance, deps: ExamsRoutesDeps): 
         applied: outcome.summary.applied,
         skipped: outcome.summary.skipped,
         errors: parsed.errors,
-        matchedByPhone: outcome.summary.matchedByPhone,
       }
       return body
     },

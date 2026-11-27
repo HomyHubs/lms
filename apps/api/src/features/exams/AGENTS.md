@@ -54,6 +54,22 @@
 **Bước tiếp theo**
 - PR slice-22 → dev; sau MVP cân nhắc gộp preview+commit để tránh parse file 2 lần.
 
+### 2026-11-27 — slice-23 gỡ hẳn fallback SĐT (ADR 0019)
+
+**Bối cảnh**
+- Cùng ngày, chủ dự án đổi quyết định so với mục "hướng an toàn" bên dưới: **bỏ đường khớp bằng SĐT, giữ SĐT như dữ liệu**. Hai khoá cho một việc thì khi có sự cố không biết dòng nào khớp vì lý do gì; và "100% học viên có mã" là điều kiện không kiểm chứng được từ code.
+
+**Đã xong**
+- `matchGradingRow(code, byCode)` chỉ tra theo mã, trả `GradingMatch` = `matched` | `looks_like_phone` | `not_found`. `importGrades` bỏ tham số `allowedPhones` (còn 6), `previewImportGrades` còn 5.
+- Phạm vi tính theo `allowedStudentCodes`; cohort theo lớp dùng `store.listStudentCodesInClasses` (mới, thay `listStudentPhonesInClasses`). Store bỏ `listStudentPhonesInBranches` + `listStudentPhonesInClasses` để không còn code chết. `GradingRow.student_phone` GIỮ NGUYÊN — SĐT vẫn hiện ở hàng đợi chấm.
+- Bù lại việc mất fallback: `looksLikePhoneNumber()` nhận dạng `0` + 9–10 chữ số (chuẩn hoá dấu cách/chấm/gạch), và chỉ xét **sau** khi tra mã thất bại → lý do `student_code_looks_like_phone`. Trung tâm dùng chính SĐT làm mã học viên vẫn khớp bình thường.
+- `GradeImportSummary` bỏ `matchedByPhone`; contract shared bỏ `GRADE_IMPORT_MATCHED_BY`/`GradeImportMatchedBy`/`GradeImportMatchedByPhone`/`matchedBy` — giữ lại sẽ là trường luôn mang một giá trị duy nhất, và người đọc sau tưởng fallback còn tồn tại.
+- **Sửa chỗ trùng lặp gây lỗi type**: `GradeImportSkipReason` ở `service.ts` vốn chép tay danh sách, nên thêm giá trị vào `@lms/shared` mà API vẫn báo `not assignable`. Nay là `(typeof GRADE_IMPORT_SKIP_REASONS)[number]` — dẫn xuất, không chép.
+
+**Bước tiếp theo**
+- **Phá vỡ có chủ ý**: file Excel cũ dùng SĐT ở cột mã sẽ không nhập được nữa. Cần thông báo trung tâm trước khi phát hành; bản xem trước là nơi họ thấy trước khi ghi.
+- Học viên `student_code is null` không nhập điểm bằng file được → xem `TODO(slice-23-b)` (bộ đếm mã) để cấp mã cho mọi học viên.
+
 ### 2026-11-27 — slice-23 hướng an toàn: fallback SĐT không còn im lặng
 
 **Bối cảnh**

@@ -7,7 +7,16 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-27
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Đã trả 6 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` fallback SĐT→hướng an toàn). Còn 2 marker **cần chủ dự án quyết**: `slice-23-b` (định dạng mã học viên), `slice-1` (`role` text → RBAC đầy đủ). Việc gỡ hẳn fallback SĐT bị chặn ở dữ liệu, không ở code — cần xác nhận `student_code` phủ 100% trên production.
+- Trạng thái: Đã trả 7 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT→ADR 0019). Còn 1 marker **cần chủ dự án quyết**: `slice-23-b` (định dạng mã học viên). `slice-1` (`role` text → RBAC đầy đủ) là việc kiến trúc, cần ADR trước khi viết code.
+
+## Đã làm (phiên 2026-11-27, phần 5)
+
+- **`slice-23` gỡ hẳn fallback SĐT (ADR 0019)**: chủ dự án chốt ngược với hướng an toàn buổi sáng — **bỏ đường khớp bằng SĐT, giữ số điện thoại như dữ liệu bình thường** (cột `users.phone_number`, `GradingRow.student_phone`, hồ sơ, hàng đợi chấm không đổi byte nào).
+  - `exams/service.ts`: `matchGradingRow(code, byCode)` chỉ tra theo mã và trả `GradingMatch` (`matched` | `looks_like_phone` | `not_found`); `importGrades` bỏ `allowedPhones` (còn 6 tham số), `previewImportGrades` còn 5. Phạm vi tính theo `allowedStudentCodes`, cohort theo lớp dùng `listStudentCodesInClasses` (mới).
+  - **Bù lại việc mất fallback**: dòng không khớp mã mà giá trị ở cột mã có dạng SĐT Việt Nam (`0` + 9–10 chữ số, chịu dấu cách/chấm/gạch) → lý do mới `student_code_looks_like_phone`, UI hiện "Cột mã đang là số điện thoại — cần đổi sang mã học viên". Kiểm **sau** khi tra theo mã nên trung tâm dùng chính SĐT làm mã vẫn nhập được.
+  - Contract bỏ `matchedByPhone`/`matchedBy` (chỉ có nghĩa khi còn fallback) → không để lại trường luôn mang một giá trị duy nhất. Store bỏ `listStudentPhonesInBranches`/`listStudentPhonesInClasses`.
+  - **Sửa một chỗ trùng lặp đã gây lỗi thật**: `GradeImportSkipReason` trong `service.ts` được **chép tay** thay vì dẫn xuất từ `@lms/shared`, nên thêm giá trị mới vào shared mà API vẫn báo lỗi type. Nay là `(typeof GRADE_IMPORT_SKIP_REASONS)[number]`.
+  - Test: `grade-import-preview.test.ts` viết lại (9 case, gồm `looksLikePhoneNumber` + ca "trung tâm dùng SĐT làm mã vẫn khớp" + ca cohort theo lớp), `service.test` 3 case, `GradingPage.test.tsx` ca cảnh báo. Cổng: lint 4/4, typecheck 5/5, api **320 pass** (+32 skip local), web **129 pass**, build OK.
 
 ## Đã làm (phiên 2026-11-27, phần 4)
 

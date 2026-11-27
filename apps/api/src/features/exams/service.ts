@@ -1,4 +1,5 @@
 import {
+  GRADE_IMPORT_SKIP_REASONS,
   type CreateExamRequest,
   type Exam,
   type ExamAttemptRecord,
@@ -7,7 +8,6 @@ import {
   type ExamMode,
   type ExamResult,
   type GradeAttemptRequest,
-  type GradeImportMatchedBy,
   type GradeImportPreviewRow,
   type GradingPolicy,
   type LevelCode,
@@ -234,14 +234,12 @@ export interface ExamsStore {
   /** Ungraded attempts of `skills` exams that are submitted or past their deadline, oldest first. */
   listUngradedAttempts: (skills: readonly string[], nowIso: string) => Promise<GradingRow[]>
   findGradingRow: (attemptId: string) => Promise<GradingRow | undefined>
-  /** SDT cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope import diem — fallback khop SDT). */
-  listStudentPhonesInBranches: (branchIds: string[]) => Promise<string[]>
-  /** slice-23: ma hoc vien (student_code) cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope khop theo ma). */
+  /** slice-23: ma hoc vien (student_code) cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope). */
   listStudentCodesInBranches: (branchIds: string[]) => Promise<string[]>
   /** slice-14: cac lop (cung cap do) co the gan cho de — kem co so de kiem tra branch-scope. */
   listClassRefsForLevel: (levelId: string) => Promise<ClassRef[]>
-  /** slice-14: SDT hoc vien ghi danh CAC LOP da cho (gioi han cohort import diem theo lop). */
-  listStudentPhonesInClasses: (classIds: string[]) => Promise<string[]>
+  /** ADR 0019: ma hoc vien cua hoc vien ghi danh CAC LOP da cho (gioi han cohort import diem theo lop). */
+  listStudentCodesInClasses: (classIds: string[]) => Promise<string[]>
   findGradingPolicy: (levelId: string) => Promise<GradingPolicyRow | undefined>
   listGradingPolicies: () => Promise<GradingPolicyRow[]>
   upsertGradingPolicy: (levelId: string, fields: GradingPolicyFields) => Promise<GradingPolicyRow>
@@ -1060,12 +1058,13 @@ export async function gradeManually(
 
 /**
  * slice-9a (revised 2026-11): Speaking/Writing duoc giao vien cham NGOAI he thong; Staff/Admin
- * UPLOAD bang diem (Excel/CSV) va he thong ghi diem theo MA HOC VIEN (= so dien thoai dang nhap).
+ * UPLOAD bang diem (Excel/CSV) va he thong ghi diem theo MA HOC VIEN.
  * - Khop moi dong voi mot luot Speaking/Writing dang CHO CHAM cua dung hoc vien trong de nay.
  * - maxScore = tong diem toi da cua de (tinh tu snapshot cua luot do). passed theo nguong cua de.
  * - Ghi mot lan (trigger DB chan sua). Cac dong khong khop / da cham / vuot diem -> bo qua co ly do.
- * - Pham vi: `allowedPhones` = undefined nghia la khong gioi han (superadmin); nguoc lai chi ap cho
- *   hoc vien co SDT trong tap nay (branch-scoped).
+ * - Pham vi (ADR 0019): `allowedStudentCodes` = undefined nghia la khong gioi han (superadmin);
+ *   nguoc lai chi ap cho hoc vien co MA trong tap nay (branch-scoped). SDT khong con la khoa khop,
+ *   chi con la du lieu cua hoc vien.
  */
 export interface GradeImportInputRow {
   row: number
@@ -1074,12 +1073,14 @@ export interface GradeImportInputRow {
   feedback: string | null
 }
 
-export type GradeImportSkipReason =
-  | 'student_not_found'
-  | 'already_graded'
-  | 'out_of_scope'
-  | 'score_exceeds_max'
-  | 'duplicate_in_file'
+/**
+ * ADR 0019: dẫn xuất từ contract shared, KHÔNG chép tay danh sách.
+ *
+ * Trước đây union này được viết lại ở đây, nên khi thêm `student_code_looks_like_phone` vào
+ * `@lms/shared` thì API vẫn báo lỗi type — hai danh sách đã lệch nhau. Dẫn xuất là cách duy nhất
+ * để chúng không lệch lại.
+ */
+export type GradeImportSkipReason = (typeof GRADE_IMPORT_SKIP_REASONS)[number]
 
 export interface GradeImportSkipped {
   row: number
@@ -1090,30 +1091,43 @@ export interface GradeImportSkipped {
 export interface GradeImportSummary {
   applied: number
   skipped: GradeImportSkipped[]
-  /** slice-23: các dòng đã nhập nhưng phải khớp qua SĐT thay vì mã học viên. */
-  matchedByPhone: { row: number; studentCode: string }[]
 }
 
 /**
- * slice-23: khớp một dòng import với lượt chờ chấm.
+ * ADR 0019: giá trị ở cột mã có dạng số điện thoại Việt Nam hay không.
  *
- * `student_code` là khoá CHÍNH. Số điện thoại chỉ là fallback chuyển tiếp cho file Excel cũ dùng SĐT
- * ở cột mã học viên — không gỡ được cho tới khi mọi file thật dùng mã. Điểm khác so với trước: hàm
- * trả kèm `matchedBy` để caller CẢNH BÁO được những dòng phải dựa vào fallback, thay vì khớp âm thầm.
- *
- * Tách ra để `importGrades` và `previewImportGrades` dùng chung — trước đây bản preview tự viết lại
- * và chỉ khớp theo SĐT, nên file dùng mã học viên hiện "không tìm thấy" ở bước xem trước nhưng vẫn
- * nhập được ở bước ghi.
+ * Chỉ dùng để ĐẶT TÊN lý do bỏ qua, không dùng để khớp. Chuẩn hoá dấu phân cách trước khi so để bắt
+ * được cả `090 123 4567` / `090.123.4567` — những kiểu Excel hay tự thêm vào.
  */
+export function looksLikePhoneNumber(value: string): boolean {
+  const digits = value.replace(/[\s.\-()]/g, '')
+  return /^0\d{9,10}$/.test(digits)
+}
+
+/**
+ * ADR 0019: kết quả tra một dòng import điểm trong hàng đợi chấm.
+ *
+ * Chỉ còn MỘT khoá là `student_code`. `looks_like_phone` không phải một cách khớp khác — nó là cách
+ * nói rõ hơn cho `not_found` khi giá trị ở cột mã trông như số điện thoại, để người dùng biết phải
+ * sửa cột nào thay vì đọc "không tìm thấy học viên" vài chục lần.
+ *
+ * Tách ra để `importGrades` và `previewImportGrades` không bao giờ lệch luật: trước đây bản xem trước
+ * tự viết lại phần khớp và đã từng nói dối (báo `student_not_found` cho file dùng mã học viên).
+ */
+export type GradingMatch =
+  | { kind: 'matched'; row: GradingRow }
+  | { kind: 'looks_like_phone' }
+  | { kind: 'not_found' }
+
 export function matchGradingRow(
   code: string,
   byCode: ReadonlyMap<string, GradingRow>,
-  byPhone: ReadonlyMap<string, GradingRow>,
-): { row: GradingRow; matchedBy: GradeImportMatchedBy } | null {
-  const byStudentCode = byCode.get(code)
-  if (byStudentCode) return { row: byStudentCode, matchedBy: 'student_code' }
-  const byPhoneNumber = byPhone.get(code)
-  return byPhoneNumber ? { row: byPhoneNumber, matchedBy: 'phone' } : null
+): GradingMatch {
+  const row = byCode.get(code)
+  if (row) return { kind: 'matched', row }
+  // Xét SAU khi tra theo mã: trung tâm nào dùng chính SĐT làm mã học viên thì vẫn khớp bình thường.
+  if (looksLikePhoneNumber(code)) return { kind: 'looks_like_phone' }
+  return { kind: 'not_found' }
 }
 
 export type ImportGradesOutcome =
@@ -1126,7 +1140,6 @@ export async function importGrades(
   rows: readonly GradeImportInputRow[],
   graderId: string,
   now: Date,
-  allowedPhones: ReadonlySet<string> | undefined,
   allowedStudentCodes: ReadonlySet<string> | undefined,
 ): Promise<ImportGradesOutcome> {
   const exam = await store.findExamById(examId)
@@ -1135,27 +1148,23 @@ export async function importGrades(
 
   // slice-14: neu de gan lop cu the -> chi cham hoc vien thuoc cac lop do (cohort theo lop).
   // Giao voi branch-scope san co: ngay ca superadmin cung bi gioi han theo danh sach lop cua de.
-  let effectiveAllowed = allowedPhones
+  // ADR 0019: pham vi tinh theo MA HOC VIEN (truoc day theo SDT, vi SDT con la khoa khop).
+  let effectiveAllowed = allowedStudentCodes
   const examClassIds = exam.exam_class_ids ?? []
   if (examClassIds.length > 0) {
-    const classPhones = new Set(await store.listStudentPhonesInClasses(examClassIds))
+    const classCodes = new Set(await store.listStudentCodesInClasses(examClassIds))
     effectiveAllowed = effectiveAllowed
-      ? new Set([...effectiveAllowed].filter((p) => classPhones.has(p)))
-      : classPhones
+      ? new Set([...effectiveAllowed].filter((c) => classCodes.has(c)))
+      : classCodes
   }
 
-  // Cac luot cho cham cua dung de nay, lap chi muc theo MA HOC VIEN (chinh) va SDT (fallback).
-  // Mot luot moi nhat moi hoc vien cho moi khoa.
+  // Cac luot cho cham cua dung de nay, lap chi muc theo MA HOC VIEN. Mot luot moi nhat moi hoc vien.
   const queue = (await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString()))
     .filter((r) => r.exam_id === examId)
   const byCode = new Map<string, GradingRow>()
-  const byPhone = new Map<string, GradingRow>()
-  for (const r of queue) {
-    if (r.student_code && !byCode.has(r.student_code)) byCode.set(r.student_code, r)
-    if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
-  }
+  for (const r of queue) if (r.student_code && !byCode.has(r.student_code)) byCode.set(r.student_code, r)
 
-  const summary: GradeImportSummary = { applied: 0, skipped: [], matchedByPhone: [] }
+  const summary: GradeImportSummary = { applied: 0, skipped: [] }
   const seen = new Set<string>()
 
   for (const input of rows) {
@@ -1166,22 +1175,20 @@ export async function importGrades(
     }
     seen.add(code)
 
-    // slice-23: scope xet theo ca ma hoc vien (chinh) lan SDT (fallback). Chi chan khi KHONG nam trong ca hai.
-    const inCodeScope = allowedStudentCodes?.has(code) ?? false
-    const inPhoneScope = effectiveAllowed?.has(code) ?? false
-    const scoped = allowedStudentCodes !== undefined || effectiveAllowed !== undefined
-    if (scoped && !inCodeScope && !inPhoneScope) {
+    // ADR 0019: pham vi chi xet theo ma hoc vien.
+    if (effectiveAllowed !== undefined && !effectiveAllowed.has(code)) {
       summary.skipped.push({ row: input.row, studentCode: code, reason: 'out_of_scope' })
       continue
     }
-    // slice-23: khop theo student_code TRUOC (khoa chinh), roi moi fallback sang SDT.
-    const match = matchGradingRow(code, byCode, byPhone)
-    if (!match) {
-      summary.skipped.push({ row: input.row, studentCode: code, reason: 'student_not_found' })
+    const match = matchGradingRow(code, byCode)
+    if (match.kind !== 'matched') {
+      summary.skipped.push({
+        row: input.row,
+        studentCode: code,
+        reason: match.kind === 'looks_like_phone' ? 'student_code_looks_like_phone' : 'student_not_found',
+      })
       continue
     }
-    // Khớp bằng SĐT vẫn được nhập (không phá file cũ) nhưng phải để lại dấu vết cho UI cảnh báo.
-    const matchedByPhone = match.matchedBy === 'phone'
     const target = match.row
 
     // Chot luot qua gio (giong loadGradable) de co snapshot cuoi cung.
@@ -1212,11 +1219,8 @@ export async function importGrades(
       feedback: input.feedback,
     })
     const won = saved.graded_by === graderId && saved.graded_at != null && toIso(saved.graded_at) === gradedAt
-    if (won) {
-      summary.applied += 1
-      // Chỉ báo những dòng THỰC SỰ đã nhập — dòng bị bỏ qua ở bước sau không tính.
-      if (matchedByPhone) summary.matchedByPhone.push({ row: input.row, studentCode: code })
-    } else summary.skipped.push({ row: input.row, studentCode: code, reason: 'already_graded' })
+    if (won) summary.applied += 1
+    else summary.skipped.push({ row: input.row, studentCode: code, reason: 'already_graded' })
   }
 
   return { ok: true, summary }
@@ -1237,42 +1241,35 @@ export async function previewImportGrades(
   examId: string,
   rows: readonly GradeImportInputRow[],
   now: Date,
-  allowedPhones: ReadonlySet<string> | undefined,
   allowedStudentCodes: ReadonlySet<string> | undefined,
 ): Promise<PreviewImportGradesOutcome> {
   const exam = await store.findExamById(examId)
   if (!exam) return { ok: false, reason: 'exam_not_found' }
   if (!isManualSkill(exam.skill)) return { ok: false, reason: 'not_manual' }
 
-  let effectiveAllowed = allowedPhones
+  // ADR 0019: pham vi tinh theo MA HOC VIEN, giong het buoc ghi.
+  let effectiveAllowed = allowedStudentCodes
   const examClassIds = exam.exam_class_ids ?? []
   if (examClassIds.length > 0) {
-    const classPhones = new Set(await store.listStudentPhonesInClasses(examClassIds))
+    const classCodes = new Set(await store.listStudentCodesInClasses(examClassIds))
     effectiveAllowed = effectiveAllowed
-      ? new Set([...effectiveAllowed].filter((p) => classPhones.has(p)))
-      : classPhones
+      ? new Set([...effectiveAllowed].filter((c) => classCodes.has(c)))
+      : classCodes
   }
 
   const queue = (await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString())).filter(
     (r) => r.exam_id === examId,
   )
-  // slice-23: PHẢI có cả bảng tra theo mã học viên, nếu không bản xem trước sẽ báo
-  // `student_not_found` cho đúng những file dùng mã học viên (bước ghi thì vẫn khớp được).
   const byCode = new Map<string, GradingRow>()
-  const byPhone = new Map<string, GradingRow>()
-  for (const r of queue) {
-    if (r.student_code && !byCode.has(r.student_code)) byCode.set(r.student_code, r)
-    if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
-  }
+  for (const r of queue) if (r.student_code && !byCode.has(r.student_code)) byCode.set(r.student_code, r)
 
   const out: GradeImportPreviewRow[] = []
   const seen = new Set<string>()
 
   for (const input of rows) {
     const code = input.studentCode
-    const match = matchGradingRow(code, byCode, byPhone)
-    const target = match?.row
-    const matchedBy = match?.matchedBy ?? null
+    const match = matchGradingRow(code, byCode)
+    const target = match.kind === 'matched' ? match.row : undefined
     const name = target
       ? [target.student_last_name, target.student_first_name].filter(Boolean).join(' ').trim() || null
       : null
@@ -1291,7 +1288,6 @@ export async function previewImportGrades(
         passed: reason === null ? passed : null,
         willApply: reason === null,
         reason,
-        matchedBy: reason === null ? matchedBy : null,
       })
     }
 
@@ -1301,16 +1297,13 @@ export async function previewImportGrades(
     }
     seen.add(code)
 
-    // slice-23: phạm vi xét theo CẢ mã học viên lẫn SĐT, giống bước ghi — chỉ chặn khi ngoài cả hai.
-    const inCodeScope = allowedStudentCodes?.has(code) ?? false
-    const inPhoneScope = effectiveAllowed?.has(code) ?? false
-    const scoped = allowedStudentCodes !== undefined || effectiveAllowed !== undefined
-    if (scoped && !inCodeScope && !inPhoneScope) {
+    // ADR 0019: pham vi chi xet theo ma hoc vien, va kiem TRUOC khi khop — giong het buoc ghi.
+    if (effectiveAllowed !== undefined && !effectiveAllowed.has(code)) {
       push('out_of_scope')
       continue
     }
     if (!target) {
-      push('student_not_found')
+      push(match.kind === 'looks_like_phone' ? 'student_code_looks_like_phone' : 'student_not_found')
       continue
     }
     const loaded = await loadGradable(store, target.id, now)

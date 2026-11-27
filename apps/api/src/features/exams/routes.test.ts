@@ -245,9 +245,6 @@ function makeFakeExamsStore(
       return { level_id: levelId, level_code: 'starter', pass_percent: fields.passPercent,
         max_attempts: fields.maxAttempts, retake_cooldown_minutes: fields.retakeCooldownMinutes }
     },
-    async listStudentPhonesInBranches() {
-      return []
-    },
     async listStudentCodesInBranches() {
       // slice-23: khong gioi han theo co so trong store gia lap (route test khong test import diem).
       return []
@@ -255,7 +252,7 @@ function makeFakeExamsStore(
     async listClassRefsForLevel(levelId) {
       return seed.classRefs?.[levelId] ?? []
     },
-    async listStudentPhonesInClasses() {
+    async listStudentCodesInClasses() {
       return []
     },
   }

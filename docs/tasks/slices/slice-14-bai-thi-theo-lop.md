@@ -25,7 +25,7 @@ Người tạo đề (admin, teacher, staff, superadmin) có thể gán đề ch
 | --- | --- | --- | --- |
 | 1 | **Migration bảng nối.** `exam_classes(exam_id uuid FK exams, class_id uuid FK classes, PRIMARY KEY(exam_id,class_id))` + index `exam_classes_class_idx(class_id)`. Đảo ngược được. | DB | `20261118000000_exam_classes.sql` |
 | 2 | **Contract + API tạo đề.** `packages/shared/src/exams.ts`: `classIds` (mảng UUID ≤100, optional) ở blueprint; `classIds` (mảng, default []) ở response `Exam`. `createExam` validate mọi lớp thuộc đúng cấp độ của đề (`class_level_mismatch`); non-superadmin bị chặn lớp ngoài chi nhánh (`class_out_of_scope`, 403). `POST /exams` cho phép `admin,teacher,staff` (+superadmin). | API | `exams/{service,store,routes}.ts`, `catalog/routes.ts` |
-| 3 | **Import điểm lọc theo lớp.** `importGrades`: nếu đề có lớp gán, giao danh sách SĐT học viên trong các lớp đó với phạm vi chi nhánh → chỉ nghiệm thu học viên trong giao đó. | API | `listStudentPhonesInClasses` |
+| 3 | **Import điểm lọc theo lớp.** `importGrades`: nếu đề có lớp gán, giao danh sách SĐT học viên trong các lớp đó với phạm vi chi nhánh → chỉ nghiệm thu học viên trong giao đó. | API | `listStudentPhonesInClasses` — **nay là `listStudentCodesInClasses`** (ADR 0019: phạm vi tính theo mã học viên, SĐT không còn là khoá khớp) |
 | 4 | **UI multi-select lớp.** `BlueprintForm.tsx`: chọn cấp độ (controlled) → hiện checkbox các lớp cùng cấp độ; đổi cấp độ thì bỏ lớp không còn hợp lệ; gửi `classIds`. Nhãn: "Lớp áp dụng (tùy chọn — để trống = toàn cấp độ)". | Web | dùng `useLevels/useCourses/useClasses` |
 | 5 | **Tests + docs + commit.** Unit service/routes (API), component (web), cập nhật test catalog cho teacher/staff đọc levels/courses/classes. Docs slice + backlog + rollup. | - | — |
 

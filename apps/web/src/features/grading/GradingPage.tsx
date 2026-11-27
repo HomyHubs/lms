@@ -149,11 +149,13 @@ function AttemptPanel({ attemptId, onGraded }: { attemptId: string; onGraded: (a
 
 /** Bang tom tat ket qua import: so dong da ap, bo qua (kem ly do), loi dinh dang. */
 const SKIP_REASON_LABELS: Record<string, string> = {
-  student_not_found: 'Không tìm thấy học viên (mã/SĐT)',
+  student_not_found: 'Không tìm thấy học viên theo mã',
   already_graded: 'Bài đã được chấm trước đó',
   out_of_scope: 'Ngoài phạm vi cơ sở của bạn',
   score_exceeds_max: 'Điểm vượt quá điểm tối đa',
   duplicate_in_file: 'Trùng mã học viên trong file',
+  // ADR 0019: chỉ khớp theo mã, nên cột mã chứa SĐT phải được gọi đúng tên bệnh.
+  student_code_looks_like_phone: 'Cột mã đang là số điện thoại — cần đổi sang mã học viên',
 }
 
 function ImportResultSummary({ result }: { result: GradeImportResult }): React.ReactElement {
@@ -162,15 +164,6 @@ function ImportResultSummary({ result }: { result: GradeImportResult }): React.R
       <p className="flex items-center gap-2 text-success-700">
         <CheckCircle2 className="h-4 w-4" /> Đã nhập <strong>{result.applied}</strong> điểm.
       </p>
-      {/* slice-23: khớp bằng SĐT vẫn nhập được (không phá file cũ) nhưng phải nói ra, không im lặng. */}
-      {result.matchedByPhone.length > 0 && (
-        <p role="status" className="rounded-md bg-warning-50 p-2 text-warning-900">
-          {result.matchedByPhone.length} dòng khớp bằng <strong>số điện thoại</strong> chứ không phải mã
-          học viên (file đang dùng SĐT ở cột mã): dòng{' '}
-          {result.matchedByPhone.map((m) => m.row).join(', ')}. Nên cập nhật mã học viên trong file để
-          lần sau khớp chắc chắn.
-        </p>
-      )}
       {result.skipped.length > 0 && (
         <div>
           <p className="font-medium text-slate-700">Bỏ qua {result.skipped.length} dòng:</p>
@@ -199,14 +192,16 @@ function ImportResultSummary({ result }: { result: GradeImportResult }): React.R
 
 /** slice-22: bang XEM TRUOC tung dong truoc khi dua diem vao lop (chua ghi gi). */
 function PreviewTable({ preview }: { preview: GradeImportPreview }): React.ReactElement {
-  // slice-23: dòng phải khớp qua SĐT — nói trước khi bấm xác nhận, không đợi tới kết quả.
-  const phoneMatches = preview.rows.filter((r) => r.matchedBy === 'phone')
+  // ADR 0019: file cũ dùng SĐT ở cột mã giờ không nhập được nữa — nói rõ TRƯỚC khi bấm xác nhận,
+  // thay vì để người dùng đọc vài chục dòng "không tìm thấy học viên".
+  const phoneLike = preview.rows.filter((r) => r.reason === 'student_code_looks_like_phone')
   return (
     <div className="space-y-2">
-      {phoneMatches.length > 0 && (
+      {phoneLike.length > 0 && (
         <p role="status" className="rounded-md bg-warning-50 p-2 text-sm text-warning-900">
-          {phoneMatches.length} dòng khớp bằng <strong>số điện thoại</strong> chứ không phải mã học viên
-          (file đang dùng SĐT ở cột mã). Vẫn nhập được, nhưng nên cập nhật mã học viên trong file.
+          {phoneLike.length} dòng có <strong>cột mã là số điện thoại</strong>. Nhập điểm chỉ khớp theo
+          mã học viên, nên các dòng này sẽ bị bỏ qua — đổi cột mã trong file sang mã học viên
+          (dạng <code>HN0001</code>) rồi xem trước lại.
         </p>
       )}
       <table className="c-table" aria-label="Xem trước bảng điểm">
@@ -233,9 +228,6 @@ function PreviewTable({ preview }: { preview: GradeImportPreview }): React.React
                   </Badge>
                 ) : (
                   <span className="text-danger-600">{SKIP_REASON_LABELS[r.reason ?? ''] ?? r.reason}</span>
-                )}
-                {r.matchedBy === 'phone' && (
-                  <span className="ml-1 text-xs text-warning-800">· khớp SĐT</span>
                 )}
               </td>
             </tr>

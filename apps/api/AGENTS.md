@@ -23,13 +23,14 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
-### 2026-11-27 — slice-23 hướng an toàn: fallback SĐT có dấu vết
+### 2026-11-27 — slice-23: bỏ hẳn fallback SĐT (ADR 0019)
 
-- **Đính chính mục 2026-11-14 bên dưới**: câu "`// TODO(slice-23)` gỡ khi 100% học viên có mã" **không còn đúng** — marker đó đã bị bỏ. Chủ dự án quyết định GIỮ fallback SĐT (chưa chứng minh được dữ liệu phủ 100% `student_code`; gỡ ra sẽ biến file Excel cũ của trung tâm thành `student_not_found`) nhưng bắt nó lộ ra.
-- `exams/service.ts`: tách `matchGradingRow(code, byCode, byPhone)` trả `{ row, matchedBy }`; `importGrades` và `previewImportGrades` dùng CHUNG hàm này. `previewImportGrades` nhận thêm tham số thứ 6 `allowedStudentCodes` và áp đúng scope kép (mã ∪ SĐT).
-- Lỗi có sẵn được sửa nhân dịp này: bản xem trước trước đây chỉ khớp SĐT nên file dùng mã học viên hiện `student_not_found` ở bước xem trước nhưng vẫn nhập được ở bước ghi.
-- `GradeImportSummary.matchedByPhone` chỉ ghi dòng thực sự được áp (`won`). `routes.ts` trả kèm trong phản hồi commit.
-- Gỡ hẳn fallback là việc **dữ liệu**, không phải code: cần `select count(*) from users where role='student' and student_code is null` = 0 trên production.
+- **Đính chính mục 2026-11-14 bên dưới**: câu "`// TODO(slice-23)` gỡ khi 100% học viên có mã" **không còn đúng** — marker đó đã bị bỏ.
+- Chủ dự án chốt trong ngày: **gỡ hẳn đường khớp bằng SĐT**, giữ số điện thoại như dữ liệu bình thường (cột `users.phone_number`, `GradingRow.student_phone`, hồ sơ, hàng đợi chấm không đổi). Xem ADR 0019.
+- `exams/service.ts`: `matchGradingRow(code, byCode)` chỉ tra theo mã, trả `GradingMatch` (`matched` | `looks_like_phone` | `not_found`). `importGrades` bỏ `allowedPhones`, `previewImportGrades` bỏ `allowedPhones`; phạm vi theo `allowedStudentCodes`, cohort theo lớp dùng `listStudentCodesInClasses` (mới).
+- Bù lại việc mất fallback: `looksLikePhoneNumber()` + lý do `student_code_looks_like_phone`, chỉ xét sau khi tra mã thất bại.
+- Bỏ `matchedByPhone`/`matchedBy` khỏi contract và 2 helper SĐT khỏi store — không để lại code chết.
+- **Bài học**: `GradeImportSkipReason` ở `service.ts` từng được **chép tay** danh sách của `@lms/shared`, nên thêm giá trị mới vào shared mà API vẫn báo lỗi type. Nay dẫn xuất bằng `(typeof GRADE_IMPORT_SKIP_REASONS)[number]`. Union/enum chia sẻ giữa package thì luôn dẫn xuất, đừng chép.
 
 ### 2026-11-06 — slice-6.1 đang làm
 

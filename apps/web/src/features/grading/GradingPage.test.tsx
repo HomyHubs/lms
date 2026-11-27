@@ -126,7 +126,7 @@ describe('GradingPage', () => {
     // Preview table shows per-row outcome; nothing is committed yet.
     expect(await screen.findByRole('table', { name: 'Xem trước bảng điểm' })).toBeInTheDocument()
     expect(screen.getByText('8/10')).toBeInTheDocument()
-    expect(screen.getByText('Không tìm thấy học viên (mã/SĐT)')).toBeInTheDocument()
+    expect(screen.getByText('Không tìm thấy học viên theo mã')).toBeInTheDocument()
     expect(fetchMock.mock.calls.some(([u, i]) => String(u).includes('/api/grading/import') && !String(u).includes('preview') && i?.method === 'POST')).toBe(false)
 
     // Confirm commits.
@@ -135,31 +135,25 @@ describe('GradingPage', () => {
     expect(fetchMock.mock.calls.some(([u, i]) => String(u).includes('/api/grading/import?') && i?.method === 'POST')).toBe(true)
   })
 
-  // slice-23: khớp bằng SĐT vẫn nhập được nhưng phải CẢNH BÁO — trước đây việc này diễn ra âm thầm.
-  it('canh bao khi dong import khop bang so dien thoai thay vi ma hoc vien (slice-23)', { timeout: 15000 }, async () => {
+  // ADR 0019: bỏ fallback SĐT — file cũ dùng SĐT ở cột mã không nhập được nữa, nhưng phải được
+  // gọi đúng tên bệnh ngay ở bước xem trước thay vì "không tìm thấy học viên" ở từng dòng.
+  it('canh bao khi cot ma la so dien thoai va khong cho xac nhan (ADR 0019)', { timeout: 15000 }, async () => {
     const file = new File(['ma_hoc_vien,diem\n0933000001,8'], 'diem.csv', { type: 'text/csv' })
     const preview = {
       rows: [
         {
-          row: 2, studentCode: '0933000001', studentName: 'Nguyễn Minh An',
-          score: 8, maxScore: 10, passed: true, willApply: true, reason: null, matchedBy: 'phone' as const,
+          row: 2, studentCode: '0933000001', studentName: null,
+          score: null, maxScore: null, passed: null, willApply: false,
+          reason: 'student_code_looks_like_phone' as const,
         },
       ],
       errors: [],
-      applicable: 1,
+      applicable: 0,
     }
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('/api/grading/attempts')) return json({ attempts: [] })
       if (url.includes('/api/grading/import/preview') && init?.method === 'POST') return json(preview)
-      if (url.includes('/api/grading/import') && init?.method === 'POST') {
-        return json({
-          applied: 1,
-          skipped: [],
-          errors: [],
-          matchedByPhone: [{ row: 2, studentCode: '0933000001' }],
-        })
-      }
       return json({ error: 'unexpected' }, 500)
     })
     vi.stubGlobal('fetch', fetchMock)
@@ -170,10 +164,9 @@ describe('GradingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Xem trước/ }))
 
     // Cảnh báo ngay ở bước xem trước, trước khi bấm xác nhận.
-    expect(await screen.findByText(/Vẫn nhập được, nhưng nên cập nhật mã học viên/)).toBeInTheDocument()
-    expect(screen.getByText('· khớp SĐT')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Xác nhận đưa vào lớp \(1\)/ }))
-    expect(await screen.findByText(/để lần sau khớp chắc chắn/)).toBeInTheDocument()
+    expect(await screen.findByText(/cột mã là số điện thoại/)).toBeInTheDocument()
+    expect(screen.getByText(/Cột mã đang là số điện thoại/)).toBeInTheDocument()
+    // applicable = 0 -> nút xác nhận bị khoá, không có gì để nhập.
+    expect(screen.getByRole('button', { name: /Xác nhận đưa vào lớp/ })).toBeDisabled()
   })
 })

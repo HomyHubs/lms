@@ -29,6 +29,20 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 - PR slice-22 → dev.
 
+### 2026-11-27 — ADR 0019: bỏ fallback SĐT, cảnh báo "cột mã là SĐT"
+
+**Đã xong**
+- Bỏ dải cảnh báo `matchedBy === 'phone'` và nhãn `· khớp SĐT` (hợp đồng đã bỏ hai trường đó — không còn fallback để báo).
+- `PreviewTable` thêm dải cảnh báo `role="status"` khi có dòng `reason === 'student_code_looks_like_phone'`: nói rõ cột mã đang là SĐT, phải đổi sang mã học viên (dạng `HN0001`) rồi xem trước lại.
+- `SKIP_REASON_LABELS`: `student_not_found` → "Không tìm thấy học viên theo mã" (bỏ "(mã/SĐT)" vì SĐT không còn là khoá); thêm `student_code_looks_like_phone` → "Cột mã đang là số điện thoại — cần đổi sang mã học viên".
+- Test: ca cũ "khớp SĐT thì cảnh báo" đổi thành ca ADR 0019 — preview trả `applicable: 0`, thấy cảnh báo + nhãn lý do, nút xác nhận **bị khoá**, không gọi `/grading/import`.
+
+**Ghi chú thiết kế**
+- Cảnh báo dùng `role="status"` (không `alert`) vì không chặn thao tác — nhưng ở đây nút xác nhận đã bị khoá do `applicable === 0`, nên người dùng không thể bỏ qua cảnh báo rồi vẫn nhập.
+
+**Bước tiếp theo**
+- Khi trung tâm đã chuẩn hoá file, có thể bỏ dải cảnh báo này; lý do bỏ qua thì nên giữ vì nó là chẩn đoán.
+
 ### 2026-11-27 — slice-23 hướng an toàn: hiện cảnh báo khi khớp bằng SĐT
 
 **Đã xong**
