@@ -20,6 +20,7 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
   - Test: `age.test.ts` 15 case (3 ngày quanh sinh nhật, 29/02, ngày không tồn tại, tương lai), `service.test.ts` +4 case, `users/store.integration.test.ts` (mới, 4 case trên Postgres thật — cũng phủ `assignStudentCode` lần đầu), `packages/shared/src/users.test.ts` (mới, 14 case).
   - Cổng: lint 4/4, typecheck 5/5, test shared 31 + api 314 (+32 integration skip ở máy local) + web 120, build OK.
   - Còn lại: dữ liệu cũ chỉ có năm sinh vẫn lệch ±1 — không sửa được bằng code (`TODO(slice-26-b)`), cần nhập bổ sung ngày sinh thật.
+- **Phát hiện thêm khi viết integration test (`TODO(slice-23-b)`)**: `nextCode` lấy `max(số thứ tự)` trên `student_code like '<prefix>%'` mà tiền tố không có dấu phân cách, nên hai cơ sở có `code` lồng nhau dùng chung bộ đếm — cơ sở `HV` và `HV1` khiến mã `HV10001` của cơ sở sau bị tính vào bộ đếm `HV` (quan sát thật trên DB test: mã sinh ra là `HV10002`). Unique index vẫn chặn trùng nên **không sinh mã trùng**, chỉ số thứ tự xấu đi. Sửa cần đổi định dạng mã + migrate mã đã cấp → để slice riêng; đã ghi marker + nới assertion của test cho đúng bản chất.
 
 ### Việc trước đó
 

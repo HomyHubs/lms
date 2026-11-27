@@ -92,6 +92,11 @@ export function makeUsersStore(db: AppDb): UsersStore {
       const n = Number.parseInt(suffix, 10)
       if (n > max) max = n
     }
+    // TODO(slice-23-b): prefix khong co dau phan cach nen hai co so ma code long nhau se dung chung
+    // bo dem. Vd co so 'HV' va co so 'HV1': ma 'HV10001' cua co so sau van khop `like 'HV%'`, nen
+    // bo dem cua 'HV' nhay tu 1 len 10002. Unique index van chan trung nen KHONG sinh ma trung,
+    // chi ra so thu tu xau va cap nhat ma hang loat sau nay kho. Sua can doi dinh dang ma
+    // (vd 'HV-0001') — viec cua mot slice rieng vi phai migrate ma da cap.
     return `${prefix}${String(max + 1).padStart(CODE_SEQ_WIDTH, '0')}`
   }
 

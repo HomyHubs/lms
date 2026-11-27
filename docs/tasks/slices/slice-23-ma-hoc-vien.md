@@ -41,6 +41,7 @@ Ngoài ra: không stub việc khớp import (phải khớp thật theo `student_
 | --- | --- | --- | --- |
 | TODO(slice-23) | `apps/api/src/features/exams/service.ts` (import điểm) | Khớp theo SĐT chỉ là fallback chuyển tiếp; gỡ khi mọi học viên đã có `student_code` | Khi backfill phủ 100% học viên — **chưa trả** (xem ghi chú dưới) |
 | ~~TODO(slice-23)~~ | `apps/api/src/features/users/store.ts` | ~~Sinh số thứ tự theo cơ sở khi tạo đồng thời có thể đụng trùng; cần khóa/retry~~ → **đã trả 2026-11-27**: `assignCodeWithRetry` sinh lại mã và thử lại khi unique violation, tối đa 5 lần | Đã trả |
+| TODO(slice-23-b) | `apps/api/src/features/users/store.ts` (`nextCode`) | Tiền tố mã không có dấu phân cách nên hai cơ sở có `code` lồng nhau dùng chung bộ đếm: cơ sở `HV` và `HV1` → mã `HV10001` của cơ sở sau vẫn khớp `like 'HV%'`, bộ đếm của `HV` nhảy lên 10002. Unique index vẫn chặn trùng nên **không sinh mã trùng**, chỉ số thứ tự xấu đi | Cần đổi định dạng mã (vd `HV-0001`) + migrate mã đã cấp — slice riêng |
 
 > **Vì sao chưa gỡ fallback SĐT:** migration `20261120000001_users_student_code.sql` có backfill cho học viên cũ,
 > nhưng bỏ fallback là thay đổi hành vi của luồng import điểm (file Excel đang dùng SĐT ở cột mã sẽ báo
