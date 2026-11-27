@@ -9,8 +9,8 @@ const errorText = (error: unknown): string => (error instanceof Error ? error.me
  * Mô phỏng thứ tự học viên thấy trong cửa sổ thi: liệt kê câu theo thứ tự + các lựa chọn,
  * KHÔNG đánh dấu đáp án đúng, KHÔNG hiển thị correctAnswer/explanation.
  *
- * Lưu ý: marker `TODO(slice-21)` cũ từng nằm ở đây nhưng SAI CHỖ — màn này chỉ đọc nên không có
- * gì để sắp xếp. Việc kéo-thả sắp xếp câu nằm ở `ExamSetsPage.tsx` (`SetEditor`), đã làm 2026-11-27.
+ * Lưu ý: marker nợ của slice-21 từng nằm ở ĐÂY nhưng SAI CHỖ — màn này chỉ đọc nên không có gì để
+ * sắp xếp. Việc kéo-thả sắp xếp câu nằm ở `ExamSetsPage.tsx` (`SetEditor`), đã làm 2026-11-27.
  */
 export function ExamSetPreview({ id, onClose }: { id: string; onClose: () => void }): React.ReactElement {
   const detail = useExamSet(id)
