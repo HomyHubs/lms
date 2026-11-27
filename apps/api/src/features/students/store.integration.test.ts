@@ -10,7 +10,9 @@ import { makeStudentsStore } from './store.js'
  *  - `loadExamAgg` tính điểm thi = trung bình điểm CAO NHẤT của TỪNG đề (ADR 0006),
  *    không phải trung bình mọi lượt thi;
  *  - `loadPolicy` đọc đúng policy xếp loại của cấp độ;
- *  - `findStudentIdentity` trả `level_id` để service lấy được policy.
+ *  - `findStudentIdentity` trả `level_id` để service lấy được policy;
+ *  - `searchStudents` so khớp mã học viên có **bỏ qua dấu phân cách** — biểu thức `replace(...)`
+ *    trong SQL không thể kiểm bằng store giả lập (slice-23-c, ADR 0022).
  */
 
 const url = process.env.TEST_DATABASE_URL
@@ -53,7 +55,9 @@ describeWithPostgres('students store on real Postgres', () => {
       .insertInto('users')
       .values([
         { id: ADMIN_ID, phone_number: '0900000721', password_hash: 'test', role: 'admin' },
-        { id: STUDENT_ID, phone_number: '0900000722', password_hash: 'test', role: 'student' },
+        { id: STUDENT_ID, phone_number: '0900000722', password_hash: 'test', role: 'student',
+          // slice-23-c: tiền tố 'W5' không dùng ở test nào khác -> không đụng unique index.
+          student_code: 'W5-0007' },
       ])
       .execute()
     await db.insertInto('centers').values({ id: CENTER_ID, name: 'Students IT' }).execute()
@@ -163,5 +167,26 @@ describeWithPostgres('students store on real Postgres', () => {
     // Chưa điểm danh buổi nào -> final = điểm thi 85 -> 'excellent' (>= 85).
     expect(profile?.attendance).toBeNull()
     expect(profile?.classification).toEqual({ finalScore: 85, label: 'excellent' })
+  })
+
+  /**
+   * slice-23-c (ADR 0022): mã học viên có dấu phân cách, và tìm kiếm phải bỏ qua dấu ở CẢ HAI phía.
+   *
+   * Đây là ca duy nhất chạy biểu thức `replace(lower(coalesce(u.student_code, '')), '-', '')` trên
+   * Postgres thật — store giả lập trong `service.test.ts` chỉ chép lại luật, không chứng minh được
+   * câu SQL đúng.
+   */
+  it('searchStudents khớp mã học viên dù người dùng có gõ dấu phân cách hay không', async () => {
+    const store = makeStudentsStore(db)
+    for (const q of ['W5-0007', 'w5-0007', 'W50007', 'w50007']) {
+      const found = await store.searchStudents(q, [BRANCH_ID])
+      expect(found.map((r) => r.student_code), `q=${q}`).toEqual(['W5-0007'])
+    }
+  })
+
+  it('searchStudents không trả về tất cả khi query chỉ gồm dấu phân cách', async () => {
+    const store = makeStudentsStore(db)
+    // Bỏ dấu '-' khỏi query cho ra chuỗi rỗng; nếu không chặn thì `%%` khớp mọi học viên.
+    expect(await store.searchStudents('-', [BRANCH_ID])).toEqual([])
   })
 })

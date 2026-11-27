@@ -51,6 +51,7 @@ Ngoài ra: **không** được để migration ở dạng "chạy được một
 
 - Tự động: `packages/shared/src/student-code.test.ts` — `formatStudentCode('HV', 1) === 'HV-0001'`, số > 9999 dài ra (`HV-10000`), `parseStudentCode` tách đúng với tiền tố lồng nhau (`HV-10001` → `HV`/10001, `HV1-0001` → `HV1`/1), tiền tố rỗng rơi về `HV`, chuỗi không đúng dạng trả `null`.
 - Tự động: `apps/api/src/features/users/store.integration.test.ts` trên Postgres thật — mã sinh ra khớp `/^HV-\d{4,}$/`, bộ đếm của `Q9` cho `Q9-0001`, cặp lồng nhau `Z7`/`Z71` cho `Z7-0001`/`Z71-0001`/`Z7-0002`/`Z71-0002`.
+- Tự động: `apps/api/src/features/students/store.integration.test.ts` — tìm theo mã khớp dù gõ `W5-0007`, `w5-0007`, `W50007` hay `w50007`; query chỉ gồm `-` trả rỗng (không khớp tất cả). Đây là ca duy nhất chạy câu SQL `replace(...)` trên Postgres thật.
 - Thủ công: `dbmate up` trên DB có học viên mã cũ → mã thành `HV-0001`; `down` → về `HV0001`; `up` lại → `HV-0001` và không đổi gì thêm.
 - Thủ công: tạo học viên mới trong màn Người dùng → cột Mã học viên hiện `HV-0001`; import điểm bằng mã đó khớp đúng học viên.
 

@@ -33,7 +33,8 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - `packages/shared/src/student-code.test.ts` (12 case): zero-pad, dài ra khi > 9999, tiền tố rỗng → `HV`, tiền tố lồng nhau (`HV-10001` vs `HV1-0001`), tiền tố chứa `-` (`AB-CD-0001`), từ chối dạng cũ `HV0001`, round-trip.
 - `users/store.integration.test.ts`: assert tuyệt đối `Q9-0001`, `Z7-0001`, `Z71-0001`, `Z7-0002`, `Z71-0002`.
 - `students/service.test.ts`: thêm case gõ có/không dấu, hoa/thường đều tìm ra.
-- Cổng: lint 4/4, typecheck 5/5, shared **60**, api **326 pass** (+33 skip local), web **129**, build OK. Migration + SQL `replace()` chỉ được chạy thật trên Postgres ở CI (`dev-health-check` chạy `dbmate up → down → up`).
+- `students/store.integration.test.ts`: +2 case trên Postgres thật cho câu SQL `replace(...)` (gõ có/không dấu) và cho chặn query chỉ gồm `-`. **Lý do phải thêm**: store giả lập chỉ chép lại luật, không chứng minh được SQL đúng — và lần chạy CI đầu tiên sau khi thêm `replace()` vẫn xanh oan vì **không test nào gọi `searchStudents`**.
+- Cổng: lint 4/4, typecheck 5/5, shared **60**, api **327 pass** (+35 skip local), web **129**, build OK. Migration + SQL `replace()` chỉ được chạy thật trên Postgres ở CI (`dev-health-check` chạy `dbmate up → down → up`).
 
 **Bước tiếp theo**
 - Import điểm **chưa** trim/đổi hoa-thường cột mã; mã giờ có `-` nên `HV - 0001` sẽ không khớp. Cố ý để ngoài phạm vi slice này (xem ADR 0022 §Consequences) — cân nhắc khi có file Excel thật.
