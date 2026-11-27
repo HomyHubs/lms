@@ -23,6 +23,14 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-27 — slice-23 hướng an toàn: fallback SĐT có dấu vết
+
+- **Đính chính mục 2026-11-14 bên dưới**: câu "`// TODO(slice-23)` gỡ khi 100% học viên có mã" **không còn đúng** — marker đó đã bị bỏ. Chủ dự án quyết định GIỮ fallback SĐT (chưa chứng minh được dữ liệu phủ 100% `student_code`; gỡ ra sẽ biến file Excel cũ của trung tâm thành `student_not_found`) nhưng bắt nó lộ ra.
+- `exams/service.ts`: tách `matchGradingRow(code, byCode, byPhone)` trả `{ row, matchedBy }`; `importGrades` và `previewImportGrades` dùng CHUNG hàm này. `previewImportGrades` nhận thêm tham số thứ 6 `allowedStudentCodes` và áp đúng scope kép (mã ∪ SĐT).
+- Lỗi có sẵn được sửa nhân dịp này: bản xem trước trước đây chỉ khớp SĐT nên file dùng mã học viên hiện `student_not_found` ở bước xem trước nhưng vẫn nhập được ở bước ghi.
+- `GradeImportSummary.matchedByPhone` chỉ ghi dòng thực sự được áp (`won`). `routes.ts` trả kèm trong phản hồi commit.
+- Gỡ hẳn fallback là việc **dữ liệu**, không phải code: cần `select count(*) from users where role='student' and student_code is null` = 0 trên production.
+
 ### 2026-11-06 — slice-6.1 đang làm
 
 - Bắt đầu tách giáo viên thực dạy khỏi người ghi điểm danh bằng `session_teacher_events` (ADR 0014); chưa mở quyền Staff/Admin, chưa hoàn thành luồng.

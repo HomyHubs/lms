@@ -7,7 +7,16 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-27
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Đã trả 5 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry). Còn 3 marker **cần chủ dự án quyết**: `slice-23` (fallback SĐT), `slice-23-b` (định dạng mã học viên), `slice-1` (`role` text → RBAC đầy đủ).
+- Trạng thái: Đã trả 6 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` fallback SĐT→hướng an toàn). Còn 2 marker **cần chủ dự án quyết**: `slice-23-b` (định dạng mã học viên), `slice-1` (`role` text → RBAC đầy đủ). Việc gỡ hẳn fallback SĐT bị chặn ở dữ liệu, không ở code — cần xác nhận `student_code` phủ 100% trên production.
+
+## Đã làm (phiên 2026-11-27, phần 4)
+
+- **`slice-23` hướng an toàn — fallback SĐT không còn im lặng** (`bcb23e2`): chủ dự án chọn **giữ** fallback (chưa chứng minh được 100% học viên có `student_code`; gỡ ra sẽ biến file Excel cũ của trung tâm thành `student_not_found`) nhưng bắt nó **lộ ra** thay vì khớp âm thầm.
+  - Tách `matchGradingRow(code, byCode, byPhone)` trả `{ row, matchedBy }`; `importGrades` và `previewImportGrades` dùng **chung** hàm này. Nhân dịp này lộ ra một lỗi có sẵn: bản xem trước chỉ khớp theo SĐT, nên file dùng mã học viên hiện "không tìm thấy" ở bước xem trước nhưng **vẫn nhập được** ở bước ghi — bản xem trước nói dối. Đã hết.
+  - `previewImportGrades` nhận thêm `allowedStudentCodes` và áp đúng **scope kép** (mã ∪ SĐT) như bước ghi; route preview dựng scope giống route commit.
+  - `GradeImportSummary.matchedByPhone` chỉ ghi dòng **thực sự** được áp (`won`), không ghi dòng bị bỏ qua vì lý do khác. Contract shared thêm `GRADE_IMPORT_MATCHED_BY`, `GradeImportResult.matchedByPhone` (`.default([])`), `GradeImportPreviewRow.matchedBy` (`.default(null)`) → payload cũ vẫn parse được.
+  - FE: dải cảnh báo `role="status"` trên bảng xem trước + nhãn `· khớp SĐT` từng dòng; cảnh báo sau khi nhập kèm số dòng. Dùng `status` chứ không `alert` vì đây là thông tin bổ sung, không chặn thao tác.
+  - Test: `grade-import-preview` +5 case (khớp mã, khớp SĐT, scope theo mã, preview không còn báo sai, `matchedBy=null` khi không khớp), `service.test` cập nhật, `GradingPage.test.tsx` +1 case. Cổng: lint 4/4, typecheck 5/5, api **318 pass** (+32 integration skip ở máy local), web **129 pass**, build OK; `dev-health-check` xanh.
 
 ## Đã làm (phiên 2026-11-27, phần 3)
 

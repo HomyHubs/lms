@@ -30,7 +30,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Bước tiếp theo**
 - Grade-import (feature `exams`) đã khớp theo `student_code` làm khóa chính với SĐT fallback — xem `exams/AGENTS.md` mục slice-23.
-- Nợ: sinh số thứ tự khi tạo đồng thời cùng prefix có thể trùng (`TODO(slice-23)` trong `store.ts`) — cần advisory lock/retry khi phát sinh trùng thực tế.
+- Nợ: sinh số thứ tự khi tạo đồng thời cùng prefix có thể trùng (`TODO(slice-23)` trong `store.ts`) — cần advisory lock/retry khi phát sinh trùng thực tế. **ĐÃ TRẢ 2026-11-27**: gộp thành `assignStudentCode` dùng `assignCodeWithRetry` (sinh lại mã + thử lại tối đa 5 lần khi unique violation); marker đã bỏ, có `users/store.test.ts` 4 case. Nợ còn lại là `TODO(slice-23-b)` — tiền tố không có dấu phân cách nên hai cơ sở lồng nhau (`HV` vs `HV1`) dùng chung bộ đếm; sửa cần đổi định dạng mã + migrate mã đã cấp, chờ chủ dự án duyệt.
 
 ### 2026-11-14 — slice-26 Hiển thị người dùng
 
