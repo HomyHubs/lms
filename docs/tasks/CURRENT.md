@@ -22,6 +22,8 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - Cổng gác trên cây đã merge: lint 4/4, typecheck 5/5, test shared 17 + api 282 (+22 integration skip vì máy local không có `TEST_DATABASE_URL`) + web 113, build OK; chạy thêm đúng lệnh Vercel (`VITE_DEMO=1 vite build`) → OK.
 - **Dependabot về 0**: graph cập nhật ngay sau push, nhưng alerts treo 130 suốt ~33 phút rồi tự đóng (`open=0`, `fixed=130`). Không cần tắt/bật lại Dependabot; job tính lại alert chạy bất đồng bộ tới ~30-40 phút.
 - **Trả nợ `TODO(slice-16)`**: chủ dự án chốt cột "Tổng số học viên" gom **theo cấp độ** (Starter/Mover/Flyer), chi tiết khóa học nằm trong tooltip. Thêm `apps/web/src/features/home/dashboard-stats.ts` (hàm thuần `buildStudentsByLevel`), `StudentsByLevelChart` + `LevelBarTooltip` trong `DashboardCharts.tsx`, màu cố định theo cấp (`LEVEL_COLORS`); bỏ `studentsByCourse` khỏi `useDashboardStats` vì hết nơi dùng. Test: `dashboard-stats.test.ts` 6 case + cập nhật `DashboardCharts.test.tsx`.
+- **Trả nợ `TODO(slice-30)` — đồng bộ công thức xếp loại**: tách `finalScore`/`classify`/`passed` sang `apps/api/src/platform/grading.ts` (reports re-export để không phá import cũ); `attendance/service.ts` thêm `ratePercentFromCounts` dùng chung. Hồ sơ học viên giờ theo đúng ADR 0006: điểm thi = trung bình điểm cao nhất **mỗi đề** (SQL `max` theo `exam_id`), chuyên cần loại vắng CÓ PHÉP khỏi mẫu số, `finalScore` có trọng số theo policy cấp độ, `classify` theo ngưỡng policy thay vì 90/75/50 cứng. Thêm `students/store.integration.test.ts` (5 case trên Postgres thật) vì phần SQL này không thể kiểm bằng unit test.
+
 
 ## Đã làm (phiên 2026-11-26)
 

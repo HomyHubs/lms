@@ -1,4 +1,5 @@
 import { sql } from 'kysely'
+import type { ClassificationPolicy } from '@lms/shared'
 import type { AppDb } from '../../platform/db.js'
 import type {
   StudentAttendanceAggRow,
@@ -73,6 +74,7 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
           fullName.as('full_name'),
           'b.name as branch_name',
           'l.code as level_code',
+          'l.id as level_id',
         ])
         .distinctOn('u.id')
       if (branchIds) query = query.where('c.branch_id', 'in', branchIds)
@@ -81,7 +83,8 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
     },
 
     async loadExamAgg(studentId) {
-      // Chi tinh cac luot da cham (graded_at not null); avg theo ti le score/max_score * 100.
+      // ADR 0006: diem thi = trung binh diem CAO NHAT cua tung de (khong phai moi luot thi).
+      // Dem luot thi van tinh moi luot da cham; chi phan diem la lay max theo de.
       const row = await db
         .selectFrom('exam_attempts as a')
         .where('a.student_id', '=', studentId)
@@ -90,11 +93,15 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
           sql<number>`count(*)::int`.as('attempts'),
           sql<number>`count(*) filter (where a.passed is true)::int`.as('passed'),
           sql<number>`count(*) filter (where a.passed is false)::int`.as('failed'),
-          sql<
-            number | null
-          >`avg(case when a.max_score > 0 then a.score::numeric / a.max_score * 100 end)`.as(
-            'avg_score_pct',
-          ),
+          sql<number | null>`(
+            select avg(best_pct) from (
+              select max(case when a2.max_score > 0 then a2.score::numeric / a2.max_score * 100 end) as best_pct
+              from exam_attempts a2
+              where a2.student_id = ${studentId}
+                and a2.graded_at is not null
+              group by a2.exam_id
+            ) b
+          )`.as('avg_score_pct'),
         ])
         .executeTakeFirstOrThrow()
       return {
@@ -140,6 +147,38 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
         sessions_attended: Number(row.sessions_attended),
         study_minutes: Number(row.study_minutes),
       } satisfies StudentStudyAggRow
+    },
+
+    async loadPolicy(levelId) {
+      // Policy xep loai theo cap do (ADR 0006) — cung bang ma man bao cao dang dung.
+      const row = await db
+        .selectFrom('student_grading_policies as p')
+        .innerJoin('levels as l', 'l.id', 'p.level_id')
+        .where('p.level_id', '=', levelId)
+        .select([
+          'p.level_id',
+          'l.code as level_code',
+          'l.name as level_name',
+          'p.exam_weight',
+          'p.attendance_weight',
+          'p.excellent_min',
+          'p.good_min',
+          'p.average_min',
+          'p.pass_min',
+        ])
+        .executeTakeFirst()
+      if (!row) return null
+      return {
+        levelId: row.level_id,
+        levelCode: row.level_code,
+        levelName: row.level_name,
+        examWeight: row.exam_weight,
+        attendanceWeight: row.attendance_weight,
+        excellentMin: row.excellent_min,
+        goodMin: row.good_min,
+        averageMin: row.average_min,
+        passMin: row.pass_min,
+      } satisfies ClassificationPolicy
     },
   }
 }

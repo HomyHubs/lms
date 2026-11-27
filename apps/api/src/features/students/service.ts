@@ -1,4 +1,5 @@
 import type {
+  ClassificationPolicy,
   StudentAttendancePanel,
   StudentClassificationPanel,
   StudentExamPanel,
@@ -6,6 +7,8 @@ import type {
   StudentSearchResult,
   StudentStudyPanel,
 } from '@lms/shared'
+import { classify, finalScore, round1 } from '../../platform/grading.js'
+import { ratePercentFromCounts } from '../attendance/index.js'
 
 /**
  * Menu "Hoc vien" (slice-30) — logic thuan tren mot store interface de de test.
@@ -31,6 +34,8 @@ export interface StudentIdentityRow {
   full_name: string | null
   branch_name: string | null
   level_code: string | null
+  /** Cap do dai dien (de lay policy xep loai). Null khi hoc vien chua vao lop nao. */
+  level_id: string | null
 }
 
 /** Tong hop luot thi da cham cua hoc vien (dem + diem). */
@@ -38,7 +43,10 @@ export interface StudentExamAggRow {
   attempts: number
   passed: number
   failed: number
-  /** Trung binh (score/max_score*100); null khi khong co luot cham. */
+  /**
+   * Trung binh diem CAO NHAT cua tung de (score/max_score*100), theo ADR 0006 —
+   * KHONG phai trung binh moi luot thi. Null khi khong co luot cham.
+   */
   avg_score_pct: number | null
 }
 
@@ -72,9 +80,9 @@ export interface StudentsStore {
   loadExamAgg: (studentId: string) => Promise<StudentExamAggRow>
   loadAttendanceAgg: (studentId: string) => Promise<StudentAttendanceAggRow>
   loadStudyAgg: (studentId: string) => Promise<StudentStudyAggRow>
+  /** Policy xep loai cua cap do (ADR 0006); null khi cap do chua co policy. */
+  loadPolicy: (levelId: string) => Promise<ClassificationPolicy | null>
 }
-
-const round1 = (n: number): number => Math.round(n * 10) / 10
 
 function toSearchResult(row: StudentSearchRow): StudentSearchResult {
   return {
@@ -107,7 +115,11 @@ function toExamPanel(agg: StudentExamAggRow): StudentExamPanel | null {
   }
 }
 
-/** Panel chuyen can: null khi chua diem danh buoi nao. Ti le = (present+late)/tong. */
+/**
+ * Panel chuyen can: null khi chua diem danh buoi nao.
+ * Ti le theo dung ADR 0006 = `ratePercentFromCounts` (loai vang CO PHEP khoi mau so),
+ * dung chung cong thuc voi bao cao de hai man hinh khong lech nhau.
+ */
 function toAttendancePanel(agg: StudentAttendanceAggRow): StudentAttendancePanel | null {
   const total = agg.present + agg.absent + agg.late + agg.excused
   if (total === 0) return null
@@ -116,7 +128,7 @@ function toAttendancePanel(agg: StudentAttendanceAggRow): StudentAttendancePanel
     absent: agg.absent,
     late: agg.late,
     excused: agg.excused,
-    ratePct: round1(((agg.present + agg.late) / total) * 100),
+    ratePct: ratePercentFromCounts(agg),
   }
 }
 
@@ -130,17 +142,21 @@ function toStudyPanel(agg: StudentStudyAggRow): StudentStudyPanel | null {
 }
 
 /**
- * Xep loai hoc luc o slice nay giu don gian (read-only tong hop): dung diem thi trung binh
- * lam diem tong tam thoi. Cong thuc xep loai day du (trong so thi/chuyen can) thuoc slice-7
- * va co the gan sau; de null khi chua co diem thi.
- * TODO(slice-30): dong bo cong thuc xep loai voi reports/service (finalScore/classify) khi chot.
+ * Panel xep loai hoc luc — theo DUNG ADR 0006 (truoc day la cong thuc tam: chi dung diem thi
+ * trung binh voi nguong cung 90/75/50):
+ *   final = examWeight% * diem thi + attendanceWeight% * ti le chuyen can (policy cua cap do);
+ *   nhan = classify(final, nguong cua policy).
+ * Null khi chua co diem thi (khong xep loai duoc) hoac cap do chua co policy.
  */
-function toClassificationPanel(exam: StudentExamPanel | null): StudentClassificationPanel | null {
-  if (!exam || exam.avgScorePct === null) return null
-  const score = exam.avgScorePct
-  const label =
-    score >= 90 ? 'excellent' : score >= 75 ? 'good' : score >= 50 ? 'average' : 'weak'
-  return { finalScore: score, label }
+function toClassificationPanel(
+  exam: StudentExamPanel | null,
+  attendance: StudentAttendancePanel | null,
+  policy: ClassificationPolicy | null,
+): StudentClassificationPanel | null {
+  if (!policy) return null
+  const score = finalScore(exam?.avgScorePct ?? null, attendance?.ratePct ?? null, policy)
+  if (score === null) return null
+  return { finalScore: score, label: classify(score, policy) }
 }
 
 export async function loadStudentProfile(
@@ -151,14 +167,15 @@ export async function loadStudentProfile(
   const identity = await store.findStudentIdentity(id, branchIds)
   if (!identity) return null
 
-  const [examAgg, attendanceAgg, studyAgg] = await Promise.all([
+  const [examAgg, attendanceAgg, studyAgg, policy] = await Promise.all([
     store.loadExamAgg(id),
     store.loadAttendanceAgg(id),
     store.loadStudyAgg(id),
+    identity.level_id ? store.loadPolicy(identity.level_id) : Promise.resolve(null),
   ])
   const exam = toExamPanel(examAgg)
   const attendance = toAttendancePanel(attendanceAgg)
-  const classification = toClassificationPanel(exam)
+  const classification = toClassificationPanel(exam, attendance, policy)
 
   return {
     id: identity.id,

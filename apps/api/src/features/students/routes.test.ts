@@ -1,6 +1,7 @@
 import cookie from '@fastify/cookie'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
+import type { ClassificationPolicy } from '@lms/shared'
 import type { AuthStore, UserRecord } from '../auth/index.js'
 import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
@@ -71,6 +72,20 @@ function makeFakeBranchScope(map: Record<string, string[]>): BranchScope {
 
 interface FakeStudent extends StudentSearchRow {
   branch_id: string
+  level_id: string | null
+}
+
+/** Policy xep loai mac dinh (ADR 0006) cho moi cap do trong test. */
+const TEST_POLICY: ClassificationPolicy = {
+  levelId: '40000000-0000-4000-8000-000000000001',
+  levelCode: 'starter',
+  levelName: 'Starter',
+  examWeight: 90,
+  attendanceWeight: 10,
+  excellentMin: 85,
+  goodMin: 70,
+  averageMin: 50,
+  passMin: 50,
 }
 
 /**
@@ -87,6 +102,7 @@ function makeFakeStudentsStore(): StudentsStore {
       full_name: 'Nguyen Van A',
       branch_name: 'Co so 1',
       level_code: 'starter',
+      level_id: TEST_POLICY.levelId,
       branch_id: BRANCH_1,
     },
     {
@@ -96,6 +112,7 @@ function makeFakeStudentsStore(): StudentsStore {
       full_name: 'Tran Thi B',
       branch_name: 'Co so 2',
       level_code: 'mover',
+      level_id: TEST_POLICY.levelId,
       branch_id: BRANCH_2,
     },
   ]
@@ -145,6 +162,7 @@ function makeFakeStudentsStore(): StudentsStore {
         full_name: row.full_name,
         branch_name: row.branch_name,
         level_code: row.level_code,
+        level_id: row.level_id,
       }
       return identity
     },
@@ -156,6 +174,9 @@ function makeFakeStudentsStore(): StudentsStore {
     },
     async loadStudyAgg(studentId) {
       return study[studentId] ?? { sessions_attended: 0, study_minutes: 0 }
+    },
+    async loadPolicy(levelId) {
+      return levelId === TEST_POLICY.levelId ? TEST_POLICY : null
     },
   }
 }
@@ -309,10 +330,12 @@ describe('students routes — ho so tong hop (slice-30)', () => {
       absent: 1,
       late: 1,
       excused: 1,
-      ratePct: 83.3,
+      // (9+1) / (9+1+1) = 90.9% — vắng có phép không bị trừ (ADR 0006).
+      ratePct: 90.9,
     })
     expect(student.study).toEqual({ sessionsAttended: 10, studyMinutes: 900 })
-    expect(student.classification).toEqual({ finalScore: 82.5, label: 'good' })
+    // 90% * 82.5 + 10% * 90.9 = 83.3 -> 'good'.
+    expect(student.classification).toEqual({ finalScore: 83.3, label: 'good' })
   })
 
   it('hoc vien chua co du lieu: cac panel null, ma hoc vien null voi du lieu cu', async () => {

@@ -39,19 +39,20 @@ Ngoài ra: số liệu các panel phải lấy thật từ store/endpoint hiện
 | --- | --- | --- | --- |
 | TODO(slice-30) | `apps/api/src/features/students/store.ts` | Gọi lặp nhiều store có thể gây N+1 khi dữ liệu học viên lớn; cần gộp/tối ưu truy vấn | Khi đo thấy chậm thực tế |
 | ~~TODO(slice-30)~~ | `apps/api/src/features/students` (profile) | ~~Nguồn "thời gian học" chưa rõ công thức~~ → **đã chốt 2026-11-26**: chỉ tính buổi `present`/`late`, phút học = `sum(class_sessions.duration_minutes)` | Đã trả |
-| TODO(slice-30) | `apps/api/src/features/students/service.ts` (`toClassificationPanel`) | Xếp loại đang dùng điểm thi trung bình làm điểm tổng tạm thời; công thức đầy đủ (trọng số thi/chuyên cần) thuộc slice-7 | Khi chốt công thức xếp loại |
+| ~~TODO(slice-30)~~ | `apps/api/src/features/students/service.ts` (`toClassificationPanel`) | ~~Xếp loại đang dùng điểm thi trung bình làm điểm tổng tạm thời~~ → **đã trả 2026-11-27**: dùng `finalScore`/`classify` của `platform/grading.ts` với policy cấp độ (ADR 0006) | Đã trả |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Tạo | Khởi tạo file slice từ yêu cầu 13.1 | Lập kế hoạch thực thi | — |
 | 2026-11-26 | Bổ sung | Gia cố sau khi slice-23 (mã học viên) merge: `studentCode` lấy thật từ `users.student_code` (trước đó hardcode `null`), thêm tìm kiếm theo mã, thêm panel "Thời gian học" (`study`: số buổi + tổng phút) và cột "Mã HV" ở danh sách | Slice-23 đã có mã học viên nên không được để `null` giả; panel thời gian học là yêu cầu 13.1 còn thiếu | ADR 0014 |
+| 2026-11-27 | Sửa | Hồ sơ học viên dùng **đúng công thức ADR 0006** thay vì công thức tạm: (1) điểm thi = trung bình điểm CAO NHẤT của từng đề, (2) tỉ lệ chuyên cần loại vắng CÓ PHÉP khỏi mẫu số, (3) `finalScore` có trọng số thi/chuyên cần theo policy cấp độ, (4) `classify` theo ngưỡng policy thay vì 90/75/50 cứng | Hồ sơ và báo cáo cho ra số khác nhau cho cùng một học viên — trái ADR 0006 | ADR 0006 |
 
 ## Cách nghiệm thu
 - Thủ công: menu "Học viên" hiện với admin/teacher/staff và ẩn với học viên.
 - Thủ công: tìm kiếm trả đúng học viên trong phạm vi cơ sở/lớp; mở chi tiết thấy các panel có cả số và biểu đồ.
 - Thủ công: `GET /students/:id/profile` trả dữ liệu tổng hợp khớp với các endpoint nguồn (reports/attendance/examhistory/exams).
-- Test tự động: `apps/api/src/features/students/routes.test.ts` (tổng hợp + phân quyền + phạm vi cơ sở); component test `StudentDetailPage` (render panel + chart) và `StudentsPage` (tìm kiếm).
+- Test tự động: `apps/api/src/features/students/routes.test.ts` (tổng hợp + phân quyền + phạm vi cơ sở); component test `StudentDetailPage` (render panel + chart) và `StudentsPage` (tìm kiếm); `store.integration.test.ts` trên Postgres thật (điểm cao nhất mỗi đề, policy theo cấp độ, `level_id`).
 
 ### Trạng thái nghiệm thu (2026-11-26)
 - [x] `apps/api/src/features/students/routes.test.ts` — 14 test: 401 khi chưa đăng nhập (2 endpoint), 200 cho admin/teacher/staff, 403 cho student, 400 khi thiếu từ khoá, branch-scope (admin chỉ thấy cơ sở được gán, ngoài phạm vi → 404), superadmin vượt scope, hồ sơ đầy đủ/trống, tìm theo mã học viên, 404 khi không tồn tại.

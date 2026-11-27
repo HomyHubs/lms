@@ -207,12 +207,27 @@ export async function canMakeUpFor(
  * ratePercent = (present + late) / (present + late + absent) * 100, rounded to 1 decimal.
  * Excused sessions are excluded from the denominator. Null when the denominator is 0.
  */
+/**
+ * Tỉ lệ chuyên cần (%) = (có mặt + đi muộn) / (có mặt + đi muộn + vắng KHÔNG PHÉP).
+ * Vắng có phép bị loại khỏi mẫu số (ADR 0006): nghỉ có lý do thì không tính là đi học
+ * nhưng cũng không bị trừ. `null` khi chưa có buổi nào đếm được.
+ *
+ * Dùng chung cho báo cáo (`summarize`) và hồ sơ học viên (`students`) để hai nơi không lệch.
+ */
+export function ratePercentFromCounts(counts: {
+  present: number
+  late: number
+  absent: number
+}): number | null {
+  const counted = counts.present + counts.late + counts.absent
+  if (counted === 0) return null
+  return Math.round(((counts.present + counts.late) / counted) * 1000) / 10
+}
+
 export function summarize(statuses: readonly string[]): AttendanceSummary {
   const summary = { present: 0, late: 0, absent: 0, excused: 0 }
   for (const raw of statuses) summary[toStatus(raw)] += 1
-  const counted = summary.present + summary.late + summary.absent
-  const ratePercent =
-    counted === 0 ? null : Math.round(((summary.present + summary.late) / counted) * 1000) / 10
+  const ratePercent = ratePercentFromCounts(summary)
   return { ...summary, total: statuses.length, ratePercent }
 }
 

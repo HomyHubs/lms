@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { ClassificationPolicy } from '@lms/shared'
 import type {
   StudentAttendanceAggRow,
   StudentExamAggRow,
@@ -18,9 +19,25 @@ interface FakeStudent {
   branch_id: string
   branch_name: string | null
   level_code: string | null
+  level_id: string | null
+  /** undefined = dung DEFAULT_POLICY; null = cap do chua co policy. */
+  policy?: ClassificationPolicy | null
   exam: StudentExamAggRow
   attendance: StudentAttendanceAggRow
   study: StudentStudyAggRow
+}
+
+/** Policy mac dinh theo ADR 0006: thi 90% + chuyen can 10%, nguong 85/70/50. */
+const DEFAULT_POLICY: ClassificationPolicy = {
+  levelId: '30000000-0000-4000-8000-000000000001',
+  levelCode: 'starter',
+  levelName: 'Starter',
+  examWeight: 90,
+  attendanceWeight: 10,
+  excellentMin: 85,
+  goodMin: 70,
+  averageMin: 50,
+  passMin: 50,
 }
 
 /** Store gia lap trong bo nho — khong can Postgres; branch-scope mo phong o day. */
@@ -61,6 +78,7 @@ function makeFakeStore(seed: FakeStudent[]): StudentsStore {
         full_name: s.full_name,
         branch_name: s.branch_name,
         level_code: s.level_code,
+        level_id: s.level_id,
       } satisfies StudentIdentityRow
     },
     async loadExamAgg(studentId) {
@@ -79,6 +97,11 @@ function makeFakeStore(seed: FakeStudent[]): StudentsStore {
     async loadStudyAgg(studentId) {
       return seed.find((x) => x.id === studentId)?.study ?? { sessions_attended: 0, study_minutes: 0 }
     },
+    async loadPolicy(levelId) {
+      const owner = seed.find((s) => s.level_id === levelId)
+      if (!owner) return null
+      return owner.policy === undefined ? DEFAULT_POLICY : owner.policy
+    },
   }
 }
 
@@ -94,6 +117,7 @@ const SEED: FakeStudent[] = [
     branch_id: HN,
     branch_name: 'Cơ sở HN',
     level_code: 'Starter',
+    level_id: DEFAULT_POLICY.levelId,
     exam: { attempts: 4, passed: 3, failed: 1, avg_score_pct: 80 },
     attendance: { present: 8, absent: 1, late: 1, excused: 0 },
     study: { sessions_attended: 9, study_minutes: 810 },
@@ -107,6 +131,7 @@ const SEED: FakeStudent[] = [
     branch_id: HCM,
     branch_name: 'Cơ sở HCM',
     level_code: 'Mover',
+    level_id: '30000000-0000-4000-8000-000000000002',
     exam: { attempts: 0, passed: 0, failed: 0, avg_score_pct: null },
     attendance: { present: 0, absent: 0, late: 0, excused: 0 },
     study: { sessions_attended: 0, study_minutes: 0 },
@@ -163,12 +188,48 @@ describe('loadStudentProfile', () => {
     if (!profile) return
     expect(profile.studentCode).toBe('HN0001')
     expect(profile.exam).toEqual({ attempts: 4, passed: 3, failed: 1, avgScorePct: 80 })
-    // Ti le di hoc = (present + late) / tong = (8+1)/10 = 90%.
+    // Ti le di hoc = (present + late) / (present + late + absent) = (8+1)/10 = 90%.
     expect(profile.attendance?.ratePct).toBe(90)
     // Chi tinh buoi co mat/di muon, phut = thoi luong buoi hoc that.
     expect(profile.study).toEqual({ sessionsAttended: 9, studyMinutes: 810 })
-    // Xep loai tam thoi tu diem thi trung binh 80 -> 'good'.
-    expect(profile.classification).toEqual({ finalScore: 80, label: 'good' })
+    // ADR 0006: final = 90% * 80 + 10% * 90 = 81 -> 'good' (nguong 85/70/50).
+    expect(profile.classification).toEqual({ finalScore: 81, label: 'good' })
+  })
+
+  it('loại vắng có phép khỏi mẫu số tỉ lệ chuyên cần (ADR 0006)', async () => {
+    const store = makeFakeStore([
+      { ...SEED[0]!, attendance: { present: 5, late: 0, absent: 0, excused: 5 } },
+    ])
+    const profile = await loadStudentProfile(store, SEED[0]!.id, undefined)
+    // Vang co phep khong bi tru: 5/5 = 100%, khong phai 5/10 = 50%.
+    expect(profile?.attendance?.ratePct).toBe(100)
+  })
+
+  it('dùng trọng số của policy cấp độ cho điểm tổng', async () => {
+    const store = makeFakeStore([
+      {
+        ...SEED[0]!,
+        exam: { attempts: 1, passed: 1, failed: 0, avg_score_pct: 80 },
+        attendance: { present: 10, late: 0, absent: 0, excused: 0 },
+        policy: { ...DEFAULT_POLICY, examWeight: 50, attendanceWeight: 50 },
+      },
+    ])
+    const profile = await loadStudentProfile(store, SEED[0]!.id, undefined)
+    // 50% * 80 + 50% * 100 = 90.
+    expect(profile?.classification).toEqual({ finalScore: 90, label: 'excellent' })
+  })
+
+  it('không xếp loại khi cấp độ chưa có policy', async () => {
+    const store = makeFakeStore([{ ...SEED[0]!, policy: null }])
+    const profile = await loadStudentProfile(store, SEED[0]!.id, undefined)
+    expect(profile?.exam).not.toBeNull()
+    expect(profile?.classification).toBeNull()
+  })
+
+  it('không xếp loại khi học viên chưa vào lớp nào (không có level_id)', async () => {
+    const store = makeFakeStore([{ ...SEED[0]!, level_id: null }])
+    const profile = await loadStudentProfile(store, SEED[0]!.id, undefined)
+    expect(profile?.classification).toBeNull()
   })
 
   it('returns null panels when there is no exam/attendance/study data', async () => {
@@ -183,15 +244,20 @@ describe('loadStudentProfile', () => {
 
   it.each([
     [95, 'excellent'],
-    [90, 'excellent'],
-    [89.9, 'good'],
-    [75, 'good'],
-    [74.9, 'average'],
+    [85, 'excellent'],
+    [84.9, 'good'],
+    [70, 'good'],
+    [69.9, 'average'],
     [50, 'average'],
     [49.9, 'weak'],
-  ])('classifies an average exam score of %s as %s', async (avg, label) => {
+  ])('xếp loại điểm thi %s (không có chuyên cần) thành %s', async (avg, label) => {
     const store = makeFakeStore([
-      { ...SEED[0]!, exam: { attempts: 2, passed: 1, failed: 1, avg_score_pct: avg } },
+      {
+        ...SEED[0]!,
+        exam: { attempts: 2, passed: 1, failed: 1, avg_score_pct: avg },
+        // Khong co buoi nao -> final = diem thi (ADR 0006: thieu diem danh khong phat).
+        attendance: { present: 0, late: 0, absent: 0, excused: 0 },
+      },
     ])
     const profile = await loadStudentProfile(store, SEED[0]!.id, undefined)
     expect(profile?.classification).toEqual({ finalScore: avg, label })

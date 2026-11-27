@@ -3,12 +3,16 @@ import type {
   ClassificationPolicy,
   LevelReport,
   MonthReport,
-  StudentClassification,
   StudentRankingRow,
   StudentReport,
   UpdateClassificationPolicyRequest,
 } from '@lms/shared'
 import { summarize } from '../attendance/index.js'
+import { classify, finalScore, passed, round1 } from '../../platform/grading.js'
+
+// Công thức xếp loại nằm ở `platform/grading.ts` để `students` và `reports` dùng chung
+// (ADR 0006). Re-export để các import cũ qua `features/reports` vẫn chạy.
+export { classify, finalScore, passed }
 
 /** Student classification + admin dashboard (slice-7). Formula: docs/adr/0006-student-grading-dashboard.md. */
 
@@ -108,8 +112,6 @@ export function toPolicyDto(row: PolicyRow): ClassificationPolicy {
   }
 }
 
-const round1 = (n: number): number => Math.round(n * 10) / 10
-
 function average(values: readonly (number | null)[]): number | null {
   const known = values.filter((v): v is number => v !== null)
   return known.length === 0 ? null : round1(known.reduce((a, b) => a + b, 0) / known.length)
@@ -117,39 +119,6 @@ function average(values: readonly (number | null)[]): number | null {
 
 function percentOf(part: number, whole: number): number | null {
   return whole === 0 ? null : round1((part / whole) * 100)
-}
-
-/**
- * Weighted final score. No exam result -> not classifiable (null). No countable attendance ->
- * the exam score alone, so a missing roll call never punishes the student.
- */
-export function finalScore(
-  examScore: number | null,
-  attendanceRate: number | null,
-  policy: Pick<ClassificationPolicy, 'examWeight' | 'attendanceWeight'>,
-): number | null {
-  if (examScore === null) return null
-  if (attendanceRate === null) return round1(examScore)
-  return round1((examScore * policy.examWeight + attendanceRate * policy.attendanceWeight) / 100)
-}
-
-export function classify(
-  score: number | null,
-  policy: Pick<ClassificationPolicy, 'excellentMin' | 'goodMin' | 'averageMin'>,
-): StudentClassification | null {
-  if (score === null) return null
-  if (score >= policy.excellentMin) return 'excellent'
-  if (score >= policy.goodMin) return 'good'
-  if (score >= policy.averageMin) return 'average'
-  return 'weak'
-}
-
-/** Đậu (true) khi điểm tổng đạt ngưỡng passMin; Rớt (false) nếu dưới; null khi chưa có điểm. */
-export function passed(
-  score: number | null,
-  policy: Pick<ClassificationPolicy, 'passMin'>,
-): boolean | null {
-  return score === null ? null : score >= policy.passMin
 }
 
 interface ExamOutcome {
