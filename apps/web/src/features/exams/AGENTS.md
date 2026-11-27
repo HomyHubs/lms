@@ -9,6 +9,17 @@
 
 ## Nhật ký liên tục
 
+### 2026-11-27 — Trả nợ `TODO(slice-20)`: bỏ N+1 khi xem trước đề
+
+**Đã xong**
+- `ExamPreview.tsx` → `LinkedSets` bỏ `useQueries` (gọi `getExamSet` cho TỪNG bộ), chuyển sang một `useQuery` gọi `listExamSets({ ids: examSetIds })`. Đề có 5 bộ liên kết: 5 request → 1 request, và dùng lại cache theo `queryKey: ['exam-sets', 'batch', ids]`.
+- Thứ tự hiển thị vẫn theo `examSetIds` (thứ tự làm bài) bằng `Map` id → set, KHÔNG theo thứ tự API trả về.
+- `lib/api.ts#listExamSets`: `ids` là mảng nên serialize thành `a,b,c`; mảng rỗng thì bỏ hẳn tham số (`?ids=` bị contract từ chối).
+- Test mới `ExamPreview.test.tsx` (3): đúng 1 request, giữ thứ tự phục vụ, và KHÔNG gọi gì khi đề ra ngẫu nhiên. Cập nhật stub của `ExamsPage.filter.test.tsx` cho nhánh `?ids=`.
+
+**Bước tiếp theo**
+- Phía API: `where id in (...)` của nhánh `ids` chưa có test riêng (feature `examsets` không có route/store test); nếu sửa `listSets` thì cần kiểm tay hoặc thêm test tích hợp.
+
 ### 2026-11-13 — slice-20 (Bộ đề & Đề thi UI)
 
 **Đã xong**

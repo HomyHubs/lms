@@ -165,6 +165,16 @@ describe('ReportsPage', () => {
       </QueryClientProvider>,
     )
 
+    // Tham số của lần gọi CUỐI tới /reports/students — ổn định hơn "có một lần gọi nào đó" khi
+    // nhiều lần refetch xen kẽ (debounce 300ms + tải lại theo trang).
+    const lastReportParams = (): URLSearchParams | null => {
+      const calls = fetchMock.mock.calls.filter(
+        ([u]) => new URL(String(u), 'http://localhost').pathname === '/api/reports/students',
+      )
+      const last = calls.at(-1)
+      return last ? new URL(String(last[0]), 'http://localhost').searchParams : null
+    }
+
     // Trang 1 mặc định 20 dòng: dòng đầu có, dòng 21 chưa có (server chỉ trả 20 dòng).
     expect(await screen.findByText('HV 00')).toBeInTheDocument()
     expect(screen.queryByText('HV 20')).not.toBeInTheDocument()
@@ -174,24 +184,25 @@ describe('ReportsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }))
     expect(await screen.findByText('HV 20')).toBeInTheDocument()
     expect(screen.queryByText('HV 00')).not.toBeInTheDocument()
-    expect(
-      fetchMock.mock.calls.some(([u]) => new URL(String(u), 'http://localhost').searchParams.get('page') === '2'),
-    ).toBe(true)
+    await waitFor(() => expect(lastReportParams()?.get('page')).toBe('2'), { timeout: 3000 })
 
     // Đổi 50 dòng/trang: về trang 1, đủ 25 dòng trong một trang.
     fireEvent.change(screen.getByLabelText('Số dòng mỗi trang'), { target: { value: '50' } })
     expect(await screen.findByText('HV 00')).toBeInTheDocument()
     expect(screen.getByText('HV 24')).toBeInTheDocument()
     expect(screen.getByText(/Trang 1\/1/)).toBeInTheDocument()
+    await waitFor(() => expect(lastReportParams()?.get('pageSize')).toBe('50'), { timeout: 3000 })
 
     // Tìm kiếm: debounce rồi gửi `q` lên server, không lọc client trên trang hiện tại.
     fireEvent.change(screen.getByLabelText('Tìm theo tên hoặc mã học sinh'), { target: { value: 'HV 24' } })
-    expect(await screen.findByText('HV 24')).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText('HV 00')).not.toBeInTheDocument())
-    expect(
-      fetchMock.mock.calls.some(
-        ([u]) => new URL(String(u), 'http://localhost').searchParams.get('q') === 'HV 24',
-      ),
-    ).toBe(true)
+    await waitFor(() => expect(screen.queryByText('HV 00')).not.toBeInTheDocument(), { timeout: 3000 })
+    // `q` phải được gửi lên server (kèm quay về trang 1) — đây mới là điều slice-24 cần chứng minh.
+    await waitFor(
+      () => {
+        expect(lastReportParams()?.get('q')).toBe('HV 24')
+        expect(lastReportParams()?.get('page')).toBe('1')
+      },
+      { timeout: 3000 },
+    )
   })
 })

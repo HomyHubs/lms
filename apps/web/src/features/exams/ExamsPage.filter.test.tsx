@@ -42,6 +42,8 @@ function stubFetch() {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.endsWith('/api/exams')) return response({ exams: EXAMS })
+    // slice-20: xem trước đề lấy các bộ liên kết bằng MỘT request `?ids=...` (không còn N+1).
+    if (url.includes('/api/exam-sets?ids=')) return response({ examSets: [EXAM_SET_DETAIL] })
     if (url.includes(`/api/exam-sets/${SET_ID}`)) return response({ examSet: EXAM_SET_DETAIL })
     if (url.includes('/api/exam-sets')) return response({ examSets: [] })
     if (url.endsWith('/api/levels')) return response({ levels: [] })

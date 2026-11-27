@@ -38,6 +38,8 @@ export interface ExamSetFilter {
   levelId?: string
   skill?: string
   status?: string
+  /** slice-20: lọc theo danh sách id — lấy nhiều bộ đề trong một truy vấn (thay N+1 phía client). */
+  ids?: string[]
 }
 
 export interface CreateExamSetFields {
@@ -133,7 +135,7 @@ export async function listExamSets(store: ExamSetsStore, query: ExamSetListQuery
     if (!level) return []
     levelId = level.id
   }
-  const rows = await store.listSets({ levelId, skill: query.skill, status: query.status })
+  const rows = await store.listSets({ levelId, skill: query.skill, status: query.status, ids: query.ids })
   return rows.map(toExamSet)
 }
 

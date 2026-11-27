@@ -650,7 +650,16 @@ async function sendExamSet(url: string, method: string, body: unknown, fallback:
 
 export async function listExamSets(query: Partial<ExamSetListQuery> = {}): Promise<ExamSet[]> {
   const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null) continue
+    // slice-20: `ids` là mảng -> gửi dạng 'a,b,c' (contract parse lại thành mảng). Mảng rỗng thì bỏ
+    // hẳn tham số, vì `?ids=` sẽ bị contract từ chối (cần ít nhất 1 id).
+    if (Array.isArray(value)) {
+      if (value.length > 0) params.set(key, value.join(','))
+    } else {
+      params.set(key, String(value))
+    }
+  }
   const qs = params.toString()
   const res = await fetch(`/api/exam-sets${qs ? `?${qs}` : ''}`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc danh sach bo de')

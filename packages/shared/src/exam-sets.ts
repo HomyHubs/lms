@@ -42,10 +42,20 @@ export type ExamSetList = z.infer<typeof ExamSetList>
 export const ExamSetResponse = z.object({ examSet: ExamSetDetail })
 export type ExamSetResponse = z.infer<typeof ExamSetResponse>
 
+/**
+ * slice-20: danh sách id trên query string (`?ids=a,b,c`) — lấy nhiều bộ đề trong MỘT request thay
+ * vì gọi từng bộ (N+1 phía client khi xem trước đề có nhiều bộ liên kết).
+ */
+const ExamSetIdList = z
+  .string()
+  .transform((v) => v.split(',').map((s) => s.trim()).filter((s) => s !== ''))
+  .pipe(z.array(z.string().uuid()).min(1).max(50))
+
 export const ExamSetListQuery = z.object({
   level: LevelCode.optional(),
   skill: QuestionSkill.optional(),
   status: ExamSetStatus.optional(),
+  ids: ExamSetIdList.optional(),
 })
 export type ExamSetListQuery = z.infer<typeof ExamSetListQuery>
 
