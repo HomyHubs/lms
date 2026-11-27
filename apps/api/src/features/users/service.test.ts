@@ -52,8 +52,8 @@ function makeFakeStore(
     async findUserByStudentCode(code) {
       return users.find((u) => u.student_code === code)
     },
-    async nextStudentCode(branchCode) {
-      // slice-23: gia lap sinh ma theo prefix (fallback 'HV') + so thu tu lon nhat + 1.
+    async assignStudentCode(id, branchCode) {
+      // slice-23: store that sinh + ghi trong mot buoc va retry khi trung so thu tu.
       const prefix = branchCode && branchCode.trim() !== '' ? branchCode : 'HV'
       let max = 0
       for (const u of users) {
@@ -63,12 +63,9 @@ function makeFakeStore(
         const n = Number.parseInt(suffix, 10)
         if (n > max) max = n
       }
-      return `${prefix}${String(max + 1).padStart(4, '0')}`
-    },
-    async setStudentCode(id, code) {
       const row = users.find((u) => u.id === id)
       if (!row) return undefined
-      row.student_code = code
+      row.student_code = `${prefix}${String(max + 1).padStart(4, '0')}`
       return row
     },
     async branchCodeForUser(userId) {

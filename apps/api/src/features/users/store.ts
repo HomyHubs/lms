@@ -21,9 +21,69 @@ const SAFE_COLUMNS = [
 const DEFAULT_CODE_PREFIX = 'HV'
 /** So chu so phan so thu tu trong ma hoc vien (vd HN0001). */
 const CODE_SEQ_WIDTH = 4
+/** So lan thu lai khi trung ma do tao dong thoi cung prefix (xac suat rat thap). */
+const CODE_ASSIGN_ATTEMPTS = 5
+
+/** Postgres unique_violation — dung de biet co nen thu lai hay khong. */
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505'
+}
+
+/**
+ * Sinh ma roi ghi; neu ghi bi unique violation (2 request tao dong thoi tinh ra cung so thu tu)
+ * thi sinh lai ma moi va thu tiep. Cac loi khac nem ra ngay.
+ *
+ * Tach rieng de test duoc bang ham gia lap — phan nay khong can Postgres.
+ */
+export async function assignCodeWithRetry<T>(
+  nextCode: () => Promise<string>,
+  writeCode: (code: string) => Promise<T>,
+  attempts: number = CODE_ASSIGN_ATTEMPTS,
+): Promise<T> {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const code = await nextCode()
+    try {
+      return await writeCode(code)
+    } catch (err) {
+      if (!isUniqueViolation(err) || attempt === attempts) throw err
+    }
+  }
+  // Khong toi day duoc: vong lap chi thoat khi return hoac throw.
+  throw new Error('assignCodeWithRetry: exhausted attempts')
+}
 
 /** Hien thuc UsersStore bang Kysely tren Postgres THUC (khong mock). */
 export function makeUsersStore(db: AppDb): UsersStore {
+  /** Ma ke tiep theo tien to co so: max(so thu tu trong cung prefix) + 1, zero-pad. */
+  const nextCode = async (branchCode: string | null): Promise<string> => {
+    const prefix = branchCode && branchCode.trim() !== '' ? branchCode : DEFAULT_CODE_PREFIX
+    const rows = await db
+      .selectFrom('users')
+      .select('student_code')
+      .where('role', '=', 'student')
+      .where('student_code', 'like', `${prefix}%`)
+      .execute()
+    let max = 0
+    for (const r of rows) {
+      const suffix = (r.student_code ?? '').slice(prefix.length)
+      // Chi nhan phan so thuan sau prefix (bo cac ma prefix khac tinh co trung dau).
+      if (!/^\d+$/.test(suffix)) continue
+      const n = Number.parseInt(suffix, 10)
+      if (n > max) max = n
+    }
+    return `${prefix}${String(max + 1).padStart(CODE_SEQ_WIDTH, '0')}`
+  }
+
+  /** Ghi ma hoc vien; nem loi unique violation neu ma da bi nguoi khac lay. */
+  const writeCode = async (id: string, code: string) => {
+    return db
+      .updateTable('users')
+      .set({ updated_at: new Date().toISOString(), student_code: code })
+      .where('id', '=', id)
+      .returning(SAFE_COLUMNS)
+      .executeTakeFirst()
+  }
+
   return {
     async listUsers() {
       return db.selectFrom('users').select(SAFE_COLUMNS).orderBy('created_at', 'asc').execute()
@@ -55,37 +115,14 @@ export function makeUsersStore(db: AppDb): UsersStore {
         .executeTakeFirst()
     },
 
-    async nextStudentCode(branchCode) {
-      // slice-23: sinh ma ke tiep theo tien to co so. prefix = branches.code (neu co), nguoc lai 'HV'.
-      // Tim so thu tu lon nhat hien co trong CUNG prefix roi + 1, zero-pad CODE_SEQ_WIDTH chu so.
-      // TODO(slice-23): tao dong thoi nhieu hoc vien cung prefix co the dung trung so thu tu;
-      // can khoa (advisory lock) hoac retry khi vi pham unique — tra khi phat sinh trung thuc te.
-      const prefix = branchCode && branchCode.trim() !== '' ? branchCode : DEFAULT_CODE_PREFIX
-      const rows = await db
-        .selectFrom('users')
-        .select('student_code')
-        .where('role', '=', 'student')
-        .where('student_code', 'like', `${prefix}%`)
-        .execute()
-      let max = 0
-      for (const r of rows) {
-        const suffix = (r.student_code ?? '').slice(prefix.length)
-        // Chi nhan phan so thuan sau prefix (bo cac ma prefix khac tinh co trung dau).
-        if (!/^\d+$/.test(suffix)) continue
-        const n = Number.parseInt(suffix, 10)
-        if (n > max) max = n
-      }
-      return `${prefix}${String(max + 1).padStart(CODE_SEQ_WIDTH, '0')}`
-    },
-
-    async setStudentCode(id, code) {
-      // slice-23: ghi ma hoc vien sau khi tao (giu nguyen cac truong khac). Tra ve ban ghi an toan.
-      return db
-        .updateTable('users')
-        .set({ updated_at: new Date().toISOString(), student_code: code })
-        .where('id', '=', id)
-        .returning(SAFE_COLUMNS)
-        .executeTakeFirst()
+    async assignStudentCode(id, branchCode) {
+      // slice-23: sinh + ghi ma, retry khi trung so thu tu do tao dong thoi cung prefix.
+      // Unique index `users_student_code_unique` la chot chan cuoi cung: neu 2 request cung
+      // tinh ra mot so, mot cai se vi pham va duoc thu lai voi so ke tiep.
+      return assignCodeWithRetry(
+        () => nextCode(branchCode),
+        (code) => writeCode(id, code),
+      )
     },
 
     async branchCodeForUser(userId) {

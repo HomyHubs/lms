@@ -62,10 +62,8 @@ export interface UsersStore {
   deleteUser: (id: string) => Promise<boolean>
   // slice-23: tim hoc vien theo ma (khop import diem).
   findUserByStudentCode: (code: string) => Promise<UserRow | undefined>
-  // slice-23: sinh ma hoc vien ke tiep theo tien to co so (null -> fallback 'HV').
-  nextStudentCode: (branchCode: string | null) => Promise<string>
-  // slice-23: ghi ma hoc vien sau khi tao (chi goi cho role hoc vien).
-  setStudentCode: (id: string, code: string) => Promise<UserRow | undefined>
+  // slice-23: sinh + ghi ma trong mot buoc, tự retry khi trung so thu tu do tao dong thoi.
+  assignStudentCode: (id: string, branchCode: string | null) => Promise<UserRow | undefined>
   // slice-23: tien to co so (branches.code) cua co so gan som nhat cho user; null khi chua gan / chua co ma.
   branchCodeForUser: (userId: string) => Promise<string | null>
 }
@@ -131,11 +129,11 @@ export async function createUser(
     parentPhone: input.parentPhone ?? null,
   })
   // slice-23: chi hoc vien moi duoc sinh ma; role khac giu student_code = null.
-  // Sinh sau insert de co id -> tra cuu tien to co so da gan; ghi lai qua setStudentCode.
+  // Sinh sau insert de co id -> tra cuu tien to co so da gan. Một lời gọi duy nhất để store
+  // tự retry nếu hai request tạo đồng thời tính ra cùng số thứ tự.
   if (row.role === 'student' && row.student_code == null) {
     const branchCode = await store.branchCodeForUser(row.id)
-    const code = await store.nextStudentCode(branchCode)
-    const updated = await store.setStudentCode(row.id, code)
+    const updated = await store.assignStudentCode(row.id, branchCode)
     if (updated) return { ok: true, user: toAdminUser(updated) }
   }
   return { ok: true, user: toAdminUser(row) }
