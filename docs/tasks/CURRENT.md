@@ -5,9 +5,9 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 ## Đang làm
 
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
-- Cập nhật ngày: 2026-11-26
-- Nhánh: `dev`
-- Trạng thái: Vá cổng gác CI — integration test giờ chạy trên mọi push vào `dev` (ADR 0017).
+- Cập nhật ngày: 2026-11-27
+- Nhánh: `dev` (đã merge vào `main`)
+- Trạng thái: Release `dev` → `main` (`196be90`) — Dependabot 130 cảnh báo → **0**. Không còn task nghiệp vụ mở; chỉ còn việc kiểm thử tay + nợ kỹ thuật có marker.
 
 ### Việc trước đó
 
@@ -15,6 +15,12 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - Cập nhật ngày: 2026-11-26
 - Nhánh: `dev`
 - Trạng thái: Done — `dev-health-check` xanh với đủ 304 test (trước: 282 pass + 22 skip).
+
+## Đã làm (phiên 2026-11-27)
+
+- **Merge `dev` → `main` (`196be90`)**: `main` thiếu 63 commit của `dev` và có 9 commit deploy riêng → merge `--no-ff`, không xung đột. Giữ nguyên phần chỉ có trên `main`: root `vercel.json` vẫn đã xoá (`008247f`), `apps/web/vercel.json` không đổi. Lockfile/workspace lấy bản của `dev` (vite 7.3.8, vitest 4.1.12, kysely 0.28.17, minimatch 11.0.9).
+- Cổng gác trên cây đã merge: lint 4/4, typecheck 5/5, test shared 17 + api 282 (+22 integration skip vì máy local không có `TEST_DATABASE_URL`) + web 113, build OK; chạy thêm đúng lệnh Vercel (`VITE_DEMO=1 vite build`) → OK.
+- **Dependabot về 0**: graph cập nhật ngay sau push, nhưng alerts treo 130 suốt ~33 phút rồi tự đóng (`open=0`, `fixed=130`). Không cần tắt/bật lại Dependabot; job tính lại alert chạy bất đồng bộ tới ~30-40 phút.
 
 ## Đã làm (phiên 2026-11-26)
 
@@ -41,6 +47,6 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 5. Đồng bộ công thức xếp loại học lực giữa `students/service.ts` và `reports/service.ts` khi slice-7 chốt (đang ghi nợ `TODO(slice-30)`).
 6. (Tùy chọn, ngoài phạm vi slice) Bundle web còn 1 chunk ~1.06 MB — có thể `manualChunks` tách recharts/vendor nếu muốn hết cảnh báo >500 kB.
 7. Nếu sau này cần nhắc điểm danh tự động hoặc audio trong LMS: **mở slice mới** (ID slice-9 không tái sử dụng), trả lời 3 câu ở mục "Nếu sau này muốn mở lại" trong `slices/slice-9-mo-rong.md`.
-8. Sau khi push, mở lại trang Dependabot của repo để xác nhận GitHub đã đóng cảnh báo (GitHub đếm theo từng đường dẫn nên số trên web khác số của `pnpm audit`).
+8. ~~Sau khi push, mở lại trang Dependabot của repo để xác nhận GitHub đã đóng cảnh báo.~~ **Đã xác nhận 2026-11-27: `open=0`, `fixed=130`.**
 9. Kiểm thử tay trên trình duyệt sau khi nâng Vite 7 / vitest 4 / zod 4: luồng tạo đề (parse body số câu/thời lượng), trang báo cáo, và dev server `pnpm dev` (Vite 7 đổi một số mặc định về `server.fs`).
 10. Bộ ba `vite` 7 / `vitest` 4 / `zod` 4.6 còn rất mới — nếu gặp lỗi lạ khi dev, nghi vấn đầu tiên nên là chúng. Đường lùi: revert commit vá phụ thuộc rồi `pnpm install` (lockfile đi kèm commit).
