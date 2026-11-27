@@ -7,7 +7,14 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-27
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Đang trả nợ kỹ thuật theo marker — vừa xong `TODO(slice-26)` (tuổi ±1, ADR 0018). Không còn task nghiệp vụ mở; còn 4 marker nợ (`slice-23` fallback SĐT, `slice-1` role text, `slice-20` ExamPreview N+1, `slice-21` kéo-thả) + việc kiểm thử tay.
+- Trạng thái: Đã trả 5 marker nợ trong phiên này (`slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry). Còn 3 marker **cần chủ dự án quyết**: `slice-23` (fallback SĐT), `slice-23-b` (định dạng mã học viên), `slice-1` (`role` text → RBAC đầy đủ).
+
+## Đã làm (phiên 2026-11-27, phần 3)
+
+- **`slice-26` — cho nhập chỉ năm sinh** (`fb08269`): bản sửa trước đổi hẳn ô nhập sang `type=date` nên chặn mất đường nhập chỉ-năm. Giờ form có "Năm sinh" (chính) + "Ngày sinh đầy đủ (tuỳ chọn)"; nhập cả hai mà lệch năm thì contract báo lỗi tại FE. Chủ sở hữu chốt: dữ liệu cũ chỉ có năm sinh và **nhập năm sinh là đủ** → `TODO(slice-26-b)` chuyển thành **quy ước được chấp nhận** (tuổi hiển thị `~`), không còn là nợ.
+- **`slice-20` — bỏ N+1 khi xem trước đề** (`9d8b26c`): `GET /exam-sets?ids=a,b,c` trả summary (title + itemCount) trong một request; `ExamPreview` chuyển từ `useQueries` (gọi từng bộ) sang một `useQuery`, vẫn giữ thứ tự phục vụ theo `examSetIds`. Test: `ExamPreview.test` 3 case + `shared/exam-sets.test` 6 case.
+- **`slice-21` — kéo-thả sắp xếp câu trong bộ đề** (`4d3f6b9`): native HTML5 DnD trên `li` (chỉ khi nháp), thả vào đâu gọi lại `move(from,to)` sẵn có. **Giữ** nút Lên/Xuống làm đường bàn phím (kéo-thả một mình không truy cập được) — có test khoá lại. Marker cũ nằm ở `ExamSetPreview` là sai chỗ (màn chỉ đọc) → đã diễn giải lại.
+- **Vá test flaky** `ReportsPage` phân trang: bỏ `some(call)` (phụ thuộc 300ms debounce + CPU) → assert tham số của lần gọi **cuối** với timeout 3000ms. Test này đã fail 2 lần do tranh CPU khi chạy song song.
 
 ## Đã làm (phiên 2026-11-27, phần 2)
 
