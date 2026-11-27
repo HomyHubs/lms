@@ -64,8 +64,10 @@ export function UsersPage(): React.ReactElement {
   const [role, setRole] = useState<UserRole>('student')
   const [lastName, setLastName] = useState('')
   const [firstName, setFirstName] = useState('')
-  // slice-26 (ADR 0018): nhập NGÀY sinh (type=date) thay vì chỉ năm — đây là cách duy nhất để
-  // tuổi chính xác, không lệch ±1 khi chưa tới sinh nhật.
+  // slice-26 (ADR 0018): năm sinh là trường CHÍNH — dữ liệu cũ của trung tâm chỉ có năm sinh.
+  // Ngày sinh đầy đủ là tuỳ chọn: nhập được thì tuổi chính xác, không nhập thì tuổi là ước lượng
+  // và bảng hiển thị `~<tuổi>` để nói rõ điều đó.
+  const [birthYear, setBirthYear] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [gender, setGender] = useState('')
   const [address, setAddress] = useState('')
@@ -83,7 +85,10 @@ export function UsersPage(): React.ReactElement {
       // Truong rong -> undefined (contract coi la khong nhap).
       lastName: lastName.trim() === '' ? undefined : lastName,
       firstName: firstName.trim() === '' ? undefined : firstName,
-      // slice-26 (ADR 0018): gửi ngày sinh đầy đủ; backend tự dẫn xuất birthYear từ đó.
+      // slice-26 (ADR 0018): nhập NĂM sinh là đủ (dữ liệu cũ chỉ có năm). Nhập thêm ngày sinh đầy
+      // đủ thì gửi `birthDate` — backend dẫn xuất `birthYear` từ đó và tuổi thành chính xác.
+      // Nhập cả hai mà lệch năm thì contract báo lỗi "Nam sinh khong khop voi ngay sinh".
+      birthYear: birthYear.trim() === '' ? undefined : Number(birthYear),
       birthDate: birthDate.trim() === '' ? undefined : birthDate,
       gender: gender === '' ? undefined : gender,
       address: address.trim() === '' ? undefined : address,
@@ -101,6 +106,7 @@ export function UsersPage(): React.ReactElement {
         setRole('student')
         setLastName('')
         setFirstName('')
+        setBirthYear('')
         setBirthDate('')
         setGender('')
         setAddress('')
@@ -167,10 +173,19 @@ export function UsersPage(): React.ReactElement {
           className="c-input"
         />
         <input
-          aria-label="Ngày sinh"
+          aria-label="Năm sinh"
+          type="number"
+          value={birthYear}
+          onChange={(e) => setBirthYear(e.target.value)}
+          placeholder="Năm sinh"
+          className="c-input"
+        />
+        <input
+          aria-label="Ngày sinh đầy đủ (tuỳ chọn)"
           type="date"
           value={birthDate}
           onChange={(e) => setBirthDate(e.target.value)}
+          title="Tuỳ chọn — nhập để tính tuổi chính xác"
           className="c-input"
         />
         <select

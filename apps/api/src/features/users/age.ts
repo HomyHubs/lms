@@ -73,8 +73,10 @@ export function ageFromBirthDate(birthDate: string, today: string): number | nul
  * Tuoi UOC LUONG khi chi biet nam sinh (du lieu cu / nhap nhanh): hieu nam, tuc co the lech +-1
  * so voi tuoi that tuy da qua sinh nhat hay chua. FE hien kem dau `~` de noi ro dieu nay.
  *
- * TODO(slice-26-b): khong the sua bang code — ban ghi chi co `birth_year` se con lech +-1 cho toi
- * khi duoc nhap bo sung ngay sinh that. Xem docs/tasks/slices/slice-26-nguoi-dung-hien-thi.md.
+ * Quyet dinh 2026-11-27 (chu du so huu): du lieu cu cua trung tam chi co NAM sinh, va nhap nam
+ * sinh la du — nen day la quy uoc duoc CHAP NHAN, khong phai no ky thuat phai tra. Cach giam thieu
+ * duy nhat la nhap bo sung ngay sinh that (viec du lieu), va khi do `ageFromBirthDate` tu dong
+ * duoc dung vi `displayAge` uu tien `birth_date`.
  */
 export function ageFromBirthYear(birthYear: number, today: string): number | null {
   const now = parseIsoDate(today)

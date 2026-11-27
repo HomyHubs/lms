@@ -28,7 +28,7 @@
 | 10 | `apps/api/src/features/users/age.ts` (mới): `todayInVN`, `ageFromBirthDate`, `ageFromBirthYear`, `displayAge` — hàm thuần, nhận `today` dạng `YYYY-MM-DD` để test tất định | API | Tính theo `Asia/Ho_Chi_Minh`, không theo giờ máy chủ |
 | 11 | `apps/api/src/features/users/service.ts`: `toAdminUser` dùng `displayAge`; `birthYear` dẫn xuất từ `birthDate` khi có; xoá `TODO(slice-26)` | API | — |
 | 12 | `apps/api/src/features/users/store.ts`: `SAFE_COLUMNS` + `createUser`/`updateUser` mang `birth_date` | API | — |
-| 13 | `apps/web/src/features/users/UsersPage.tsx`: ô "Năm sinh" → ô "Ngày sinh" (`type=date`); bảng hiện năm sinh từ `birthYear` (đã dẫn xuất) và tuổi ước lượng kèm `~` + tooltip khi chỉ biết năm | FE | ADR 0018 mục 5: không thêm trường "độ chính xác" vào contract |
+| 13 | `apps/web/src/features/users/UsersPage.tsx`: giữ ô "Năm sinh" (`type=number`) làm trường **chính**, thêm ô "Ngày sinh đầy đủ (tuỳ chọn)" (`type=date`) cho tuổi chính xác; bảng hiện năm sinh từ `birthYear` và tuổi ước lượng kèm `~` + tooltip khi chỉ biết năm | FE | Chủ sở hữu chốt 2026-11-27: nhập chỉ năm sinh là đủ (dữ liệu cũ chỉ có năm) — xem ADR 0018 mục 5 |
 
 ## Stub cho phép
 - Không có stub chức năng. Nếu ẩn hẳn cột "Tuổi" làm vỡ layout bảng, tạm để "—" cho role khác thay vì bỏ cột.
@@ -40,13 +40,14 @@ Xác thực, phân quyền, hạn mức, chuỗi hiển thị — trừ khi ghi 
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
 | ~~TODO(slice-26)~~ | ~~`apps/api/src/features/users/service.ts` (`toAdminUser`)~~ | ~~Tuổi tính từ `birth_year` nên sai lệch tới ±1 so với tuổi thật; muốn chính xác cần `birth_date`~~ | **Đã trả 2026-11-27** (ADR 0018, migration `20261127000000_users_birth_date.sql`) |
-| TODO(slice-26-b) | `apps/api/src/features/users/age.ts` (`ageFromBirthYear`) | Học viên chỉ có `birth_year` (dữ liệu cũ) vẫn lệch ±1; FE hiển thị `~` để nói rõ là ước lượng | Không trả được bằng code — cần nhập bổ sung ngày sinh thật cho từng học viên cũ |
+| ~~TODO(slice-26-b)~~ | `apps/api/src/features/users/age.ts` (`ageFromBirthYear`) | ~~Học viên chỉ có `birth_year` vẫn lệch ±1~~ → **Chấp nhận 2026-11-27** theo quyết định chủ sở hữu: dữ liệu cũ của trung tâm chỉ có năm sinh và "chỉ nhập năm sinh là được". FE hiển thị `~` để nói rõ là ước lượng; nhập bổ sung ngày sinh thật thì tự chuyển sang tuổi chính xác | Không trả — quy ước đã chốt |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Tạo | Khởi tạo file slice từ yêu cầu 9.1 (hiển thị) + 9.2 | Lập kế hoạch thực thi | — |
 | 2026-11-27 | Mở rộng | Thêm Task 7–13: thêm cột `birth_date`, contract `birthDate`, helper tuổi, đổi ô nhập ở FE | Trả nợ `TODO(slice-26)`: tuổi lệch ±1 vì chỉ có năm sinh | 0018 |
+| 2026-11-27 | Thu hẹp | Form nhập **năm sinh là chính**, ngày sinh đầy đủ chỉ là tuỳ chọn (Task 13 điều chỉnh) | Chủ sở hữu chốt: dữ liệu cũ chỉ có năm sinh, "chỉ nhập năm sinh là được" — không được bắt buộc ngày đầy đủ | 0018 |
 
 ## Cách nghiệm thu
 - Thủ công: mở `/users` → mỗi dòng hiển thị họ tên to, số điện thoại nhỏ ngay bên dưới; không còn cột "Số điện thoại" riêng.
@@ -54,6 +55,7 @@ Xác thực, phân quyền, hạn mức, chuỗi hiển thị — trừ khi ghi 
 - Thủ công (ADR 0018): học viên có **ngày sinh** → tuổi đúng kể cả trước sinh nhật trong năm; học viên chỉ có **năm sinh** → tuổi hiện kèm `~` và tooltip giải thích.
 - Test tự động: component test `UsersPage` kiểm tra tên + SĐT phụ cùng ô; `apps/api/src/features/users/service.test.ts` cho `age` chỉ tính với học viên và các biên (null `birthYear`, năm hiện tại).
 - Test tự động (ADR 0018): `apps/api/src/features/users/age.test.ts` phủ biên sinh nhật (hôm trước / đúng ngày / hôm sau), 29/02, ngày không tồn tại, chỉ-có-năm; `service.test.ts` phủ trường hợp `birthDate` thắng `birthYear`; `store.integration.test.ts` xác nhận `birth_date` đọc ra đúng chuỗi `YYYY-MM-DD` (không lệch timezone).
+- Test tự động: `UsersPage.test.tsx` phủ 3 đường nhập — chỉ năm sinh (gửi `birthYear`, không gửi `birthDate`), năm + ngày đầy đủ (gửi cả hai), và năm lệch ngày (báo lỗi tại FE, không gửi request).
 
 ## Bàn giao phiên gần nhất
 - 2026-11-27: trả nợ `TODO(slice-26)`. Thêm `users.birth_date` + contract `birthDate` + helper `age.ts`; FE đổi ô nhập sang `type=date` và đánh dấu tuổi ước lượng bằng `~`. Chi tiết quyết định ở `docs/adr/0018-tuoi-hoc-vien-birth-date.md`.

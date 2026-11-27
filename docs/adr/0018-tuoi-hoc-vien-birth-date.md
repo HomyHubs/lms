@@ -25,11 +25,12 @@ Slice-26 đã ghi nợ `TODO(slice-26)` với dự kiến trả là "khi có nhu
 3. Tuổi tính theo **giờ Việt Nam** (`Asia/Ho_Chi_Minh`), không theo giờ máy chủ: `toAdminUser` so ngày hôm nay (dạng `YYYY-MM-DD`) với ngày sinh để biết đã qua sinh nhật chưa. Dùng chung quy ước timezone đã có ở attendance/examhistory.
 4. Contract: `AdminUser` thêm `birthDate: string | null` (`YYYY-MM-DD`), giữ `birthYear`. `CreateUserRequest`/`UpdateUserRequest` nhận `birthDate` (ưu tiên) và vẫn nhận `birthYear` (tương thích ngược, seed, nhập nhanh). Nếu gửi cả hai và không khớp năm → lỗi validate, không im lặng chọn một.
 5. `age` vẫn CHỈ tính cho role `student`; role khác `null`. Không thêm trường "độ chính xác" vào contract — FE tự suy ra từ `birthDate == null`, và hiển thị tuổi ước lượng kèm dấu `~` + tooltip.
+6. **(Chốt 2026-11-27, chủ sở hữu)** Nhập **năm sinh là đủ**: dữ liệu cũ của trung tâm chỉ có năm sinh và chủ dự án xác nhận "chỉ nhập năm sinh là được". Vì vậy form có ô "Năm sinh" là trường chính, ô "Ngày sinh đầy đủ" chỉ là tuỳ chọn để có tuổi chính xác. Tuổi của bản ghi chỉ-có-năm là **ước lượng được chấp nhận** (hiển thị `~`), không phải nợ kỹ thuật phải trả.
 
 ## Consequences
 
 - Tuổi của học viên có ngày sinh là **chính xác**; tuổi của học viên chỉ có năm sinh vẫn lệch ±1 nhưng giờ **được hiển thị là ước lượng**, không còn giả vờ chính xác.
-- Form người dùng đổi ô "Năm sinh" thành ô "Ngày sinh" (`type=date`). Nhập chỉ năm không còn qua UI, nhưng vẫn qua API (giữ tương thích cho seed/import cũ).
+- Form người dùng có ô "Năm sinh" (chính) + ô "Ngày sinh đầy đủ (tuỳ chọn)". Nhập chỉ năm vẫn qua UI và API; nhập thêm ngày thì tuổi chính xác.
 - Cần migration + `db.ts` + contract + service + store + FE + test. Không đổi dữ liệu đã lưu của user hiện có.
 - Bảng `users` giờ có hai cột mô tả cùng một thứ. Ràng buộc "khớp năm" được thực thi ở tầng validate + service, **không** bằng CHECK constraint của Postgres (tránh phải sửa dữ liệu cũ khi một trong hai cột null).
 - Nếu sau này muốn bỏ hẳn `birth_year`, cần một slice riêng: backfill `birth_date` cho dữ liệu cũ là bất khả thi, nên chỉ có thể bỏ sau khi xác nhận không còn bản ghi year-only.
