@@ -15,10 +15,10 @@ import type {
   LevelRow,
 } from './service.js'
 
-const LEVEL_STARTER = '10000000-0000-0000-0000-000000000001'
-const BRANCH_1 = '20000000-0000-0000-0000-000000000001'
-const BRANCH_2 = '20000000-0000-0000-0000-000000000002'
-const STUDENT_1 = '30000000-0000-0000-0000-000000000001'
+const LEVEL_STARTER = '10000000-0000-4000-8000-000000000001'
+const BRANCH_1 = '20000000-0000-4000-8000-000000000001'
+const BRANCH_2 = '20000000-0000-4000-8000-000000000002'
+const STUDENT_1 = '30000000-0000-4000-8000-000000000001'
 
 const ADMIN_A: UserRecord = { id: 'admin-a', phone_number: '0900000001', password_hash: 'x', role: 'admin' }
 const ADMIN_B: UserRecord = { id: 'admin-b', phone_number: '0900000002', password_hash: 'x', role: 'admin' }
@@ -281,5 +281,60 @@ describe('catalog routes — branch-scoped classes (slice-1 Task 4)', () => {
       payload: { courseId, branchId: BRANCH_2, name: 'Lop B2' },
     })
     expect(res.statusCode).toBe(403)
+  })
+})
+
+describe('catalog routes — chan xoa lop con hoc vien (slice-28)', () => {
+  let app: FastifyInstance | undefined
+  afterEach(async () => {
+    if (app) await app.close()
+    app = undefined
+  })
+
+  it('DELETE /classes/:id tra 409 khi lop con hoc vien, 204 sau khi go het hoc vien', async () => {
+    const store = makeFakeCatalogStore()
+    const scope = makeFakeBranchScope({ [ADMIN_A.id]: [BRANCH_1] })
+    app = await buildTestApp(ADMIN_A, store, scope)
+
+    const course = await app.inject({
+      method: 'POST',
+      url: '/courses',
+      headers: { cookie: COOKIE },
+      payload: { levelId: LEVEL_STARTER, name: 'KH1' },
+    })
+    const courseId = course.json().course.id as string
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/classes',
+      headers: { cookie: COOKIE },
+      payload: { courseId, branchId: BRANCH_1, name: 'Lop 1' },
+    })
+    expect(created.statusCode).toBe(201)
+    const classId = created.json().class.id as string
+
+    const enrolled = await app.inject({
+      method: 'POST',
+      url: '/enrollments',
+      headers: { cookie: COOKIE },
+      payload: { classId, studentId: STUDENT_1 },
+    })
+    expect(enrolled.statusCode).toBe(201)
+
+    const blocked = await app.inject({ method: 'DELETE', url: `/classes/${classId}`, headers: { cookie: COOKIE } })
+    expect(blocked.statusCode).toBe(409)
+    expect(String(blocked.json().error)).toContain('con hoc vien')
+
+    // Lop van con sau khi bi chan.
+    const stillThere = await app.inject({ method: 'GET', url: '/classes', headers: { cookie: COOKIE } })
+    expect(stillThere.json().classes).toHaveLength(1)
+
+    // Go het hoc vien -> xoa duoc.
+    const enrollmentId = enrolled.json().enrollment.id as string
+    const removed = await app.inject({ method: 'DELETE', url: `/enrollments/${enrollmentId}`, headers: { cookie: COOKIE } })
+    expect(removed.statusCode).toBe(204)
+
+    const ok = await app.inject({ method: 'DELETE', url: `/classes/${classId}`, headers: { cookie: COOKIE } })
+    expect(ok.statusCode).toBe(204)
   })
 })

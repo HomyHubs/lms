@@ -102,7 +102,23 @@ async function buildTestApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: false })
   await app.register(cookie)
-  await questionsRoutes(app, { rbac: makeRbac(makeFakeAuthStore(authUser)), questionsStore })
+  // slice-19: these slice-3 RBAC tests predate the per-role edit setting, so use a permissive
+  // fake settings store (all roles may edit). The slice-19 toggle behavior has its own tests.
+  const fakeSettingsStore = {
+    listQuestionEditPermissions: async () => [
+      { role: 'superadmin', can_edit: true },
+      { role: 'admin', can_edit: true },
+      { role: 'teacher', can_edit: true },
+      { role: 'student', can_edit: true },
+      { role: 'staff', can_edit: true },
+    ],
+    upsertQuestionEditPermissions: async () => {},
+  }
+  await questionsRoutes(app, {
+    rbac: makeRbac(makeFakeAuthStore(authUser)),
+    questionsStore,
+    settingsStore: fakeSettingsStore,
+  })
   await app.ready()
   return app
 }

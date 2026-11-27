@@ -10,6 +10,7 @@ import {
   createClass,
   createCourse,
   createEnrollment,
+  deleteClass,
   deleteCourse,
   listClasses,
   listCourses,
@@ -205,6 +206,33 @@ describe('classes', () => {
 
     const moved = await updateClass(store, (await store.listClasses())[0]!.id, { branchId: 'nope' })
     expect(moved).toEqual({ ok: false, reason: 'branch_not_found' })
+  })
+})
+
+describe('classes — xoa lop (slice-28)', () => {
+  it('blocks deleting a class that still has active enrollments', async () => {
+    const store = makeFakeStore({ branchIds: ['b1'], userIds: ['student-1'] })
+    const course = await createCourse(store, { levelId: 'lvl-starter', name: 'KH' })
+    if (!course.ok) throw new Error('setup failed')
+    const klass = await createClass(store, { courseId: course.course.id, branchId: 'b1', name: 'L1' })
+    if (!klass.ok) throw new Error('setup failed')
+    const enrolled = await createEnrollment(store, { classId: klass.class.id, studentId: 'student-1' })
+    expect(enrolled.ok).toBe(true)
+
+    expect(await deleteClass(store, klass.class.id)).toEqual({ ok: false, reason: 'has_enrollments' })
+    expect(await listClasses(store)).toHaveLength(1)
+  })
+
+  it('deletes an empty class and reports a missing class', async () => {
+    const store = makeFakeStore({ branchIds: ['b1'] })
+    const course = await createCourse(store, { levelId: 'lvl-starter', name: 'KH' })
+    if (!course.ok) throw new Error('setup failed')
+    const klass = await createClass(store, { courseId: course.course.id, branchId: 'b1', name: 'L1' })
+    if (!klass.ok) throw new Error('setup failed')
+
+    expect(await deleteClass(store, klass.class.id)).toEqual({ ok: true })
+    expect(await listClasses(store)).toHaveLength(0)
+    expect(await deleteClass(store, klass.class.id)).toEqual({ ok: false, reason: 'not_found' })
   })
 })
 

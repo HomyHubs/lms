@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { CreateBranchRequest, CreateCenterRequest } from '@lms/shared'
+import type {
+  CreateBranchRequest,
+  CreateCenterRequest,
+  UpdateBranchRequest,
+  UpdateCenterRequest,
+} from '@lms/shared'
 import {
   createBranch,
   createCenter,
@@ -7,6 +12,8 @@ import {
   deleteCenter,
   listBranches,
   listCenters,
+  updateBranch,
+  updateCenter,
 } from '@/lib/api'
 
 const CENTERS_KEY = ['centers'] as const
@@ -21,6 +28,15 @@ export function useCreateCenter() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateCenterRequest) => createCenter(input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: CENTERS_KEY }),
+  })
+}
+
+/** slice-27: doi ten trung tam (PATCH /centers/:id). */
+export function useUpdateCenter() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateCenterRequest }) => updateCenter(id, input),
     onSuccess: () => void qc.invalidateQueries({ queryKey: CENTERS_KEY }),
   })
 }
@@ -46,6 +62,15 @@ export function useCreateBranch() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateBranchRequest) => createBranch(input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: BRANCHES_KEY }),
+  })
+}
+
+/** slice-27: sua ten/dia chi co so (PATCH /branches/:id). */
+export function useUpdateBranch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateBranchRequest }) => updateBranch(id, input),
     onSuccess: () => void qc.invalidateQueries({ queryKey: BRANCHES_KEY }),
   })
 }

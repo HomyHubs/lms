@@ -11,17 +11,22 @@ import { CentersPage } from '@/features/centers/CentersPage'
 import { ExamHistoryPage } from '@/features/examhistory/ExamHistoryPage'
 import { ExamReportsPage } from '@/features/examhistory/ExamReportsPage'
 import { ExamsPage } from '@/features/exams/ExamsPage'
+import { ExamManagementPage } from '@/features/exams/ExamManagementPage'
 import { ExamSetsPage } from '@/features/examsets/ExamSetsPage'
 import { GradingPage } from '@/features/grading/GradingPage'
+import { BranchAttendancePage } from '@/features/home/BranchAttendancePage'
 import { HomePage } from '@/features/home/HomePage'
 import { QuestionsPage } from '@/features/questions/QuestionsPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { AssignmentsPage } from '@/features/userbranches/AssignmentsPage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { WorkHoursPage } from '@/features/workhours/WorkHoursPage'
+import { StudentsPage } from '@/features/students/StudentsPage'
+import { StudentDetailPage } from '@/features/students/StudentDetailPage'
 
 const PAGES: Record<NavPath, React.ReactElement> = {
   '/': <HomePage />,
+  '/exam-management': <ExamManagementPage />,
   '/exams': <ExamsPage />,
   '/exam-history': <ExamHistoryPage />,
   '/attendance': <AttendancePage />,
@@ -36,6 +41,7 @@ const PAGES: Record<NavPath, React.ReactElement> = {
   '/centers': <CentersPage />,
   '/catalog': <CatalogPage />,
   '/assignments': <AssignmentsPage />,
+  '/students': <StudentsPage />,
 }
 
 /** Public: /login, /forgot-password. Everything else renders inside AppShell, role-guarded by NAV_ITEMS. */
@@ -58,6 +64,24 @@ export function App(): React.ReactElement {
             element={<RequireAuth role={[...item.roles]}>{PAGES[item.path]}</RequireAuth>}
           />
         ))}
+        {/* slice-16: branch attendance detail (non-nav route, opened from the Dashboard card) */}
+        <Route
+          path="/attendance/branch/:branchId"
+          element={
+            <RequireAuth role={['admin']}>
+              <BranchAttendancePage />
+            </RequireAuth>
+          }
+        />
+        {/* slice-30: trang hồ sơ chi tiết học viên (non-nav route) */}
+        <Route
+          path="/students/:id"
+          element={
+            <RequireAuth role={['admin', 'teacher', 'staff']}>
+              <StudentDetailPage />
+            </RequireAuth>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

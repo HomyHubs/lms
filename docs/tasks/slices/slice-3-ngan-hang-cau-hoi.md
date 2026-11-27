@@ -22,7 +22,7 @@ Admin/Giao vien tao/sua cau hoi thu cong hoac import hang loat tu Excel/CSV dung
 
 ## Stub cho phep
 
-Chua can ho tro audio (Listening) va ghi am (Speaking) ngay — danh dau TODO(slice-9) cho phan nay.
+Chua can ho tro audio (Listening) va ghi am (Speaking) — **khong lam trong LMS** (quyet dinh 2026-11-26 khi huy slice-9): GV phat audio ngoai lop va tu cham, dua diem vao lop qua luong cham tay.
 
 ## Khong duoc stub
 
@@ -32,7 +32,7 @@ Validate schema khi import phai la thuc, khong duoc import du lieu sai dinh dang
 
 | Marker | Vi tri | Noi dung | Du kien tra |
 | --- | --- | --- | --- |
-| TODO(slice-9) | Question model | Chua ho tro audio/ghi am cho Listening/Speaking | slice-9 |
+| — | Question model | Khong ho tro audio/ghi am cho Listening/Speaking — quyet dinh co chu y 2026-11-26 (slice-9 huy), khong phai no | Không trả |
 
 ## Nhat ky thay doi pham vi cua rieng Slice/Task nay
 

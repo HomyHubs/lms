@@ -1,23 +1,26 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CatalogPage } from './CatalogPage'
 
-const LEVEL = '10000000-0000-0000-0000-000000000001'
-const COURSE = '40000000-0000-0000-0000-000000000001'
-const BRANCH = '20000000-0000-0000-0000-000000000001'
-const CLASS = '50000000-0000-0000-0000-000000000001'
-const CENTER = '60000000-0000-0000-0000-000000000001'
+const LEVEL = '10000000-0000-4000-8000-000000000001'
+const COURSE = '40000000-0000-4000-8000-000000000001'
+const BRANCH = '20000000-0000-4000-8000-000000000001'
+const CLASS = '50000000-0000-4000-8000-000000000001'
+const CENTER = '60000000-0000-4000-8000-000000000001'
 
 /** Fetch gia lap tra ve du du lieu cho cac query cua trang. */
-function stubFetch(): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input)
-      const body = (data: unknown) => ({ ok: true, status: 200, json: async () => data })
-      if (url.includes('/enrollments')) return body({ enrollments: [] })
+function stubFetch(opts: { blockDelete?: boolean } = {}) {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    const body = (data: unknown) => ({ ok: true, status: 200, json: async () => data })
+    if (init?.method === 'DELETE' && url.includes('/classes/')) {
+      return opts.blockDelete
+        ? { ok: false, status: 409, json: async () => ({ error: 'Lop con hoc vien dang hoc, khong the xoa' }) }
+        : { ok: true, status: 204, json: async () => ({}) }
+    }
+    if (url.includes('/enrollments')) return body({ enrollments: [] })
       if (url.includes('/classes')) {
         return body({
           classes: [
@@ -58,7 +61,7 @@ function stubFetch(): void {
         return body({
           users: [
             {
-              id: '30000000-0000-0000-0000-000000000001',
+              id: '30000000-0000-4000-8000-000000000001',
               phoneNumber: '0900000009',
               email: null,
               role: 'student',
@@ -75,8 +78,9 @@ function stubFetch(): void {
         })
       }
       throw new Error(`unexpected fetch: ${url}`)
-    }),
-  )
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
 }
 
 function renderPage() {
@@ -102,5 +106,16 @@ describe('CatalogPage', () => {
     // Ten khoa hoc/lop xuat hien ca o bang lan o dropdown -> dung getAllByText.
     await waitFor(() => expect(screen.getAllByText('KH1').length).toBeGreaterThan(0))
     await waitFor(() => expect(screen.getAllByText('Lop 1').length).toBeGreaterThan(0))
+  })
+
+  it('shows the server message when deleting a class that still has students (slice-28)', async () => {
+    stubFetch({ blockDelete: true })
+    renderPage()
+    await waitFor(() => expect(screen.getAllByText('Lop 1').length).toBeGreaterThan(0))
+
+    const classRow = screen.getByRole('row', { name: /Lop 1/ })
+    fireEvent.click(within(classRow).getByRole('button', { name: /Xoá/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Lop con hoc vien dang hoc, khong the xoa')
   })
 })

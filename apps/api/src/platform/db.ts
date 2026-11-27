@@ -21,6 +21,8 @@ export interface UsersTable {
   gender: ColumnType<string | null, string | null | undefined, string | null>
   address: ColumnType<string | null, string | null | undefined, string | null>
   parent_phone: ColumnType<string | null, string | null | undefined, string | null>
+  // slice-23: ma hoc vien (nullable). Chi unique voi role 'student' va khi khong null (partial unique index).
+  student_code: ColumnType<string | null, string | null | undefined, string | null>
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -61,6 +63,8 @@ export interface BranchesTable {
   center_id: string
   address: ColumnType<string | null, string | null | undefined, string | null>
   name: string
+  // slice-23: tien to ma hoc vien cua co so (vd 'HN','HCM'), nullable.
+  code: ColumnType<string | null, string | null | undefined, string | null>
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -91,12 +95,24 @@ export interface ClassesTable {
   updated_at: Timestamp
 }
 
-/** Bang `enrollments` — slice-1 Task 3: ghi danh hoc vien vao lop (unique class+student). */
+/** One enrollment period; at most one active period per class and student. */
 export interface EnrollmentsTable {
   id: Generated<string>
   class_id: string
   student_id: string
   created_at: Timestamp
+  ended_at: ColumnType<Date | null, string | null | undefined, string | null>
+}
+
+export interface EnrollmentEventsTable {
+  id: Generated<string>
+  enrollment_id: string
+  class_id: string
+  student_id: string
+  branch_id: string | null
+  event_type: 'enrolled' | 'withdrawn'
+  occurred_at: Timestamp
+  is_backfilled: Generated<boolean>
 }
 
 /** Bang `user_branches` — slice-1 Task 4: gan Branch cho User (branch-scoped access). */
@@ -252,6 +268,25 @@ export interface ClassSessionsTable {
   cancelled_at: ColumnType<Date | null, string | null | undefined, string | null>
 }
 
+export interface SessionTeacherEventsTable {
+  id: Generated<string>
+  session_id: string
+  teacher_id: string
+  recorded_by: string
+  recorded_at: Timestamp
+}
+
+export interface ShiftEventsTable {
+  id: Generated<string>
+  shift_id: string
+  user_id: string
+  event_type: 'check_in' | 'check_out'
+  occurred_at: ColumnType<Date, string, string>
+  recorded_by: string | null
+  branch_id: string | null
+  is_backfilled: Generated<boolean>
+}
+
 /** Table `staff_shifts` — slice-8: one check-in/check-out of a staff member or teacher. */
 export interface StaffShiftsTable {
   id: Generated<string>
@@ -268,6 +303,12 @@ export interface AttendanceRecordsTable {
   note: ColumnType<string | null, string | null | undefined, string | null>
   recorded_by: string
   recorded_at: Timestamp
+  arrived_at: ColumnType<Date | null, string | null | undefined, string | null>
+  late_minutes: ColumnType<number | null, number | null | undefined, number | null>
+}
+
+export interface AttendanceEventsTable extends AttendanceRecordsTable {
+  id: Generated<string>
 }
 
 /** Table `ai_generation_requests` — slice-4.5: a prompt generated for an external AI tool. */
@@ -355,6 +396,12 @@ export interface ExamAttemptMediaTable {
   media_id: string
 }
 
+/** Table `question_edit_permissions` — slice-19 (ADR 0015): per-role toggle for editing questions. */
+export interface QuestionEditPermissionsTable {
+  role: string
+  can_edit: boolean
+}
+
 export interface Database {
   users: UsersTable
   sessions: SessionsTable
@@ -365,6 +412,7 @@ export interface Database {
   courses: CoursesTable
   classes: ClassesTable
   enrollments: EnrollmentsTable
+  enrollment_events: EnrollmentEventsTable
   user_branches: UserBranchesTable
   questions: QuestionsTable
   exams: ExamsTable
@@ -376,15 +424,19 @@ export interface Database {
   exam_grading_policies: ExamGradingPoliciesTable
   class_teachers: ClassTeachersTable
   class_sessions: ClassSessionsTable
+  session_teacher_events: SessionTeacherEventsTable
   attendance_records: AttendanceRecordsTable
+  attendance_events: AttendanceEventsTable
   ai_generation_requests: AiGenerationRequestsTable
   ai_generated_items: AiGeneratedItemsTable
   student_grading_policies: StudentGradingPoliciesTable
   staff_shifts: StaffShiftsTable
+  shift_events: ShiftEventsTable
   notifications: NotificationsTable
   media_assets: MediaAssetsTable
   question_media: QuestionMediaTable
   exam_attempt_media: ExamAttemptMediaTable
+  question_edit_permissions: QuestionEditPermissionsTable
 }
 
 export function createDb(connectionString: string): Kysely<Database> {

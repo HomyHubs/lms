@@ -6,9 +6,9 @@ import type { MyTimesheet, StaffShift, WorkHoursReport } from '@lms/shared'
 import { workHoursToSheets } from './work-hours-export'
 import { WorkHoursPage } from './WorkHoursPage'
 
-const TEACHER_ID = '70000000-0000-0000-0000-000000000001'
-const SESSION_ID = '90000000-0000-0000-0000-000000000001'
-const CLASS_ID = '50000000-0000-0000-0000-000000000001'
+const TEACHER_ID = '70000000-0000-4000-8000-000000000001'
+const SESSION_ID = '90000000-0000-4000-8000-000000000001'
+const CLASS_ID = '50000000-0000-4000-8000-000000000001'
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body })
 
@@ -81,6 +81,33 @@ describe('WorkHoursPage', () => {
     expect(screen.getByText('Đang trong ca')).toBeTruthy()
   })
 
+  it('lets an admin select a branch and teacher, check in, and see who recorded it', async () => {
+    const branchId = '20000000-0000-4000-8000-000000000001'
+    let open: StaffShift | null = null
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) return json({ user: { id: SESSION_ID, phoneNumber: '0900000001', role: 'admin' } })
+      if (url.endsWith('/api/branches')) return json({ branches: [{ id: branchId, centerId: CLASS_ID, name: 'Cơ sở A', address: null, createdAt: '2026-11-01T00:00:00Z' }] })
+      if (url.includes('/api/reports/work-hours')) return json({ ...report, staff: [{ ...report.staff[0], userId: TEACHER_ID, role: 'teacher' }] })
+      if (url.includes(`/api/admin/teachers/${TEACHER_ID}/timesheet/check-in`) && init?.method === 'POST') {
+        open = { id: SESSION_ID, checkInAt: '2026-11-08T01:00:00.000Z', checkOutAt: null, workedMinutes: null }
+        return json({ shift: open }, 201)
+      }
+      if (url.includes(`/api/admin/teachers/${TEACHER_ID}/timesheet`)) return json({ openShift: open, events: open ? [{ shiftId: SESSION_ID, action: 'check_in', occurredAt: open.checkInAt, recordedBy: SESSION_ID, recordedByPhone: '0900000001', branchId }] : [] })
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    await screen.findByRole('option', { name: 'Cơ sở A' })
+    fireEvent.change(screen.getByLabelText('Cơ sở'), { target: { value: branchId } })
+    const select = await screen.findByRole('combobox', { name: 'Giáo viên' })
+    fireEvent.change(select, { target: { value: TEACHER_ID } })
+    fireEvent.click(await screen.findByRole('button', { name: 'Check-in cho giáo viên' }))
+    expect(await screen.findByRole('button', { name: 'Check-out cho giáo viên' })).toBeTruthy()
+    expect(screen.getByText('0900000001')).toBeTruthy()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes(`branchId=${branchId}`))).toBe(true)
+  })
+
   it('shows the admin monthly report and flattens it for the Excel export', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -104,5 +131,31 @@ describe('WorkHoursPage', () => {
     expect(teacherSheet?.rows[1]).toEqual(['2026-11', '0911000001', 'Nguyễn Thu Hà', 3, 3, 1, 1, 0, 4.5])
     expect(staffSheet?.rows[1]).toEqual(['2026-11', '0912000001', '', 'staff', 2, 16, 0])
     expect(detailSheet?.rows[1]?.slice(6)).toEqual(['Đã dạy', 'Có', ''])
+  })
+
+  it('shows per-class teaching hours and per-teacher session detail (slice-25)', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) return json({ user: { id: TEACHER_ID, phoneNumber: '0901234567', role: 'admin' } })
+      if (url.endsWith('/api/branches')) return json({ branches: [] })
+      if (url.includes('/api/reports/work-hours')) return json(report)
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+
+    // Theo lop: 1 buoi da day, 90 phut -> 1.5 gio.
+    const classCard = await screen.findByRole('region', { name: 'Theo lớp' })
+    expect(classCard.textContent).toContain('Starter A')
+    expect(classCard.textContent).toContain('1.5 giờ')
+    // Bieu do gio day theo lop co trong trang.
+    expect(await screen.findByRole('region', { name: 'Biểu đồ giờ dạy theo lớp' })).toBeTruthy()
+
+    // Chi tiet theo giao vien: chon 0911000001 -> thay buoi day cua giao vien do.
+    fireEvent.change(await screen.findByLabelText('Xem chi tiết giáo viên'), { target: { value: '0911000001' } })
+    const detail = await screen.findByRole('region', { name: 'Chi tiết giáo viên' })
+    expect(detail.textContent).toContain('2026-11-03 18:00')
+    expect(detail.textContent).toContain('90 phút')
+    expect(detail.textContent).toContain('Đã dạy')
   })
 })

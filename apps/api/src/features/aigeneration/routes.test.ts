@@ -9,18 +9,18 @@ import type { CreateQuestionFields } from '../questions/index.js'
 import { aiGenerationRoutes } from './routes.js'
 import type { AiGenerationStore, AiItemRow, AiRequestRow, SampleQuestionRow } from './service.js'
 
-const LEVEL_STARTER = '10000000-0000-0000-0000-000000000001'
-const LEVEL_MOVER = '10000000-0000-0000-0000-000000000002'
-const SAMPLE_READING = '30000000-0000-0000-0000-000000000001'
-const SAMPLE_MOVER = '30000000-0000-0000-0000-000000000002'
+const LEVEL_STARTER = '10000000-0000-4000-8000-000000000001'
+const LEVEL_MOVER = '10000000-0000-4000-8000-000000000002'
+const SAMPLE_READING = '30000000-0000-4000-8000-000000000001'
+const SAMPLE_MOVER = '30000000-0000-4000-8000-000000000002'
 
 function user(id: string, phone: string, role: string): UserRecord {
   return { id, phone_number: phone, password_hash: 'x', role }
 }
-const ADMIN = user('60000000-0000-0000-0000-000000000001', '0900000001', 'admin')
-const TEACHER_1 = user('70000000-0000-0000-0000-000000000001', '0900000011', 'teacher')
-const TEACHER_2 = user('70000000-0000-0000-0000-000000000002', '0900000012', 'teacher')
-const STUDENT = user('80000000-0000-0000-0000-000000000001', '0900000021', 'student')
+const ADMIN = user('60000000-0000-4000-8000-000000000001', '0900000001', 'admin')
+const TEACHER_1 = user('70000000-0000-4000-8000-000000000001', '0900000011', 'teacher')
+const TEACHER_2 = user('70000000-0000-4000-8000-000000000002', '0900000012', 'teacher')
+const STUDENT = user('80000000-0000-4000-8000-000000000001', '0900000021', 'student')
 const COOKIE = { cookie: `${SESSION_COOKIE}=any-token` }
 
 function makeFakeAuthStore(sessionUser: UserRecord): AuthStore {

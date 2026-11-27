@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createDb, type AppDb } from '../../platform/db.js'
 import { listStudentHistory, loadExamAttemptReport, makeExamHistoryStore } from '../examhistory/index.js'
+import { makeCatalogStore } from '../catalog/index.js'
 import { loadStudentReport } from './service.js'
 import { makeReportsStore } from './store.js'
 
@@ -23,6 +24,7 @@ describeWithPostgres('reports store on real Postgres', () => {
   async function cleanup(): Promise<void> {
     await db.deleteFrom('exam_attempts').where('exam_id', '=', EXAM_ID).execute()
     await db.deleteFrom('exams').where('id', '=', EXAM_ID).execute()
+    await db.deleteFrom('enrollment_events').where('class_id', '=', CLASS_ID).execute()
     // Deleting the center cascades to branch -> class -> sessions/records/enrollments.
     await db.deleteFrom('centers').where('id', '=', CENTER_ID).execute()
     await db.deleteFrom('courses').where('id', '=', COURSE_ID).execute()
@@ -117,6 +119,21 @@ describeWithPostgres('reports store on real Postgres', () => {
     }
   })
 
+  it('filters movement events by branch and local date, excluding unknown historical branches', async () => {
+    const rows = [
+      { enrollment_id: '71000000-0000-4000-8000-000000000031', branch_id: BRANCH_ID, occurred_at: '2026-01-01T17:00:00Z' },
+      { enrollment_id: '71000000-0000-4000-8000-000000000032', branch_id: BRANCH_ID, occurred_at: '2026-01-02T16:59:59Z' },
+      { enrollment_id: '71000000-0000-4000-8000-000000000033', branch_id: BRANCH_ID, occurred_at: '2026-01-02T17:00:00Z' },
+      { enrollment_id: '71000000-0000-4000-8000-000000000034', branch_id: null, occurred_at: '2026-01-02T10:00:00Z' },
+    ]
+    await db.insertInto('enrollment_events').values(rows.map((row) => ({ ...row, class_id: CLASS_ID, student_id: STUDENT_ID, event_type: 'enrolled' as const }))).execute()
+    const store = makeReportsStore(db)
+    const result = await store.listMovements([BRANCH_ID], '2026-01-02', '2026-01-02')
+    expect(result.map((r) => r.occurred_at.toISOString())).toEqual(['2026-01-02T16:59:59.000Z', '2026-01-01T17:00:00.000Z'])
+    expect(result[0]).toMatchObject({ branch_name: 'Branch IT', class_name: 'Class IT', phone_number: '0900000821' })
+    expect(await store.listMovements([], '2026-01-02', '2026-01-02')).toEqual([])
+  })
+
   it('builds the branch-scoped report from real attempts and attendance, honoring the date range', async () => {
     const store = makeReportsStore(db)
     const all = await loadStudentReport(store, { branchIds: [BRANCH_ID] }, {})
@@ -155,7 +172,9 @@ describeWithPostgres('reports store on real Postgres', () => {
   it('reports exam history and retakes per exam from the same attempts, filtering by local day', async () => {
     const history = makeExamHistoryStore(db)
     const now = new Date('2026-12-01T00:00:00Z')
-    const report = await loadExamAttemptReport(history, { branchIds: [BRANCH_ID] }, now)
+    const outcome = await loadExamAttemptReport(history, { branchIds: [BRANCH_ID] }, {}, now)
+    if (!outcome.ok) throw new Error('unexpected bad cursor')
+    const report = outcome.report
     expect(report.byExam).toEqual([
       {
         examId: EXAM_ID,
@@ -174,7 +193,19 @@ describeWithPostgres('reports store on real Postgres', () => {
       [2, 80, '0900000821'],
       [1, 40, '0900000821'],
     ])
-    expect((await loadExamAttemptReport(history, { branchIds: [CENTER_ID] }, now)).attempts).toEqual([])
+    // slice-24: pass/fail aggregations (1 lượt đạt, 1 không đạt cùng cơ sở/lớp/cấp độ); chưa đủ 50 lượt nên hết trang.
+    expect(report.nextCursor).toBeNull()
+    expect(report.byBranch).toEqual([
+      expect.objectContaining({ key: BRANCH_ID, label: 'Branch IT', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(report.byClass).toEqual([
+      expect.objectContaining({ key: CLASS_ID, label: 'Class IT', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(report.byLevel).toEqual([
+      expect.objectContaining({ key: 'starter', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    const centerOutcome = await loadExamAttemptReport(history, { branchIds: [CENTER_ID] }, {}, now)
+    expect(centerOutcome.ok && centerOutcome.report.attempts).toEqual([])
 
     const oct16 = await listStudentHistory(history, STUDENT_ID, { from: '2026-10-16', to: '2026-10-16' }, now)
     expect(oct16).toMatchObject({
@@ -187,5 +218,15 @@ describeWithPostgres('reports store on real Postgres', () => {
     expect(await history.isStudentInBranches(STUDENT_ID, [BRANCH_ID])).toBe(true)
     expect(await history.isStudentInBranches(STUDENT_ID, [CENTER_ID])).toBe(false)
     await expect(db.deleteFrom('exams').where('id', '=', EXAM_ID).execute()).rejects.toThrow(/foreign key/)
+
+    const catalog = makeCatalogStore(db)
+    const enrollment = await catalog.findEnrollment(CLASS_ID, STUDENT_ID)
+    expect(await catalog.deleteEnrollment(enrollment!.id)).toBe(true)
+    expect((await loadStudentReport(makeReportsStore(db), { branchIds: [BRANCH_ID], classId: CLASS_ID }, {})).ranking).toEqual([])
+    const emptyOutcome = await loadExamAttemptReport(history, { branchIds: [BRANCH_ID], classId: CLASS_ID }, {}, now)
+    if (!emptyOutcome.ok) throw new Error('unexpected bad cursor')
+    expect(emptyOutcome.report.attempts).toEqual([])
+    expect(await history.isStudentInBranches(STUDENT_ID, [BRANCH_ID])).toBe(false)
+    expect(await listStudentHistory(history, STUDENT_ID, {}, now)).toMatchObject({ ok: true, page: { attempts: [expect.anything(), expect.anything()] } })
   })
 })

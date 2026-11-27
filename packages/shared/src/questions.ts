@@ -30,7 +30,7 @@ const QuestionText = z.string().trim().min(1, 'Noi dung cau hoi khong duoc de tr
 const CorrectAnswer = z.string().trim().min(1, 'Dap an dung khong duoc de trong').max(2000)
 const Options = z.array(z.string().trim().min(1, 'Lua chon khong duoc rong')).max(26)
 const Points = z.coerce
-  .number({ invalid_type_error: 'Diem phai la so' })
+  .number({ error: 'Diem phai la so' })
   .int('Diem phai la so nguyen')
   .min(1, 'Diem toi thieu la 1')
   .max(100, 'Diem toi da la 100')

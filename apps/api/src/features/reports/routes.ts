@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import {
+  EnrollmentMovementQuery,
   StudentReportQuery,
   UpdateClassificationPolicyRequest,
   type ClassificationPolicy,
@@ -51,6 +52,22 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
     },
   )
 
+  app.get('/reports/enrollment-movements', { preHandler: requireAdmin }, async (request, reply) => {
+    const parsed = EnrollmentMovementQuery.safeParse(request.query)
+    if (!parsed.success) return reply.code(400).send({ error: 'Bo loc lich su ghi danh khong hop le' })
+    const { branchId, from, to } = parsed.data
+    const scoped = await branchScope.branchIdsForUser(getSessionUser(request).id)
+    if (branchId && !scoped.includes(branchId)) return reply.code(404).send({ error: 'Khong tim thay co so' })
+    const [rows, branches] = await Promise.all([
+      store.listMovements(branchId ? [branchId] : scoped, from, to),
+      store.listMovementBranches(scoped),
+    ])
+    return { branches, events: rows.map((r) => ({ id: r.id, branchId: r.branch_id, branchName: r.branch_name,
+      className: r.class_name, studentPhone: r.phone_number, type: r.event_type, occurredAt: r.occurred_at.toISOString() })) }
+  })
+
+  // TODO(slice-24): phan trang server cho ranking khi vuot REPORT_ROW_LIMIT (5000). Hien tai ranking
+  // tra toan bo trong pham vi (thu hang tinh tren toan cuc), FE cat trang 20/50 phia client (Task 6).
   app.get('/reports/students', { preHandler: requireAdmin }, async (request, reply) => {
     const parsed = StudentReportQuery.safeParse(request.query)
     if (!parsed.success) {

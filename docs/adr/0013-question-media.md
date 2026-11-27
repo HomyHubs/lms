@@ -35,6 +35,9 @@ student must not be able to fetch an exam picture before the exam is handed to t
 
 ## Consequences
 
+- **Images only, by decision.** Audio for Listening and recordings for Speaking are **not** supported
+  and will not be added: slice-9 was cancelled on 2026-11-26 — the teacher plays the audio in class,
+  grades by hand and pushes the score into the class (slice-9a + slice-22). This is not a TODO.
 - Orphan assets (uploaded, never linked) are kept; a cleanup job is deferred.
 - Bank question form and Word-import images (slice-11b) are not wired yet; the set editor is the
   entry point. Manual grading does not show images yet.

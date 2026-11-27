@@ -33,7 +33,7 @@ function makeFakeStore(users: UserRecord[]): AuthStore {
 
 async function seedUser(): Promise<UserRecord> {
   return {
-    id: '11111111-1111-1111-1111-111111111111',
+    id: '11111111-1111-4111-8111-111111111111',
     phone_number: '0901234567',
     password_hash: await hashPassword('secret12'),
     role: 'admin',
@@ -94,7 +94,7 @@ describe('session lifecycle', () => {
       ttlSeconds: 3600,
     })
     const user = await resolveSession(store, result!.token)
-    expect(user?.id).toBe('11111111-1111-1111-1111-111111111111')
+    expect(user?.id).toBe('11111111-1111-4111-8111-111111111111')
   })
 
   it('rejects an unknown token', async () => {

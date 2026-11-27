@@ -5,6 +5,7 @@ import {
   cancelClassSession,
   createClassSession,
   getAttendanceRates,
+  getBranchAttendanceRates,
   getMyAttendance,
   getSessionAttendance,
   getStudentAttendance,
@@ -110,6 +111,15 @@ export function useClassRates(classId: string | null) {
     queryKey: ['attendance', 'rates', classId],
     queryFn: () => getAttendanceRates({ classId: classId as string }),
     enabled: classId !== null,
+  })
+}
+
+/** slice-16: attendance rates for a branch (overall + per-class). Admin-only on the backend. */
+export function useBranchRates(branchId: string | null) {
+  return useQuery({
+    queryKey: ['attendance', 'branch-rates', branchId],
+    queryFn: () => getBranchAttendanceRates(branchId as string),
+    enabled: branchId !== null,
   })
 }
 

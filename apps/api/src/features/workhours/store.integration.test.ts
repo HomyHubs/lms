@@ -23,6 +23,7 @@ describeWithPostgres('work hours store on real Postgres', () => {
     // Deleting the center cascades to branch -> class -> sessions/records.
     await db.deleteFrom('centers').where('id', '=', CENTER_ID).execute()
     await db.deleteFrom('courses').where('id', '=', COURSE_ID).execute()
+    await db.deleteFrom('shift_events').where('user_id', 'in', USER_IDS).execute()
     await db.deleteFrom('users').where('id', 'in', USER_IDS).execute()
   }
 
@@ -80,6 +81,23 @@ describeWithPostgres('work hours store on real Postgres', () => {
     await db.deleteFrom('staff_shifts').where('user_id', '=', STAFF_ID).execute()
   })
 
+  it('records the actor and server timestamps atomically for concurrent shift actions', async () => {
+    const store = makeWorkHoursStore(db)
+    const opened = await Promise.all([store.checkIn(TEACHER_ID, STAFF_ID, BRANCH_ID), store.checkIn(TEACHER_ID, STAFF_ID, BRANCH_ID)])
+    expect(opened.filter(Boolean)).toHaveLength(1)
+    const shift = opened.find(Boolean)!
+    const closed = await Promise.all([store.checkOut(TEACHER_ID, STAFF_ID, BRANCH_ID), store.checkOut(TEACHER_ID, STAFF_ID, BRANCH_ID)])
+    expect(closed.filter(Boolean)).toHaveLength(1)
+    const events = await store.listShiftEvents(TEACHER_ID, { from: '2000-01-01', to: '2100-01-01' })
+    expect(events.map((event) => [event.event_type, event.recorded_by, event.branch_id])).toEqual([
+      ['check_out', STAFF_ID, BRANCH_ID], ['check_in', STAFF_ID, BRANCH_ID],
+    ])
+    expect(events[0]?.occurred_at).toEqual(closed.find(Boolean)!.check_out_at)
+    expect(events[1]?.occurred_at).toEqual(shift.check_in_at)
+    await db.deleteFrom('shift_events').where('user_id', '=', TEACHER_ID).execute()
+    await db.deleteFrom('staff_shifts').where('user_id', '=', TEACHER_ID).execute()
+  })
+
   it('reports 3 taught sessions for 2 regular + 1 make-up of a cancelled session, and local work days', async () => {
     const attendance = makeAttendanceStore(db)
     const plan = async (sessionDate: string, makeupForSessionId: string | null = null) => {
@@ -123,6 +141,8 @@ describeWithPostgres('work hours store on real Postgres', () => {
     expect(report.teachers).toEqual([
       {
         teacherId: TEACHER_ID,
+        firstName: null,
+        lastName: null,
         phoneNumber: '0900000911',
         planned: 3,
         held: 3,
@@ -145,5 +165,23 @@ describeWithPostgres('work hours store on real Postgres', () => {
       openShifts: 0,
     })
     expect((await loadWorkHoursReport(makeWorkHoursStore(db), '2026-11', [CENTER_ID], new Date())).teachers).toEqual([])
+  })
+
+  it('keeps the actual teacher when staff corrects attendance', async () => {
+    const attendance = makeAttendanceStore(db)
+    const session = await attendance.createSession({
+      classId: CLASS_ID,
+      sessionDate: '2026-12-01',
+      startsAt: '18:00',
+      topic: null,
+      createdBy: TEACHER_ID,
+      durationMinutes: 90,
+      makeupForSessionId: null,
+    })
+    await attendance.upsertRecords(session!.id, TEACHER_ID, [{ studentId: STUDENT_ID, status: 'present', note: null }])
+    await attendance.upsertRecords(session!.id, STAFF_ID, [{ studentId: STUDENT_ID, status: 'late', note: 'Updated by staff' }])
+    const sessions = await makeWorkHoursStore(db).listSessions({ from: '2026-12-01', to: '2027-01-01', branchIds: [BRANCH_ID] })
+    expect(sessions.find((s) => s.id === session!.id)?.taught_by).toBe(TEACHER_ID)
+    expect((await attendance.listRecords(session!.id))[0]).toMatchObject({ status: 'late', note: 'Updated by staff' })
   })
 })

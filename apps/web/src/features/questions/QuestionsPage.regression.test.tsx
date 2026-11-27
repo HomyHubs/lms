@@ -2,8 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { IMPORT_COLUMNS, type Question } from '@lms/shared'
+import { DEFAULT_QUESTION_EDIT_PERMISSIONS, IMPORT_COLUMNS, type Question } from '@lms/shared'
 import { QuestionsPage } from './QuestionsPage'
+
+// slice-19: phien admin (duoc sua) de cac luong regression giu nguyen hanh vi editor.
+const ADMIN_ME = {
+  id: '99999999-9999-4999-8999-999999999999',
+  phoneNumber: '0900000000',
+  role: 'admin',
+}
 
 const first: Question = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -31,6 +38,10 @@ const second = {
 function setup(failImport = false) {
   let questions = [first, second]
   const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    // slice-19: phien admin + cau hinh quyen sua cau hoi (defaults: admin duoc sua).
+    if (String(url).includes('/auth/me')) return new Response(JSON.stringify({ user: ADMIN_ME }))
+    if (String(url).includes('/settings/question-edit-permissions'))
+      return new Response(JSON.stringify(DEFAULT_QUESTION_EDIT_PERMISSIONS))
     if (init?.method === 'PATCH') {
       const input = JSON.parse(String(init.body))
       questions = questions.map((q) =>

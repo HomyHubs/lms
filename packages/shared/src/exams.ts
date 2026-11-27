@@ -13,13 +13,13 @@ import { QuestionSkill, QuestionType } from './questions.js'
 const Title = z.string().trim().min(1, 'Ten de khong duoc de trong').max(200)
 
 const QuestionCount = z.coerce
-  .number({ invalid_type_error: 'So cau phai la so' })
+  .number({ error: 'So cau phai la so' })
   .int('So cau phai la so nguyen')
   .min(1, 'It nhat 1 cau')
   .max(200, 'Toi da 200 cau')
 
 const DurationMinutes = z.coerce
-  .number({ invalid_type_error: 'Thoi luong phai la so' })
+  .number({ error: 'Thoi luong phai la so' })
   .int('Thoi luong phai la so nguyen')
   .min(1, 'Thoi luong toi thieu 1 phut')
   .max(600, 'Thoi luong toi da 600 phut')
@@ -32,19 +32,19 @@ const DateTimeString = z
   .refine((s) => !Number.isNaN(Date.parse(s)), 'Thoi diem khong hop le')
 
 const PassPercent = z.coerce
-  .number({ invalid_type_error: 'Nguong dat phai la so' })
+  .number({ error: 'Nguong dat phai la so' })
   .int('Nguong dat phai la so nguyen')
   .min(0, 'Nguong dat tu 0 den 100')
   .max(100, 'Nguong dat tu 0 den 100')
 
 const MaxAttempts = z.coerce
-  .number({ invalid_type_error: 'So lan thi toi da phai la so' })
+  .number({ error: 'So lan thi toi da phai la so' })
   .int('So lan thi toi da phai la so nguyen')
   .min(1, 'It nhat 1 lan thi')
   .max(20, 'Toi da 20 lan thi')
 
 const RetakeCooldownMinutes = z.coerce
-  .number({ invalid_type_error: 'Thoi gian cho phai la so' })
+  .number({ error: 'Thoi gian cho phai la so' })
   .int('Thoi gian cho phai la so nguyen')
   .min(0, 'Thoi gian cho khong am')
   .max(43_200, 'Thoi gian cho toi da 30 ngay')
@@ -354,3 +354,31 @@ export const GradeImportResult = z.object({
   errors: z.array(GradeImportError),
 })
 export type GradeImportResult = z.infer<typeof GradeImportResult>
+
+/**
+ * slice-22: mot dong trong ban XEM TRUOC (preview) nhap diem — KHONG ghi DB.
+ * `willApply=true` nghia la dong nay se duoc ghi diem khi commit; nguoc lai `reason` neu ly do bo qua.
+ * `studentName`/`score`/`maxScore` chi co khi khop duoc hoc vien + luot cho cham.
+ */
+export const GradeImportPreviewRow = z.object({
+  row: z.number().int(),
+  studentCode: z.string(),
+  studentName: z.string().nullable(),
+  score: z.number().nullable(),
+  maxScore: z.number().int().nullable(),
+  passed: z.boolean().nullable(),
+  willApply: z.boolean(),
+  reason: GradeImportSkipReason.nullable(),
+})
+export type GradeImportPreviewRow = z.infer<typeof GradeImportPreviewRow>
+
+/**
+ * slice-22: ban xem truoc nhap diem (buoc 1 cua preview -> commit). `rows` la ket qua suy ra neu
+ * commit; `errors` la loi dinh dang file; `applicable` = so dong se duoc ghi. Preview KHONG ghi gi.
+ */
+export const GradeImportPreview = z.object({
+  rows: z.array(GradeImportPreviewRow),
+  errors: z.array(GradeImportError),
+  applicable: z.number().int(),
+})
+export type GradeImportPreview = z.infer<typeof GradeImportPreview>

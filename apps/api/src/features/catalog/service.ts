@@ -89,7 +89,7 @@ export interface CatalogStore {
   listEnrollmentsByClass: (classId: string) => Promise<EnrollmentRow[]>
   findEnrollment: (classId: string, studentId: string) => Promise<EnrollmentRow | undefined>
   findEnrollmentById: (id: string) => Promise<EnrollmentRow | undefined>
-  createEnrollment: (input: { classId: string; studentId: string }) => Promise<EnrollmentRow>
+  createEnrollment: (input: { classId: string; studentId: string }) => Promise<EnrollmentRow | undefined>
   deleteEnrollment: (id: string) => Promise<boolean>
 }
 
@@ -227,8 +227,19 @@ export async function updateClass(
   return row ? { ok: true, class: toClass(row) } : { ok: false, reason: 'not_found' }
 }
 
-export async function deleteClass(store: CatalogStore, id: string): Promise<boolean> {
-  return store.deleteClass(id)
+export type DeleteClassOutcome =
+  | { ok: true }
+  | { ok: false; reason: 'has_enrollments' | 'not_found' }
+
+/**
+ * slice-28: khong cho xoa lop con hoc vien dang hoc — bao toan lich su ghi danh (slice-1.1)
+ * va tranh xoa cascade lam mat du lieu diem danh/ket qua thi gan voi lop.
+ */
+export async function deleteClass(store: CatalogStore, id: string): Promise<DeleteClassOutcome> {
+  const active = await store.listEnrollmentsByClass(id)
+  if (active.length > 0) return { ok: false, reason: 'has_enrollments' }
+  const deleted = await store.deleteClass(id)
+  return deleted ? { ok: true } : { ok: false, reason: 'not_found' }
 }
 
 // ----- Enrollments -----
@@ -254,7 +265,7 @@ export async function createEnrollment(
   if (existing) return { ok: false, reason: 'already_enrolled' }
 
   const row = await store.createEnrollment({ classId: input.classId, studentId: input.studentId })
-  return { ok: true, enrollment: toEnrollment(row) }
+  return row ? { ok: true, enrollment: toEnrollment(row) } : { ok: false, reason: 'already_enrolled' }
 }
 
 export async function deleteEnrollment(store: CatalogStore, id: string): Promise<boolean> {

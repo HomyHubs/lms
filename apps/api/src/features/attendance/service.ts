@@ -3,6 +3,7 @@ import type {
   AttendanceRosterEntry,
   AttendanceStatus,
   AttendanceSummary,
+  BranchClassRate,
   ClassSession,
   MarkAttendanceRecord,
   StudentAttendanceRate,
@@ -55,6 +56,8 @@ export interface RecordRow {
   student_id: string
   status: string
   note: string | null
+  arrived_at?: Date | string | null
+  late_minutes?: number | null
 }
 
 export interface HistoryRow {
@@ -82,6 +85,15 @@ export interface TodaySessionRow {
   session_id: string
   starts_at: string
   enrolled_count: number
+  branch_id: string
+  branch_name: string
+}
+
+/** One attendance record for a class in a branch (slice-16 branch rates). */
+export interface BranchClassRecordRow {
+  class_id: string
+  class_name: string
+  status: string
 }
 
 export interface CreateSessionFields {
@@ -99,6 +111,8 @@ export interface UpsertRecordFields {
   studentId: string
   status: AttendanceStatus
   note: string | null
+  arrivedAt?: string | null
+  lateMinutes?: number | null
 }
 
 /** Filter for rate queries. `branchIds` limits the result to classes in those branches. */
@@ -108,6 +122,8 @@ export interface RecordScope {
   studentId?: string
   branchIds: string[]
 }
+
+export class SessionCancelledError extends Error {}
 
 export interface AttendanceStore {
   findClass(classId: string): Promise<AttendanceClassRow | undefined>
@@ -122,6 +138,7 @@ export interface AttendanceStore {
   listTeachingClasses(teacherId: string): Promise<AttendanceClassRow[]>
 
   listSessions(classId: string): Promise<SessionRow[]>
+  listTodaySessions(branchIds: string[], date: string): Promise<Array<SessionRow & { class_name: string; branch_id: string; branch_name: string }>>
   findSession(sessionId: string): Promise<SessionRow | undefined>
   /** Returns undefined when (class, date, start time) already exists. */
   createSession(fields: CreateSessionFields): Promise<SessionRow | undefined>
@@ -132,13 +149,16 @@ export interface AttendanceStore {
   listRoster(classId: string): Promise<RosterStudentRow[]>
   listRecords(sessionId: string): Promise<RecordRow[]>
   /** Insert-or-update all records atomically. */
-  upsertRecords(sessionId: string, recordedBy: string, records: UpsertRecordFields[]): Promise<void>
+  upsertRecords(sessionId: string, recordedBy: string, records: UpsertRecordFields[], actualTeacherId?: string): Promise<void>
 
   listStudentHistory(studentId: string, branchIds?: string[]): Promise<HistoryRow[]>
   listScopedRecords(scope: RecordScope): Promise<ScopedRecordRow[]>
 
   /** Lớp có buổi học trong một ngày (YYYY-MM-DD), branchIds giới hạn phạm vi. */
   listSessionsOnDate(branchIds: string[], dateIso: string): Promise<TodaySessionRow[]>
+
+  /** All attendance records of a branch, grouped-able by class (slice-16 branch rates). */
+  listBranchClassRecords(branchId: string): Promise<BranchClassRecordRow[]>
 }
 
 const STATUSES: readonly AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
@@ -211,6 +231,8 @@ export function buildRoster(
       lastName: s.last_name ?? null,
       status: rec ? toStatus(rec.status) : null,
       note: rec?.note ?? null,
+      ...(rec?.arrived_at !== undefined ? { arrivedAt: rec.arrived_at === null ? null : toIso(rec.arrived_at) } : {}),
+      ...(rec?.late_minutes !== undefined ? { lateMinutes: rec.late_minutes } : {}),
     }
   })
 }
@@ -257,6 +279,37 @@ export function aggregateRates(rows: readonly ScopedRecordRow[]): {
 }
 
 /**
+ * slice-16: branch attendance rates. Groups branch records by class, computes per-class counts
+ * (present/late/absent/excused) + total + ratePercent (ADR 0004: (present + late) /
+ * (present + late + absent) * 100, 1 decimal, excused excluded, null when denominator is 0),
+ * sorts classes by className, and computes `overall` with the shared `summarize` helper.
+ */
+export function aggregateBranchRates(
+  branchId: string,
+  rows: readonly BranchClassRecordRow[],
+): { branchId: string; overall: AttendanceSummary; classes: BranchClassRate[] } {
+  const perClass = new Map<string, { className: string; statuses: string[] }>()
+  for (const row of rows) {
+    const entry = perClass.get(row.class_id) ?? { className: row.class_name, statuses: [] }
+    entry.statuses.push(row.status)
+    perClass.set(row.class_id, entry)
+  }
+  const classes: BranchClassRate[] = [...perClass.entries()]
+    .map(([classId, v]) => {
+      const counts = { present: 0, late: 0, absent: 0, excused: 0 }
+      for (const s of v.statuses) {
+        if (s === 'present' || s === 'late' || s === 'absent' || s === 'excused') counts[s] += 1
+      }
+      const counted = counts.present + counts.late + counts.absent
+      const ratePercent =
+        counted === 0 ? null : Math.round(((counts.present + counts.late) / counted) * 1000) / 10
+      return { classId, className: v.className, ...counts, total: v.statuses.length, ratePercent }
+    })
+    .sort((a, b) => a.className.localeCompare(b.className))
+  return { branchId, overall: summarize(rows.map((r) => r.status)), classes }
+}
+
+/**
  * Tom tat diem danh cho cac lop co buoi hoc hom nay (dung cho bar chart admin).
  * Ty le tinh theo ADR 0004: (present + late) / (present + late + absent), lam tron 1 chu so thap phan.
  */
@@ -279,7 +332,7 @@ export async function buildTodaySummary(
     const notMarked = Math.max(0, total - marked)
     const counted = counts.present + counts.late + counts.absent
     const ratePercent = counted === 0 ? null : Math.round(((counts.present + counts.late) / counted) * 1000) / 10
-    classes.push({ classId: s.class_id, className: s.class_name, startsAt: s.starts_at, ...counts, notMarked, total, ratePercent })
+    classes.push({ classId: s.class_id, className: s.class_name, startsAt: s.starts_at, branchId: s.branch_id, branchName: s.branch_name, ...counts, notMarked, total, ratePercent })
   }
   return { date: dateIso, classes }
 }
@@ -298,6 +351,7 @@ export async function markAttendance(
   session: SessionRow,
   recordedBy: string,
   records: readonly MarkAttendanceRecord[],
+  actualTeacherId?: string,
 ): Promise<MarkAttendanceOutcome> {
   const ids = records.map((r) => r.studentId)
   if (new Set(ids).size !== ids.length) return { ok: false, reason: 'duplicate_student' }
@@ -307,7 +361,8 @@ export async function markAttendance(
   await store.upsertRecords(
     session.id,
     recordedBy,
-    records.map((r) => ({ studentId: r.studentId, status: r.status, note: r.note ? r.note : null })),
+    records.map((r) => ({ studentId: r.studentId, status: r.status, note: r.note ? r.note : null, arrivedAt: r.arrivedAt, lateMinutes: r.lateMinutes })),
+    actualTeacherId,
   )
   return { ok: true }
 }

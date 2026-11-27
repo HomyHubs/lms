@@ -22,7 +22,7 @@ Giao vien diem danh hoc vien theo tung buoi hoc; hoc vien/Admin xem lai lich su 
 
 ## Stub cho phep
 
-Chua can thong bao tu dong nhac diem danh — de o slice-9.
+Khong nhac diem danh tu dong — slice-9 da huy 2026-11-26 (thong bao cua 9b chi gom nhac thi lai va nhac lich day). Muon co thi mo slice moi.
 
 ## Khong duoc stub
 

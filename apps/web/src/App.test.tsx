@@ -22,7 +22,7 @@ function stubFetch(options: { authed: boolean; role?: UserRole }): void {
           status: 200,
           json: async () => ({
             user: {
-              id: '11111111-1111-1111-1111-111111111111',
+              id: '11111111-1111-4111-8111-111111111111',
               phoneNumber: '0901234567',
               role: options.role ?? 'admin',
             },
@@ -113,9 +113,9 @@ describe('App routing + auth guard', () => {
 
 const SHELL_CASES: { role: UserRole; visible: string[]; hidden: string[]; dashboard: string }[] = [
   { role: 'admin', visible: ['Người dùng', 'Báo cáo & xếp loại', 'Điểm danh'], hidden: ['Bài thi của tôi'], dashboard: 'Lớp học' },
-  { role: 'teacher', visible: ['Điểm danh', 'Ngân hàng câu hỏi', 'Ngày công & giờ dạy'], hidden: ['Người dùng', 'Báo cáo & xếp loại'], dashboard: 'Lớp phụ trách' },
-  { role: 'staff', visible: ['Ngày công & giờ dạy'], hidden: ['Điểm danh', 'Người dùng', 'Ngân hàng câu hỏi'], dashboard: 'Ngày công (tháng)' },
-  { role: 'student', visible: ['Bài thi của tôi', 'Điểm danh'], hidden: ['Ngày công & giờ dạy', 'Người dùng'], dashboard: 'Tỷ lệ chuyên cần' },
+  { role: 'teacher', visible: ['Điểm danh', 'Quản lý thi', 'Ngày công & giờ dạy'], hidden: ['Người dùng', 'Báo cáo & xếp loại'], dashboard: 'Lớp phụ trách' },
+  { role: 'staff', visible: ['Ngày công & giờ dạy'], hidden: ['Điểm danh', 'Người dùng', 'Ngân hàng câu hỏi', 'Quản lý thi'], dashboard: 'Ngày công (tháng)' },
+  { role: 'student', visible: ['Quản lý thi', 'Điểm danh'], hidden: ['Ngày công & giờ dạy', 'Người dùng'], dashboard: 'Tỷ lệ chuyên cần' },
 ]
 
 describe('AppShell navigation by role', () => {
@@ -128,6 +128,33 @@ describe('AppShell navigation by role', () => {
     for (const label of visible) expect(within(nav).getByRole('link', { name: label })).toBeInTheDocument()
     for (const label of hidden) expect(within(nav).queryByRole('link', { name: label })).not.toBeInTheDocument()
     expect(screen.getByText(dashboard)).toBeInTheDocument()
+  })
+
+  it('opens the exam hub and submenu for an admin, and retains old paths', async () => {
+    stubFetch({ authed: true, role: 'admin' })
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Điều hướng chính' })
+    expect(within(nav).queryByRole('link', { name: 'Chấm bài' })).not.toBeInTheDocument()
+    fireEvent.click(within(nav).getByRole('link', { name: 'Quản lý thi' }))
+    expect(screen.getByRole('heading', { name: 'Quản lý thi' })).toBeInTheDocument()
+    for (const label of ['Ngân hàng câu hỏi', 'Bộ đề & đề thi', 'Sinh câu hỏi AI', 'Chấm bài', 'Báo cáo thi']) {
+      expect(within(nav).getByRole('link', { name: label })).toBeInTheDocument()
+      expect(within(screen.getByRole('main')).getByRole('link', { name: label })).toBeInTheDocument()
+    }
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'Bài thi của tôi' })).not.toBeInTheDocument()
+    fireEvent.click(within(nav).getByRole('button', { name: 'Thu gọn menu Quản lý thi' }))
+    expect(within(nav).queryByRole('link', { name: 'Chấm bài' })).not.toBeInTheDocument()
+    fireEvent.click(within(nav).getByRole('button', { name: 'Mở menu Quản lý thi' }))
+    expect(within(nav).getByRole('link', { name: 'Chấm bài' })).toHaveAttribute('href', '/grading')
+  })
+
+  it('shows students only their own exam links', async () => {
+    stubFetch({ authed: true, role: 'student' })
+    renderAt('/exam-management')
+    const main = await screen.findByRole('main')
+    expect(within(main).getByRole('link', { name: 'Bài thi của tôi' })).toHaveAttribute('href', '/exams')
+    expect(within(main).getByRole('link', { name: 'Lịch sử thi' })).toHaveAttribute('href', '/exam-history')
+    expect(within(main).queryByRole('link', { name: 'Chấm bài' })).not.toBeInTheDocument()
   })
 
   it('sends a role away from a page outside its navigation', async () => {

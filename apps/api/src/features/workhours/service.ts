@@ -11,7 +11,7 @@ import type {
 /**
  * Work days + teaching hours (slice-8, ADR 0007) — pure functions over a store interface.
  * A session is "held" only when it is not cancelled and attendance was recorded; the teacher
- * who recorded attendance is the one who taught it. Nothing is counted from the plan alone.
+ * is identified by the session teacher event log (ADR 0014). Nothing is counted from the plan alone.
  */
 
 export const WORK_TIME_ZONE = 'Asia/Ho_Chi_Minh'
@@ -28,7 +28,7 @@ export interface WorkSessionRow {
   planned_teacher_id: string | null
   makeup_for_session_id: string | null
   cancelled_at: Date | string | null
-  /** Teacher who recorded attendance; null when nothing was recorded. */
+  /** Actual teacher from the latest attribution event; null when not established. */
   taught_by: string | null
 }
 
@@ -67,11 +67,20 @@ export interface SessionScope extends DateRange {
   teacherId?: string
 }
 
+export interface ShiftEventRow {
+  shift_id: string
+  event_type: 'check_in' | 'check_out'
+  occurred_at: Date
+  recorded_by: string | null
+  branch_id: string | null
+}
+
 export interface WorkHoursStore {
   /** Undefined when the user already has an open shift. */
-  checkIn(userId: string): Promise<ShiftRow | undefined>
+  checkIn(userId: string, recordedBy?: string, branchId?: string): Promise<ShiftRow | undefined>
   /** Undefined when the user has no open shift. */
-  checkOut(userId: string): Promise<ShiftRow | undefined>
+  checkOut(userId: string, recordedBy?: string, branchId?: string): Promise<ShiftRow | undefined>
+  listShiftEvents(userId: string, range: DateRange): Promise<ShiftEventRow[]>
   findOpenShift(userId: string): Promise<ShiftRow | undefined>
   listShifts(userIds: string[], range: DateRange): Promise<ShiftRow[]>
   listSessions(scope: SessionScope): Promise<WorkSessionRow[]>

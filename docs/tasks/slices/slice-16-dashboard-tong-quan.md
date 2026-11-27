@@ -60,3 +60,20 @@ Branch-scope (admin chỉ thấy cơ sở được phân quyền — slice-1) ph
 5. Test tự động: mở rộng `apps/web/src/features/home/DashboardCharts.test.tsx` (nhãn số, màu cột, điều hướng); API `apps/api/src/features/attendance/routes.test.ts` + `store.integration.test.ts` cho tỉ lệ theo cơ sở. Gates PASS.
 
 ## Bàn giao phiên gần nhất
+
+### 2026-11-13 — agent (nhánh `feature/slice-16-dashboard-tong-quan`, trạng thái Review)
+
+**Đã làm (cả 8 task):**
+- FE `apps/web/src/features/home/DashboardCharts.tsx`:
+  - Task 1: thêm `<LabelList position="top">` cho cột (học viên/khóa học, học viên/cơ sở, và sĩ số từng lớp) → hiện số trên đỉnh cột.
+  - Task 2+3: đổi tiêu đề thành "Tổng số học viên theo khóa học" / "Tổng số học viên theo cơ sở"; `StudentsBarChart` nhận prop `colors` và tô mỗi cột một màu từ `SLICE_COLORS` (cùng bảng màu với pie cơ sở). Có `TODO(slice-16)` về việc gom theo cấp độ vs khóa học.
+  - Task 4: `percentLabel` chỉ còn hiện `%` + `labelLine={false}`, `outerRadius` 72→60, `PIE_HEIGHT` 240→260 → nhãn pie không chồng khi 3 pie cùng dòng.
+  - Task 5: bỏ `AttendancePieChart` (chọn 1 lớp qua `<select>`); thay bằng `AttendanceByBranch` dùng `useBranches()` — mỗi cơ sở là một `<Link to="/attendance/branch/:id">`.
+- Task 6: trang mới `apps/web/src/features/home/BranchAttendancePage.tsx` (bar ratePercent theo từng lớp của cơ sở + tỉ lệ chung + link về Dashboard). Route `/attendance/branch/:branchId` (role `admin`) thêm vào `apps/web/src/App.tsx`.
+- Task 7+8 (API + Shared): `GET /api/attendance/rates?branchId=` trả `BranchAttendanceRates` ({ branchId, overall, classes[] }). Thêm `branchId` vào `AttendanceRatesQuery`; type `BranchClassRate`/`BranchAttendanceRates` trong `@lms/shared`; `aggregateBranchRates` + `listBranchClassRecords` (service/store); client `getBranchAttendanceRates` + hook `useBranchRates`. RBAC: admin ngoài scope → 404, teacher query theo branch → 403; đường cũ (classId/courseId/studentId) giữ nguyên.
+
+**Gates đã chạy:** `@lms/shared build` ✅, `@lms/api typecheck` ✅, `@lms/web typecheck` ✅. CHƯA chạy được ở phiên này (môi trường shell không flush được output của vitest/lint): `@lms/web test`, `@lms/api test`, lint, và `store.integration.test.ts` (cần Postgres). **Người review cần chạy đầy đủ** `pnpm -r test` + `pnpm -r lint` trước khi merge.
+
+**Nợ kỹ thuật:** `TODO(slice-16)` (DashboardCharts.tsx — chốt gom theo cấp độ vs khóa học), `PERF(slice-16)` (BranchAttendancePage.tsx — nếu nhiều lớp gây chậm thì tối ưu thêm).
+
+**Lưu ý git:** có một stash `slice-19 wip stash before slice-16` (WIP slice-19 trên `dev`) cần `git stash pop` khi quay lại `dev`; sẽ xung đột ở `apps/web/src/lib/api.ts` và `packages/shared/src/index.ts` — cần hợp nhất thủ công.

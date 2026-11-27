@@ -7,6 +7,7 @@ import {
   type ExamMode,
   type ExamResult,
   type GradeAttemptRequest,
+  type GradeImportPreviewRow,
   type GradingPolicy,
   type LevelCode,
   type ManualGradingAttempt,
@@ -151,6 +152,8 @@ export interface GradingRow extends AttemptRow {
   skill: string
   pass_percent: number
   student_phone: string
+  // slice-23: ma hoc vien (khop import diem la khoa chinh; SDT chi la fallback). null khi hoc vien chua co ma.
+  student_code: string | null
   student_first_name: string | null
   student_last_name: string | null
 }
@@ -230,8 +233,10 @@ export interface ExamsStore {
   /** Ungraded attempts of `skills` exams that are submitted or past their deadline, oldest first. */
   listUngradedAttempts: (skills: readonly string[], nowIso: string) => Promise<GradingRow[]>
   findGradingRow: (attemptId: string) => Promise<GradingRow | undefined>
-  /** SDT (ma hoc vien) cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope import diem). */
+  /** SDT cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope import diem — fallback khop SDT). */
   listStudentPhonesInBranches: (branchIds: string[]) => Promise<string[]>
+  /** slice-23: ma hoc vien (student_code) cua hoc vien ghi danh lop thuoc cac co so da cho (branch-scope khop theo ma). */
+  listStudentCodesInBranches: (branchIds: string[]) => Promise<string[]>
   /** slice-14: cac lop (cung cap do) co the gan cho de — kem co so de kiem tra branch-scope. */
   listClassRefsForLevel: (levelId: string) => Promise<ClassRef[]>
   /** slice-14: SDT hoc vien ghi danh CAC LOP da cho (gioi han cohort import diem theo lop). */
@@ -1097,6 +1102,7 @@ export async function importGrades(
   graderId: string,
   now: Date,
   allowedPhones: ReadonlySet<string> | undefined,
+  allowedStudentCodes: ReadonlySet<string> | undefined,
 ): Promise<ImportGradesOutcome> {
   const exam = await store.findExamById(examId)
   if (!exam) return { ok: false, reason: 'exam_not_found' }
@@ -1113,11 +1119,16 @@ export async function importGrades(
       : classPhones
   }
 
-  // Cac luot cho cham cua dung de nay, lap chi muc theo SDT hoc vien (mot luot moi nhat moi hoc vien).
+  // Cac luot cho cham cua dung de nay, lap chi muc theo MA HOC VIEN (chinh) va SDT (fallback).
+  // Mot luot moi nhat moi hoc vien cho moi khoa.
   const queue = (await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString()))
     .filter((r) => r.exam_id === examId)
+  const byCode = new Map<string, GradingRow>()
   const byPhone = new Map<string, GradingRow>()
-  for (const r of queue) if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
+  for (const r of queue) {
+    if (r.student_code && !byCode.has(r.student_code)) byCode.set(r.student_code, r)
+    if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
+  }
 
   const summary: GradeImportSummary = { applied: 0, skipped: [] }
   const seen = new Set<string>()
@@ -1130,11 +1141,17 @@ export async function importGrades(
     }
     seen.add(code)
 
-    if (effectiveAllowed && !effectiveAllowed.has(code)) {
+    // slice-23: scope xet theo ca ma hoc vien (chinh) lan SDT (fallback). Chi chan khi KHONG nam trong ca hai.
+    const inCodeScope = allowedStudentCodes?.has(code) ?? false
+    const inPhoneScope = effectiveAllowed?.has(code) ?? false
+    const scoped = allowedStudentCodes !== undefined || effectiveAllowed !== undefined
+    if (scoped && !inCodeScope && !inPhoneScope) {
       summary.skipped.push({ row: input.row, studentCode: code, reason: 'out_of_scope' })
       continue
     }
-    const target = byPhone.get(code)
+    // slice-23: khop theo student_code TRUOC (khoa chinh), roi moi fallback sang SDT.
+    // TODO(slice-23): Khop theo SDT chi la fallback chuyen tiep; go khi moi hoc vien da co student_code.
+    const target = byCode.get(code) ?? byPhone.get(code)
     if (!target) {
       summary.skipped.push({ row: input.row, studentCode: code, reason: 'student_not_found' })
       continue
@@ -1173,4 +1190,103 @@ export async function importGrades(
   }
 
   return { ok: true, summary }
+}
+
+export type PreviewImportGradesOutcome =
+  | { ok: true; rows: GradeImportPreviewRow[]; applicable: number }
+  | { ok: false; reason: 'exam_not_found' | 'not_manual' }
+
+/**
+ * slice-22: XEM TRUOC (dry-run) nhap diem — suy ra ket qua cho tung dong MA KHONG ghi DB.
+ * Dung lai toan bo logic khop cua `importGrades` (branch-scope, cohort theo lop, khop luot cho cham,
+ * tinh maxScore + passed, cac ly do bo qua) nhung thay buoc `saveGrade` bang suy dien. Nho vay ban
+ * preview va ket qua commit khop nhau — tru cac thay doi dong thoi giua hai lan goi.
+ */
+export async function previewImportGrades(
+  store: ExamsStore,
+  examId: string,
+  rows: readonly GradeImportInputRow[],
+  now: Date,
+  allowedPhones: ReadonlySet<string> | undefined,
+): Promise<PreviewImportGradesOutcome> {
+  const exam = await store.findExamById(examId)
+  if (!exam) return { ok: false, reason: 'exam_not_found' }
+  if (!isManualSkill(exam.skill)) return { ok: false, reason: 'not_manual' }
+
+  let effectiveAllowed = allowedPhones
+  const examClassIds = exam.exam_class_ids ?? []
+  if (examClassIds.length > 0) {
+    const classPhones = new Set(await store.listStudentPhonesInClasses(examClassIds))
+    effectiveAllowed = effectiveAllowed
+      ? new Set([...effectiveAllowed].filter((p) => classPhones.has(p)))
+      : classPhones
+  }
+
+  const queue = (await store.listUngradedAttempts([...MANUAL_SKILLS], now.toISOString())).filter(
+    (r) => r.exam_id === examId,
+  )
+  const byPhone = new Map<string, GradingRow>()
+  for (const r of queue) if (!byPhone.has(r.student_phone)) byPhone.set(r.student_phone, r)
+
+  const out: GradeImportPreviewRow[] = []
+  const seen = new Set<string>()
+
+  for (const input of rows) {
+    const code = input.studentCode
+    const target = byPhone.get(code)
+    const name = target
+      ? [target.student_last_name, target.student_first_name].filter(Boolean).join(' ').trim() || null
+      : null
+
+    const push = (reason: GradeImportPreviewRow['reason'], maxScore: number | null = null): void => {
+      const passed =
+        reason === null && maxScore != null && maxScore > 0
+          ? input.score * 100 >= target!.pass_percent * maxScore
+          : null
+      out.push({
+        row: input.row,
+        studentCode: code,
+        studentName: name,
+        score: reason === null ? input.score : null,
+        maxScore: reason === null ? maxScore : null,
+        passed: reason === null ? passed : null,
+        willApply: reason === null,
+        reason,
+      })
+    }
+
+    if (seen.has(code)) {
+      push('duplicate_in_file')
+      continue
+    }
+    seen.add(code)
+
+    if (effectiveAllowed && !effectiveAllowed.has(code)) {
+      push('out_of_scope')
+      continue
+    }
+    if (!target) {
+      push('student_not_found')
+      continue
+    }
+    const loaded = await loadGradable(store, target.id, now)
+    if (!loaded.ok) {
+      push('student_not_found')
+      continue
+    }
+    const graded = loaded.row
+    if (graded.graded_at) {
+      push('already_graded')
+      continue
+    }
+    const maxScore = snapshot(graded).reduce((sum, q) => sum + q.points, 0)
+    if (input.score > maxScore) {
+      push('score_exceeds_max', maxScore)
+      continue
+    }
+    push(null, maxScore)
+  }
+
+  const applicable = out.filter((r) => r.willApply).length
+  return { ok: true, rows: out, applicable }
 }

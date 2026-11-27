@@ -46,7 +46,7 @@ function makeFakeResetHarness(): {
   sent: OtpDispatchArgs[]
 } {
   const email = 'admin@example.com'
-  const userId = '11111111-1111-1111-1111-111111111111'
+  const userId = '11111111-1111-4111-8111-111111111111'
   const otps: OtpRecord[] = []
   const sent: OtpDispatchArgs[] = []
   const store: PasswordResetStore = {
@@ -165,7 +165,7 @@ describe('auth routes', () => {
 
   beforeEach(async () => {
     const user: UserRecord = {
-      id: '11111111-1111-1111-1111-111111111111',
+      id: '11111111-1111-4111-8111-111111111111',
       phone_number: '0901234567',
       password_hash: await hashPassword('secret12'),
       role: 'admin',
@@ -258,7 +258,7 @@ describe('password reset routes (Task 3 + Slice-2)', () => {
 
   beforeEach(async () => {
     user = {
-      id: '11111111-1111-1111-1111-111111111111',
+      id: '11111111-1111-4111-8111-111111111111',
       phone_number: '0901234567',
       password_hash: await hashPassword('secret12'),
       role: 'admin',

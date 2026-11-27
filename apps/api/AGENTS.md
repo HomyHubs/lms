@@ -23,10 +23,16 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-06 — slice-6.1 đang làm
+
+- Bắt đầu tách giáo viên thực dạy khỏi người ghi điểm danh bằng `session_teacher_events` (ADR 0014); chưa mở quyền Staff/Admin, chưa hoàn thành luồng.
+- Test store PostgreSQL liên quan: 4/4; lint/typecheck đạt. Cần xác minh migration nâng cấp dữ liệu cũ và rollback, hoàn thiện API/UI và RBAC.
+
 ### 2026-11-14
 
 **Đã xong**
 
+- slice-23 (Mã học viên): import điểm (`/grading/import` → `importGrades`) nay khớp học viên theo `student_code` làm khóa chính, SĐT chỉ là fallback chuyển tiếp (`// TODO(slice-23)` gỡ khi 100% học viên có mã). `importGrades(store, examId, rows, graderId, now, allowedPhones, allowedStudentCodes?)` — thêm `allowedStudentCodes` SAU `allowedPhones`; dựng map `byCode` (student_code → grading row) song song `byPhone`; mỗi dòng thử khớp mã trước, không có thì fallback SĐT; không khớp cả hai → `student_not_found`; scope check nay xét cả mã lẫn SĐT (`out_of_scope`), `duplicate_in_file` giữ nguyên. `store.ts`: `selectGradingRows` chọn thêm `users.student_code as student_code`; thêm `listStudentCodesInBranches(branchIds)` (mirror `listStudentPhonesInBranches`, lọc `role='student'` + `student_code is not null`). `routes.ts`: khi scoped (non-superadmin) dựng `allowedStudentCodes = new Set(await listStudentCodesInBranches(branchIds))` cùng chỗ với `allowedPhones`, truyền vào `importGrades`. `GradingRow` thêm `student_code: string | null`. Test: `exams/{service,routes}.test.ts` (khớp theo mã là chính, fallback SĐT, không khớp → `student_not_found`).
 - slice-11c (Mẫu Excel trắc nghiệm + hình từ link Google): `parseSheet` nhận header có “Câu hỏi” → `parseFriendly` (STT, Hình, Câu hỏi, A..F, Đáp án, Điểm, Giải thích, Độ khó; chữ cái → nội dung lựa chọn; Đúng/Sai → `true_false`). `import-image-url.ts`: `googleImageUrl` (chỉ https Drive/googleusercontent, link chia sẻ → link tải), `makeImageDownloader` (không Google API; kiểm host mỗi redirect, 10s, ≤ 2 MB, HTML → “chưa chia sẻ”). `attachImportImages` tải link trong `imageRefs` (4 song song), `ImportMedia.download` tuỳ chọn (test truyền bản giả). Mẫu `mau-trac-nghiem.xlsx` sinh bằng `scripts/make-import-fixtures.mjs`.
 - slice-12.2 (Ảnh nhúng Word khi import): preview `.docx` lưu hình `word/media/*` (qua rels) bằng `uploadMedia` → `mediaIds` mỗi câu (hình không hợp lệ bỏ qua + cảnh báo); preview vẫn không tạo câu/bộ đề nhưng có ghi `media_assets`. Commit nhận `mediaIds`, `importSet` ghi `question_media` slot `stem` cùng transaction; id lạ → 400 `media_not_found`. `examSetsRoutes` nhận thêm `media: { store, storage }` (dùng chung với `mediaRoutes` trong `app.ts`).
 - slice-12 (Hình ảnh câu hỏi): feature mới `media` — `POST /media` (Admin/GV, body raw `application/octet-stream` ≤ 2MB, kiểm magic bytes PNG/JPEG/WebP/GIF, ≤ 4000×4000, gỡ metadata PNG/JPEG, khử trùng sha256), `GET /media/:id` (manager mọi ảnh; học viên chỉ ảnh trong lượt thi của mình, còn lại 404; `private` cache + `nosniff`), `GET/PUT /questions/:id/media` (thay cả danh sách; trigger `23001` → 409). `MediaStorage` driver local (`MEDIA_DIR`). `exams`: câu hỏi kèm `stemImages`/`optionImages`, xáo đáp án thì ảnh đi theo, `createAttempt` ghi `exam_attempt_media` trong transaction. Xem ADR 0013.
@@ -56,6 +62,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 - slice-14 (Bài thi theo lớp): `POST /exams` mở cho `admin,teacher,staff` (+superadmin). `createExam` nhận `classIds` (≤100), validate mọi lớp cùng cấp độ với đề (`class_level_mismatch` → 400); non-superadmin gán lớp ngoài chi nhánh → 403 `class_out_of_scope`. `importGrades` giao danh sách SĐT học viên trong lớp gán (`listStudentPhonesInClasses`) với phạm vi chi nhánh → chỉ nghiệm thu học viên trong giao đó; để trống classIds = toàn cấp độ (hành vi cũ). `store.ts`: subquery `exam_class_ids`, ghi `exam_classes` trong transaction tạo đề, `listClassRefsForLevel`. `catalog/routes.ts`: `GET /levels`, `GET /courses`, `GET /classes` mở cho teacher/staff (phục vụ UI chọn lớp), vẫn chặn học viên. Test: `exams/{service,routes}.test.ts`, `catalog/routes.test.ts`.
 - slice-9a (Chấm tay Speaking/Writing): feature `exams` thêm `GET /grading/attempts`, `GET /grading/attempts/:attemptId`, `POST /grading/attempts/:attemptId/grade` (Admin/GV). Điểm từng câu 0..điểm tối đa, ngưỡng đạt đóng băng của đề, ghi một lần (người chấm đầu tiên thắng), `ExamResult.feedback` cho học viên. Xem ADR 0009.
+- slice-23 (Mã học viên): feature `users` sinh `student_code` tự động khi tạo học viên (chỉ role `student`, tiền tố `branches.code` fallback `HV` + số thứ tự zero-pad 4 → vd `HN0001`); `GET /users` trả `studentCode` (read-only). Store thêm `findUserByStudentCode/nextStudentCode/setStudentCode/branchCodeForUser`. Migration `20261120000001_users_student_code.sql` + rollback gate `scripts/student-code.integration.mjs`. Xem `users/AGENTS.md`, ADR 0014.
 
 ### 2026-11-08
 
@@ -138,3 +145,9 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 
 - CI guard đã xanh trên `ca45ef8`; review lại đúng HEAD bằng identity độc lập.
+
+### 2026-11-06 — lịch sử ghi danh
+
+- Gỡ ghi danh kết thúc giai đoạn thay vì xóa; roster và báo cáo theo lớp chỉ tính ghi danh đang hoạt động, lịch sử cá nhân vẫn giữ. Tái ghi danh đồng thời được ràng buộc ở database.
+- API test PostgreSQL riêng 242/242; build, lint và typecheck đạt.
+- Dashboard: `GET /reports/enrollment-movements` cho Admin, giới hạn cơ sở được gán, lọc ngày theo Asia/Ho_Chi_Minh; không gán bừa cơ sở cho sự kiện cũ. Test route và Postgres 8/8 đạt.

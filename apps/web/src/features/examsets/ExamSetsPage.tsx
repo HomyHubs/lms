@@ -1,11 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowDown, ArrowUp, FileStack, ImagePlus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, FileStack, ImagePlus, Trash2 } from 'lucide-react'
 import {
   AddExamSetQuestionRequest,
   CreateExamSetRequest,
   type ExamSetDetail,
   type ExamSetStatus,
-  type Question,
 } from '@lms/shared'
 import {
   addExamSetQuestion,
@@ -21,8 +20,9 @@ import { Badge, Card, CardTitle, PageHeader } from '@/components/ui/card'
 import type { Tone } from '@/components/ui/tone'
 import { BlueprintForm } from '@/features/exams/BlueprintForm'
 import { useExams } from '@/features/exams/useExams'
-import { useQuestions } from '@/features/questions/useQuestions'
 import { QuestionImages } from '@/features/media/QuestionImages'
+import { BankPicker } from './BankPicker'
+import { ExamSetPreview } from './ExamSetPreview'
 import { ImportExamSet } from './ImportExamSet'
 import { SetMetaFields } from './LevelSkillFields'
 import { useExamSet, useExamSetCommand, useExamSets } from './useExamSets'
@@ -99,27 +99,10 @@ function ComposeQuestion({ set }: { set: ExamSetDetail }): React.ReactElement {
   )
 }
 
-function BankPicker({ set, onAdd }: { set: ExamSetDetail; onAdd: (q: Question) => void }): React.ReactElement {
-  const bank = useQuestions()
-  const used = new Set(set.items.map((q) => q.id))
-  const candidates = (bank.data ?? []).filter((q) => q.levelId === set.levelId && q.skill === set.skill && !used.has(q.id))
-  if (bank.isPending) return <p className="text-sm text-slate-500">Đang tải ngân hàng…</p>
-  if (candidates.length === 0) return <p className="text-sm text-slate-500">Không còn câu cùng cấp độ/kỹ năng trong ngân hàng.</p>
-  return (
-    <ul className="max-h-72 divide-y overflow-y-auto text-sm">
-      {candidates.map((q) => (
-        <li key={q.id} className="flex items-center justify-between gap-2 py-1.5">
-          <span>{q.questionText}</span>
-          <Button size="sm" variant="outline" aria-label={`Thêm: ${q.questionText}`} onClick={() => onAdd(q)}>Thêm</Button>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => void }): React.ReactElement {
   const detail = useExamSet(id)
   const [imagesFor, setImagesFor] = useState<string | null>(null)
+  const [previewing, setPreviewing] = useState(false)
   const reorder = useExamSetCommand((ids: string[]) => replaceExamSetItems(id, ids))
   const publish = useExamSetCommand(() => publishExamSet(id))
   const archive = useExamSetCommand(() => archiveExamSet(id))
@@ -146,6 +129,9 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
         <div className="ml-auto flex flex-wrap gap-2">
           {draft && <Button size="sm" onClick={() => publish.mutate(undefined)}>Phát hành</Button>}
           {set.status === 'published' && <Button size="sm" variant="outline" onClick={() => archive.mutate(undefined)}>Lưu trữ</Button>}
+          <Button size="sm" variant="outline" aria-label="Xem trước bộ đề"
+            aria-pressed={previewing} onClick={() => setPreviewing((on) => !on)}>
+            <Eye className="mr-1 h-4 w-4" />Xem trước</Button>
           <Button size="sm" variant="outline"
             onClick={() => duplicate.mutate(undefined, { onSuccess: (copy) => copy && onClose(copy.id) })}>Nhân bản</Button>
           {draft && <Button size="sm" variant="ghost" onClick={() => remove.mutate(undefined, { onSuccess: () => onClose() })}>
@@ -153,6 +139,7 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
         </div>
       </div>
       {!draft && <p className="text-sm text-slate-500">Bộ đề đã phát hành không thể sửa — dùng “Nhân bản” để tạo bản nháp mới.</p>}
+      {previewing && <ExamSetPreview id={id} onClose={() => setPreviewing(false)} />}
       {failure && <p role="alert" className="text-sm text-danger-600">{errorText(failure)}</p>}
       <ol aria-label="Câu hỏi trong bộ đề" className="space-y-2">
         {set.items.map((q, index) => (
@@ -189,7 +176,11 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <h4 className="font-medium">Thêm từ ngân hàng</h4>
-            <BankPicker set={set} onAdd={(q) => reorder.mutate([...ids, q.id])} />
+            <BankPicker
+              set={set}
+              onAdd={(q) => reorder.mutate([...ids, q.id])}
+              onAddMany={(sel) => reorder.mutate([...ids, ...sel])}
+            />
           </div>
           <div className="space-y-2">
             <h4 className="font-medium">Soạn câu mới</h4>

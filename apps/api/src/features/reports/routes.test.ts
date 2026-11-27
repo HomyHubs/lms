@@ -10,19 +10,19 @@ import { examHistoryRoutes, type ExamHistoryStore, type HistoryAttemptRow } from
 import { reportsRoutes } from './routes.js'
 import type { EnrollmentRow, GradedAttemptRow, PolicyRow, ReportsStore } from './service.js'
 
-const LEVEL = '10000000-0000-0000-0000-000000000001'
-const BRANCH_1 = '20000000-0000-0000-0000-000000000001'
-const BRANCH_2 = '20000000-0000-0000-0000-000000000002'
-const CLASS_1 = '50000000-0000-0000-0000-000000000001'
-const CLASS_2 = '50000000-0000-0000-0000-000000000002'
-const STUDENT_1 = '80000000-0000-0000-0000-000000000001'
-const STUDENT_2 = '80000000-0000-0000-0000-000000000002'
+const LEVEL = '10000000-0000-4000-8000-000000000001'
+const BRANCH_1 = '20000000-0000-4000-8000-000000000001'
+const BRANCH_2 = '20000000-0000-4000-8000-000000000002'
+const CLASS_1 = '50000000-0000-4000-8000-000000000001'
+const CLASS_2 = '50000000-0000-4000-8000-000000000002'
+const STUDENT_1 = '80000000-0000-4000-8000-000000000001'
+const STUDENT_2 = '80000000-0000-4000-8000-000000000002'
 
 function user(id: string, role: string): UserRecord {
   return { id, phone_number: `09${id.slice(-8)}`, password_hash: 'x', role }
 }
-const ADMIN_B1 = user('60000000-0000-0000-0000-000000000001', 'admin')
-const TEACHER = user('70000000-0000-0000-0000-000000000001', 'teacher')
+const ADMIN_B1 = user('60000000-0000-4000-8000-000000000001', 'admin')
+const TEACHER = user('70000000-0000-4000-8000-000000000001', 'teacher')
 const COOKIE = { cookie: `${SESSION_COOKIE}=any-token` }
 
 function makeFakeAuthStore(sessionUser: UserRecord): AuthStore {
@@ -89,6 +89,8 @@ function makeFakeStore(): ReportsStore {
   })
   const attempts = [graded('a1', STUDENT_1, 8, true), graded('a2', STUDENT_2, 4, false)]
   return {
+    async listMovements() { return [] },
+    async listMovementBranches(ids) { return ids.map((id) => ({ id, name: 'Co so 1' })) },
     async listPolicies() {
       return [policy]
     },
@@ -159,6 +161,22 @@ describe('reports routes', () => {
     expect((await admin('GET', '/reports/students?from=11-2026')).statusCode).toBe(400)
   })
 
+  it('limits movement history to assigned branches and validates dates', async () => {
+    const store = makeFakeStore()
+    let received: unknown
+    store.listMovements = async (ids, from, to) => { received = { ids, from, to }; return [] }
+    const admin = await client(ADMIN_B1, store)
+    const path = '/reports/enrollment-movements?from=2026-01-01&to=2026-01-31'
+    const res = await admin('GET', path)
+    expect(res.statusCode).toBe(200)
+    expect(received).toEqual({ ids: [BRANCH_1], from: '2026-01-01', to: '2026-01-31' })
+    expect(res.json()).toEqual({ branches: [{ id: BRANCH_1, name: 'Co so 1' }], events: [] })
+    expect((await admin('GET', `${path}&branchId=${BRANCH_2}`)).statusCode).toBe(404)
+    expect((await admin('GET', '/reports/enrollment-movements?from=2026-02-30&to=2026-03-01')).statusCode).toBe(400)
+    expect((await admin('GET', '/reports/enrollment-movements?from=2026-02-01&to=2026-01-01')).statusCode).toBe(400)
+    expect((await (await client(TEACHER, store))('GET', path)).statusCode).toBe(403)
+  })
+
   it('applies a reconfigured level policy to the classification', async () => {
     const admin = await client(ADMIN_B1, makeFakeStore())
     const invalid = await admin('PUT', `/reports/classification-policies/${LEVEL}`, {
@@ -193,8 +211,8 @@ describe('exam history routes', () => {
   })
 
   const row: HistoryAttemptRow = {
-    id: '90000000-0000-0000-0000-000000000001',
-    exam_id: '90000000-0000-0000-0000-000000000002',
+    id: '90000000-0000-4000-8000-000000000001',
+    exam_id: '90000000-0000-4000-8000-000000000002',
     exam_title: 'Starter reading',
     level_code: 'starter',
     skill: 'reading',
@@ -213,6 +231,21 @@ describe('exam history routes', () => {
     student_phone: '0900000001',
     student_first_name: null,
     student_last_name: null,
+    branch_id: BRANCH_1,
+    branch_name: 'Co so 1',
+    class_id: CLASS_1,
+    class_name: 'Starter A',
+  }
+  // A failed attempt by the same student in the same branch/class/level (slice-24 aggregation).
+  const rowFailed: HistoryAttemptRow = {
+    ...row,
+    id: '90000000-0000-4000-8000-000000000003',
+    attempt_number: 1,
+    started_at: new Date('2026-10-15T17:30:00Z'),
+    submitted_at: new Date('2026-10-15T18:00:00Z'),
+    graded_at: new Date('2026-10-15T18:00:00Z'),
+    score: 4,
+    passed: false,
   }
   const store: ExamHistoryStore = {
     async listStudentAttempts(studentId) {
@@ -221,8 +254,14 @@ describe('exam history routes', () => {
     async isStudentInBranches(studentId, branchIds) {
       return studentId === STUDENT_1 && branchIds.includes(BRANCH_1)
     },
-    async listScopedAttempts() {
-      return [row]
+    async listScopedAttempts(scope) {
+      return scope.branchIds.includes(BRANCH_1) ? [row, rowFailed] : []
+    },
+    async listScopedAttemptsPage(scope, before, limit) {
+      if (!scope.branchIds.includes(BRANCH_1)) return []
+      const ordered = [row, rowFailed] // already newest-first
+      const start = before ? ordered.findIndex((r) => r.id === before.id) + 1 : 0
+      return ordered.slice(start, start + limit)
     },
   }
 
@@ -253,5 +292,36 @@ describe('exam history routes', () => {
     expect((await student('/me/exam-attempts')).json<ExamHistoryPage>().attempts).toHaveLength(1)
     expect((await student('/me/exam-attempts?cursor=bad')).statusCode).toBe(400)
     expect((await student(`/students/${STUDENT_1}/exam-attempts`)).statusCode).toBe(403)
+  })
+
+  it('reports pass/fail by branch/class/level and paginates the detail (slice-24)', async () => {
+    const admin = await client(ADMIN_B1)
+    const res = await admin('/reports/exam-attempts')
+    expect(res.statusCode).toBe(200)
+    const body = res.json<import('@lms/shared').ExamAttemptReport>()
+    // One passed + one failed attempt, same branch/class/level.
+    expect(body.byBranch).toEqual([
+      expect.objectContaining({ key: BRANCH_1, label: 'Co so 1', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(body.byClass).toEqual([
+      expect.objectContaining({ key: CLASS_1, label: 'Starter A', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    expect(body.byLevel).toEqual([
+      expect.objectContaining({ key: 'starter', passed: 1, failed: 1, total: 2, passRate: 50 }),
+    ])
+    // Both attempts fit in one 50-row page → no next cursor, newest first.
+    expect(body.attempts.map((a) => a.attemptId)).toEqual([
+      '90000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000003',
+    ])
+    expect(body.nextCursor).toBeNull()
+    // A branch outside the admin's scope → 404.
+    expect((await admin(`/reports/exam-attempts?branchId=${BRANCH_2}`)).statusCode).toBe(404)
+    // Bad cursor → 400.
+    expect((await admin('/reports/exam-attempts?cursor=bad')).statusCode).toBe(400)
+    // A teacher with no branches sees empty aggregations, not an error.
+    const teacher = await client(TEACHER)
+    const empty = (await teacher('/reports/exam-attempts')).json<import('@lms/shared').ExamAttemptReport>()
+    expect(empty).toMatchObject({ byBranch: [], byClass: [], byLevel: [], attempts: [], nextCursor: null })
   })
 })

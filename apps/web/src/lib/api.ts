@@ -22,6 +22,7 @@ import {
   LoginResponse,
   MeResponse,
   OkResponse,
+  QuestionEditPermissions,
   QuestionList,
   QuestionResponse,
   UserBranchesResponse,
@@ -32,6 +33,8 @@ import {
   type Course,
   type CreateBranchRequest,
   type CreateCenterRequest,
+  type UpdateBranchRequest,
+  type UpdateCenterRequest,
   type CreateClassRequest,
   type CreateCourseRequest,
   type CreateEnrollmentRequest,
@@ -53,10 +56,12 @@ import {
   type UpdateQuestionRequest,
   type UpdateUserRequest,
   AttendanceRates,
+  BranchAttendanceRates,
   ClassSessionList,
   ClassSessionResponse,
   ClassTeacherList,
   SessionAttendance,
+  TodayAttendance,
   StudentAttendance,
   TeachingClassList,
   TodayAttendanceSummary,
@@ -72,6 +77,8 @@ import {
   type AiGenerationRequest,
   type CreateAiRequestRequest,
   type UpdateAiItemRequest,
+  EnrollmentMovementReport,
+  type EnrollmentMovementQuery,
   ClassificationPolicy,
   ClassificationPolicyList,
   StudentReport,
@@ -79,6 +86,7 @@ import {
   type UpdateClassificationPolicyRequest,
   MyTimesheet,
   StaffShiftResponse,
+  TeacherTimesheet,
   WorkHoursReport,
   type StaffShift,
   type WorkHoursReportQuery,
@@ -90,6 +98,7 @@ import {
   ExamSetList,
   ExamSetResponse,
   ExamSetImportPreview,
+  GradeImportPreview,
   GradeImportResult,
   type CommitExamSetImportRequest,
   type AddExamSetQuestionRequest,
@@ -106,6 +115,10 @@ import {
   ExamAttemptReport,
   type ExamHistoryQuery,
   type ExamAttemptReportQuery,
+  StudentSearchResponse,
+  StudentProfileResponse,
+  type StudentSearchResult,
+  type StudentProfile,
 } from '@lms/shared'
 
 /** Goi endpoint health-check that qua proxy `/api` (vite.config.ts). */
@@ -265,6 +278,18 @@ export async function deleteCenter(id: string): Promise<void> {
   if (!res.ok) throw new ApiError(res.status, 'Xoa trung tam that bai')
 }
 
+/** slice-27: doi ten trung tam (PATCH /centers/:id, chi Admin). */
+export async function updateCenter(id: string, input: UpdateCenterRequest): Promise<Center> {
+  const res = await fetch(`/api/centers/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Cap nhat trung tam that bai')
+  return CenterResponse.parse(await res.json()).center
+}
+
 export async function listBranches(): Promise<Branch[]> {
   const res = await fetch('/api/branches', { credentials: 'include' })
   if (!res.ok) throw new ApiError(res.status, 'Khong lay duoc danh sach co so')
@@ -285,6 +310,18 @@ export async function createBranch(input: CreateBranchRequest): Promise<Branch> 
 export async function deleteBranch(id: string): Promise<void> {
   const res = await fetch(`/api/branches/${id}`, { method: 'DELETE', credentials: 'include' })
   if (!res.ok) throw new ApiError(res.status, 'Xoa co so that bai')
+}
+
+/** slice-27: sua ten/dia chi co so (PATCH /branches/:id, it nhat 1 truong, chi Admin). */
+export async function updateBranch(id: string, input: UpdateBranchRequest): Promise<Branch> {
+  const res = await fetch(`/api/branches/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Cap nhat co so that bai')
+  return BranchResponse.parse(await res.json()).branch
 }
 
 /**
@@ -337,7 +374,8 @@ export async function createClass(input: CreateClassRequest): Promise<Class> {
 
 export async function deleteClass(id: string): Promise<void> {
   const res = await fetch(`/api/classes/${id}`, { method: 'DELETE', credentials: 'include' })
-  if (!res.ok) throw new ApiError(res.status, 'Xoa lop that bai')
+  // slice-28: 409 khi lop con hoc vien — hien thi thong bao that tu server.
+  if (!res.ok) return throwApiError(res, 'Xoa lop that bai')
 }
 
 export async function listEnrollments(classId: string): Promise<Enrollment[]> {
@@ -468,6 +506,29 @@ export async function importQuestions(
   })
   if (!res.ok) return throwApiError(res, 'Import that bai: du lieu sai dinh dang')
   return ImportQuestionsResult.parse(await res.json())
+}
+
+/**
+ * slice-19: settings quyen sua cau hoi theo role (toan he thong). GET cho moi role da dang nhap
+ * (BE merge mac dinh cho role thieu); PUT chi Admin/Superadmin (BE thuc thi RBAC + validate Zod).
+ */
+export async function getQuestionEditPermissions(): Promise<QuestionEditPermissions> {
+  const res = await fetch('/api/settings/question-edit-permissions', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc cau hinh quyen sua cau hoi')
+  return QuestionEditPermissions.parse(await res.json())
+}
+
+export async function setQuestionEditPermissions(
+  permissions: QuestionEditPermissions,
+): Promise<QuestionEditPermissions> {
+  const res = await fetch('/api/settings/question-edit-permissions', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(permissions),
+  })
+  if (!res.ok) return throwApiError(res, 'Khong luu duoc cau hinh quyen sua cau hoi')
+  return QuestionEditPermissions.parse(await res.json())
 }
 
 /** Tach CSV thanh cac dong (mang o), ho tro o co dau ngoac kep "" (chua dau phay / xuong dong). */
@@ -673,6 +734,25 @@ export async function importGrades(
   return GradeImportResult.parse(await res.json())
 }
 
+/**
+ * slice-22: XEM TRUOC nhap diem (buoc 1). Gui file (raw bytes) va nhan ban preview tung dong
+ * (se ap / bo qua kem ly do) + loi dinh dang — KHONG ghi gi. Dung de xac nhan truoc khi commit.
+ */
+export async function previewGradeImport(
+  file: Blob,
+  meta: { examId: string; fileName: string },
+): Promise<GradeImportPreview> {
+  const params = new URLSearchParams(meta)
+  const res = await fetch(`/api/grading/import/preview?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/octet-stream' },
+    body: file,
+  })
+  if (!res.ok) return throwApiError(res, 'Khong xem truoc duoc bang diem')
+  return GradeImportPreview.parse(await res.json())
+}
+
 /** slice-4: danh sach de dang mo cho hoc vien (backend tu loc theo role + lich). */
 export async function listExams(): Promise<Exam[]> {
   const res = await fetch('/api/exams', { credentials: 'include' })
@@ -788,6 +868,12 @@ export async function createClassSession(
   return ClassSessionResponse.parse(await res.json()).session
 }
 
+export async function getTodayAttendance(): Promise<TodayAttendance> {
+  const res = await fetch('/api/attendance/today', { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Không tải được điểm danh hôm nay')
+  return TodayAttendance.parse(await res.json())
+}
+
 export async function getSessionAttendance(sessionId: string): Promise<SessionAttendance> {
   const res = await fetch(`/api/sessions/${sessionId}/attendance`, { credentials: 'include' })
   if (!res.ok) return throwApiError(res, 'Khong lay duoc diem danh')
@@ -828,6 +914,15 @@ export async function getAttendanceRates(query: AttendanceRatesQuery): Promise<A
   return AttendanceRates.parse(await res.json())
 }
 
+/** slice-16: overall + per-class attendance rates for a branch (admin-only on the backend). */
+export async function getBranchAttendanceRates(branchId: string): Promise<BranchAttendanceRates> {
+  const res = await fetch(`/api/attendance/rates?branchId=${encodeURIComponent(branchId)}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc ty le chuyen can')
+  return BranchAttendanceRates.parse(await res.json())
+}
+
 export async function getTodayAttendanceSummary(date?: string): Promise<TodayAttendanceSummary> {
   const url = date ? `/api/attendance/today-summary?date=${date}` : '/api/attendance/today-summary'
   const res = await fetch(url, { credentials: 'include' })
@@ -860,6 +955,12 @@ function queryString(query: Record<string, string | undefined>): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) if (value) params.set(key, value)
   return params.toString()
+}
+
+export async function getEnrollmentMovements(query: EnrollmentMovementQuery): Promise<EnrollmentMovementReport> {
+  const res = await fetch(`/api/reports/enrollment-movements?${queryString(query)}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Khong lay duoc lich su ghi danh')
+  return EnrollmentMovementReport.parse(await res.json())
 }
 
 export async function getStudentReport(query: StudentReportQuery): Promise<StudentReport> {
@@ -896,6 +997,18 @@ export async function getExamAttemptReport(query: ExamAttemptReportQuery): Promi
 export async function checkShift(action: 'check-in' | 'check-out'): Promise<StaffShift> {
   const res = await fetch(`/api/timesheet/${action}`, { method: 'POST', credentials: 'include' })
   if (!res.ok) return throwApiError(res, action === 'check-in' ? 'Check-in that bai' : 'Check-out that bai')
+  return StaffShiftResponse.parse(await res.json()).shift
+}
+
+export async function getTeacherTimesheet(teacherId: string, branchId: string, month: string): Promise<TeacherTimesheet> {
+  const res = await fetch(`/api/admin/teachers/${teacherId}/timesheet?${queryString({ branchId, month })}`, { credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Không lấy được lịch sử chấm công')
+  return TeacherTimesheet.parse(await res.json())
+}
+
+export async function checkTeacherShift(teacherId: string, branchId: string, action: 'check-in' | 'check-out'): Promise<StaffShift> {
+  const res = await fetch(`/api/admin/teachers/${teacherId}/timesheet/${action}?${queryString({ branchId })}`, { method: 'POST', credentials: 'include' })
+  if (!res.ok) return throwApiError(res, 'Không chấm công được')
   return StaffShiftResponse.parse(await res.json()).shift
 }
 
@@ -991,6 +1104,26 @@ export async function saveAiRequest(id: string): Promise<SaveAiRequestResult> {
   return SaveAiRequestResult.parse(
     await sendAiJson(`/api/ai-requests/${id}/save`, 'POST', {}, 'Luu vao ngan hang that bai'),
   )
+}
+
+// ─── slice-30: Menu Học viên ────────────────────────────────────────────────
+
+/** Tìm học viên theo tên / SĐT (GET /students?q=). */
+export async function searchStudents(q: string): Promise<StudentSearchResult[]> {
+  const res = await fetch(`/api/students?q=${encodeURIComponent(q)}`, { credentials: 'include' })
+  if (!res.ok) throw new ApiError(res.status, 'Tìm kiếm học viên thất bại')
+  const json: unknown = await res.json()
+  return StudentSearchResponse.parse(json).students
+}
+
+/** Hồ sơ tổng hợp một học viên (GET /students/:id/profile). */
+export async function getStudentProfile(id: string): Promise<StudentProfile> {
+  const res = await fetch(`/api/students/${encodeURIComponent(id)}/profile`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new ApiError(res.status, 'Không tìm thấy học viên')
+  const json: unknown = await res.json()
+  return StudentProfileResponse.parse(json).student
 }
 
 /** Parses what the external AI returned: a JSON array of rows, or CSV with the import header. */

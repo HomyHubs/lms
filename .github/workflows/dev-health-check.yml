@@ -7,6 +7,14 @@
 # xảy ra). Nếu job dưới đây FAIL: dừng merge mọi PR khác vào `dev` ngay,
 # tạo nhánh bugfix/dev-health-<mo-ta> sửa ưu tiên cao nhất, chỉ tiếp tục
 # merge PR khác sau khi workflow này xanh lại. Xem AGENTS.md mục 12.4.
+#
+# 2026-11-26: thêm Postgres thật. Trước đây job này không có DB nên 22 test
+# `*.integration.test.ts` (gate theo TEST_DATABASE_URL) bị skip, mà `ci.yml`
+# chỉ chạy trên pull_request — nghĩa là mọi commit push thẳng vào `dev` đều
+# đi qua cổng gác mà KHÔNG hề chạy test tích hợp.
+#
+# Nếu DB không lên được thì `dbmate up` fail ngay (job đỏ), nên không cần
+# thêm bước "chặn skip" thủ công.
 
 name: Dev Health Check
 
@@ -18,6 +26,23 @@ on:
 jobs:
   health-check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lms
+          POSTGRES_PASSWORD: lms
+          POSTGRES_DB: lms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lms -d lms_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://lms:lms@localhost:5432/lms_test?sslmode=disable
+      TEST_DATABASE_URL: postgres://lms:lms@localhost:5432/lms_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +57,15 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Install dbmate
+        run: |
+          curl -fsSL https://github.com/amacneil/dbmate/releases/download/v2.24.0/dbmate-linux-amd64 -o /tmp/dbmate
+          chmod +x /tmp/dbmate
+          sudo mv /tmp/dbmate /usr/local/bin/dbmate
+
+      - name: Migrate test database
+        run: dbmate --migrations-dir db/migrations up
 
       - name: Build
         run: pnpm -r build

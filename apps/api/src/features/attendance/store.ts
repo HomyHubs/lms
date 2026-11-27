@@ -1,6 +1,6 @@
 import { sql } from 'kysely'
 import type { AppDb } from '../../platform/db.js'
-import type { AttendanceStore, SessionRow } from './service.js'
+import { SessionCancelledError, type AttendanceStore, type SessionRow } from './service.js'
 
 // Postgres `date`/`time` are formatted in SQL so no JS timezone conversion can shift the day.
 const SESSION_DATE = sql<string>`to_char(class_sessions.session_date, 'YYYY-MM-DD')`
@@ -91,6 +91,18 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .orderBy('class_sessions.starts_at', 'desc')
         .execute()
     },
+    async listTodaySessions(branchIds, date) {
+      if (branchIds.length === 0) return []
+      return sessionQuery()
+        .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
+        .innerJoin('branches', 'branches.id', 'classes.branch_id')
+        .select(['classes.name as class_name', 'classes.branch_id', 'branches.name as branch_name'])
+        .where('classes.branch_id', 'in', branchIds)
+        .where('class_sessions.session_date', '=', date)
+        .where('class_sessions.cancelled_at', 'is', null)
+        .orderBy('class_sessions.starts_at', 'asc')
+        .execute()
+    },
     async findSession(sessionId) {
       return sessionQuery().where('class_sessions.id', '=', sessionId).executeTakeFirst()
     },
@@ -128,22 +140,14 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       }
     },
     async cancelSession(sessionId) {
-      const res = await db
-        .updateTable('class_sessions')
-        .set({ cancelled_at: sql<string>`now()`, updated_at: sql<string>`now()` })
-        .where('id', '=', sessionId)
-        .where('cancelled_at', 'is', null)
-        .where(({ not, exists, selectFrom }) =>
-          not(
-            exists(
-              selectFrom('attendance_records')
-                .select('attendance_records.session_id')
-                .whereRef('attendance_records.session_id', '=', 'class_sessions.id'),
-            ),
-          ),
-        )
-        .executeTakeFirst()
-      return (res.numUpdatedRows ?? 0n) > 0n
+      return db.transaction().execute(async (trx) => {
+        const session = await trx.selectFrom('class_sessions').select('cancelled_at').where('id', '=', sessionId).forUpdate().executeTakeFirst()
+        if (!session || session.cancelled_at !== null) return false
+        const record = await trx.selectFrom('attendance_records').select('session_id').where('session_id', '=', sessionId).executeTakeFirst()
+        if (record) return false
+        await trx.updateTable('class_sessions').set({ cancelled_at: sql<string>`now()`, updated_at: sql<string>`now()` }).where('id', '=', sessionId).execute()
+        return true
+      })
     },
 
     async listRoster(classId) {
@@ -152,6 +156,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .innerJoin('users', 'users.id', 'enrollments.student_id')
         .select(['enrollments.student_id', 'users.phone_number', 'users.first_name', 'users.last_name'])
         .where('enrollments.class_id', '=', classId)
+        .where('enrollments.ended_at', 'is', null)
         .orderBy('users.last_name', 'asc')
         .orderBy('users.first_name', 'asc')
         .orderBy('users.phone_number', 'asc')
@@ -160,40 +165,42 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
     async listRecords(sessionId) {
       return db
         .selectFrom('attendance_records')
-        .select(['session_id', 'student_id', 'status', 'note'])
+        .select(['session_id', 'student_id', 'status', 'note', 'arrived_at', 'late_minutes'])
         .where('session_id', '=', sessionId)
         .execute()
     },
-    async upsertRecords(sessionId, recordedBy, records) {
+    async upsertRecords(sessionId, recordedBy, records, actualTeacherId) {
       if (records.length === 0) return
-      const now = new Date().toISOString()
       await db.transaction().execute(async (trx) => {
-        await trx
-          .insertInto('attendance_records')
-          .values(
-            records.map((r) => ({
-              session_id: sessionId,
-              student_id: r.studentId,
-              status: r.status,
-              note: r.note,
-              recorded_by: recordedBy,
-              recorded_at: now,
-            })),
-          )
-          .onConflict((oc) =>
-            oc.columns(['session_id', 'student_id']).doUpdateSet((eb) => ({
-              status: eb.ref('excluded.status'),
-              note: eb.ref('excluded.note'),
-              recorded_by: eb.ref('excluded.recorded_by'),
-              recorded_at: eb.ref('excluded.recorded_at'),
-            })),
-          )
-          .execute()
-        await trx
-          .updateTable('class_sessions')
-          .set({ updated_at: now })
-          .where('id', '=', sessionId)
-          .execute()
+        const locked = await trx.selectFrom('class_sessions').select('cancelled_at').where('id', '=', sessionId).forUpdate().executeTakeFirstOrThrow()
+        if (locked.cancelled_at !== null) throw new SessionCancelledError()
+        const now = new Date().toISOString()
+        const recorder = await trx.selectFrom('users').select('role').where('id', '=', recordedBy).executeTakeFirstOrThrow()
+        const teacherId = recorder.role === 'teacher' ? recordedBy : actualTeacherId
+        if (teacherId) {
+          await trx.insertInto('session_teacher_events').values({ session_id: sessionId, teacher_id: teacherId, recorded_by: recordedBy }).execute()
+        }
+        const previous = await trx.selectFrom('attendance_records').select(['student_id', 'arrived_at', 'late_minutes']).where('session_id', '=', sessionId).execute()
+        const priorByStudent = new Map(previous.map((r) => [r.student_id, r]))
+        const values = records.map((r) => {
+          const prior = priorByStudent.get(r.studentId)
+          const attended = r.status === 'present' || r.status === 'late'
+          return {
+            session_id: sessionId, student_id: r.studentId, status: r.status, note: r.note,
+            arrived_at: attended ? (r.arrivedAt === undefined ? prior?.arrived_at?.toISOString() ?? null : r.arrivedAt) : null,
+            late_minutes: r.status === 'late' ? (r.lateMinutes === undefined ? prior?.late_minutes ?? null : r.lateMinutes) : null,
+            recorded_by: recordedBy, recorded_at: now,
+          }
+        })
+        await trx.insertInto('attendance_events').values(values).execute()
+        await trx.insertInto('attendance_records').values(values).onConflict((oc) =>
+          oc.columns(['session_id', 'student_id']).doUpdateSet((eb) => ({
+            status: eb.ref('excluded.status'), note: eb.ref('excluded.note'),
+            arrived_at: eb.ref('excluded.arrived_at'), late_minutes: eb.ref('excluded.late_minutes'),
+            recorded_by: eb.ref('excluded.recorded_by'), recorded_at: eb.ref('excluded.recorded_at'),
+          })),
+        ).execute()
+        await trx.updateTable('class_sessions').set({ updated_at: now }).where('id', '=', sessionId).execute()
       })
     },
 
@@ -227,6 +234,7 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
         .innerJoin('class_sessions', 'class_sessions.id', 'attendance_records.session_id')
         .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
         .innerJoin('users', 'users.id', 'attendance_records.student_id')
+        .innerJoin('enrollments', (join) => join.onRef('enrollments.class_id', '=', 'classes.id').onRef('enrollments.student_id', '=', 'attendance_records.student_id').on('enrollments.ended_at', 'is', null))
         .select([
           'attendance_records.student_id',
           'users.phone_number',
@@ -240,11 +248,15 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
       if (studentId) query = query.where('attendance_records.student_id', '=', studentId)
       return query.execute()
     },
+    // `dateIso` ('YYYY-MM-DD', đã validate + mặc định = hôm nay giờ Asia/Ho_Chi_Minh ở routes.ts) lọc
+    // đúng các buổi học của ngày đó. `session_date` là cột Postgres `date` (không có giờ) nên so khớp
+    // trực tiếp sau khi ép ${dateIso}::date; toàn bộ xử lý ngày/giờ VN ở server, không nhận đồng hồ client.
     async listSessionsOnDate(branchIds, dateIso) {
       if (branchIds.length === 0) return []
       const rows = await db
         .selectFrom('class_sessions')
         .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
+        .innerJoin('branches', 'branches.id', 'classes.branch_id')
         .leftJoin('enrollments', 'enrollments.class_id', 'classes.id')
         .select([
           'classes.id as class_id',
@@ -252,16 +264,29 @@ export function makeAttendanceStore(db: AppDb): AttendanceStore {
           'class_sessions.id as session_id',
           SESSION_TIME.as('starts_at'),
           db.fn.count('enrollments.student_id').as('enrolled_count'),
+          'branches.id as branch_id',
+          'branches.name as branch_name',
         ])
         .where('classes.branch_id', 'in', branchIds)
         .where('class_sessions.cancelled_at', 'is', null)
-        .where(
-          sql<boolean>`to_char(class_sessions.session_date, 'YYYY-MM-DD') = to_char(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')`,
-        )
-        .groupBy(['classes.id', 'classes.name', 'class_sessions.id', 'class_sessions.starts_at'])
+        .where(sql<boolean>`class_sessions.session_date = ${dateIso}::date`) // date-only column, server-side VN date
+        .groupBy(['classes.id', 'classes.name', 'class_sessions.id', 'class_sessions.starts_at', 'branches.id', 'branches.name'])
         .orderBy('class_sessions.starts_at', 'asc')
         .execute()
       return rows.map((r) => ({ ...r, enrolled_count: Number(r.enrolled_count) }))
+    },
+    async listBranchClassRecords(branchId) {
+      return db
+        .selectFrom('attendance_records')
+        .innerJoin('class_sessions', 'class_sessions.id', 'attendance_records.session_id')
+        .innerJoin('classes', 'classes.id', 'class_sessions.class_id')
+        .select([
+          'classes.id as class_id',
+          'classes.name as class_name',
+          'attendance_records.status',
+        ])
+        .where('classes.branch_id', '=', branchId)
+        .execute()
     },
   }
 }

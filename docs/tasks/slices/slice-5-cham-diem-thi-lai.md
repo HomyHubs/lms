@@ -16,14 +16,14 @@ Bai thi duoc cham diem tu dong, xac dinh dat/khong dat theo nguong, va tu dong t
 
 | # | Task | Tang | Ghi chu |
 | --- | --- | --- | --- |
-| 1 | Cham tu dong cau trac nghiem/dien tu theo dap an chuan | api service `gradeAttempt` | Xong. MC chap nhan chu cai (a/b/...) hoac noi dung lua chon; fill_blank chap nhan nhieu dap an `a\|b`, bo qua hoa/thuong & khoang trang. Speaking/Writing -> `pending_manual` (slice-9) |
+| 1 | Cham tu dong cau trac nghiem/dien tu theo dap an chuan | api service `gradeAttempt` | Xong. MC chap nhan chu cai (a/b/...) hoac noi dung lua chon; fill_blank chap nhan nhieu dap an `a\|b`, bo qua hoa/thuong & khoang trang. Speaking/Writing -> `pending_manual` (cham tay o slice-9a; slice-9 da huy 2026-11-26 nen `pending_manual` la trang thai cuoi) |
 | 2 | Logic pass/fail theo nguong diem, nguong cau hinh duoc theo tung cap do/khoa hoc | db `exam_grading_policies` + `exams.pass_percent` | Xong. Policy theo cap do (Admin `PUT /api/exam-policies/:level`), de thi co the ghi de; de copy policy luc tao (snapshot) |
 | 3 | Tu dong tao luot thi lai (de moi random, gioi han so lan toi da, thoi gian cho giua cac lan) khi khong dat | api `startAttempt` | Xong. Truot -> `retake.available`; bat dau lan N+1 voi de random tranh de lan truoc; chan `retake_limit_reached`, `retake_cooldown`, `already_passed`, `closed` |
 | 4 | Luu lich su tat ca luot thi (de, diem, thoi gian, so lan thi lai) de audit | `exam_attempts` | Xong. `attempt_number` unique, diem/ket qua bat bien (trigger `protect_exam_grade`); `GET /api/exams/:id/history` (hoc vien), `GET /api/exams/:id/results` (Admin/Teacher) |
 
 ## Stub cho phep
 
-Cham diem Speaking/Writing ban tu dong qua UI giao vien — de o slice-9.
+Cham diem Speaking/Writing: **khong lam ban tu dong/AI** — da cham tay qua UI + import Excel o slice-9a, va slice-9 (chua phan ban tu dong) da huy 2026-11-26.
 
 ## Khong duoc stub
 
@@ -33,7 +33,7 @@ Logic pass/fail va gioi han so lan thi lai toi da phai la thuc, khong duoc bo qu
 
 | Marker | Vi tri | Noi dung | Du kien tra |
 | --- | --- | --- | --- |
-| TODO(slice-9) | Cham diem | Cau tu luan/speaking chua cham ban tu dong qua UI; bai co cau nay o trang thai `pending_manual`, khong mo thi lai | slice-9 |
+| — | Cham diem | Cau tu luan/speaking o trang thai `pending_manual` — **trang thai cuoi, khong phai no**: GV tu cham va dua diem vao lop (slice-9a + slice-22). Khong lam cham ban tu dong/AI (quyet dinh 2026-11-26) | Không trả |
 
 ## Nhat ky thay doi pham vi cua rieng Slice/Task nay
 

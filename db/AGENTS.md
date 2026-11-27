@@ -17,6 +17,10 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-06 — slice-6.1 đang làm
+
+- Thêm migration `20261115000000_attendance_teacher.sql` cho nhật ký giáo viên thực dạy; áp dụng riêng trên DB test. Chưa xác minh backfill với dữ liệu cũ hoặc down/up. Chạy cả thư mục migration gặp lỗi `submit_reason` đã tồn tại trên DB test; cần xử lý thử nghiệm độc lập trước khi bàn giao.
+
 ### 2026-11-14
 
 **Đã xong**
@@ -107,3 +111,8 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 
 - V002 đã đóng: workflow PR #6 xanh trên `ca45ef8`, gồm migrate up, integration test và down/up migration exams.
+
+### 2026-11-06 — lịch sử ghi danh
+
+- Thêm `ended_at`, duy nhất ghi danh đang hoạt động và log sự kiện vào/ra. Backfill chỉ những dòng còn tồn tại, không suy đoán cơ sở cũ.
+- Migration đã thử up, down/up trên PostgreSQL riêng; rollback bị chặn khi có sự kiện mới để tránh mất lịch sử.

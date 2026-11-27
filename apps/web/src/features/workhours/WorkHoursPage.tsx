@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import {
   WORK_SESSION_STATUS_LABELS,
+  WORK_SESSION_STATUSES,
   type StaffShift,
   type TeacherWorkSummary,
   type WorkHoursReport,
@@ -21,14 +22,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge, Card, CardTitle, PageHeader, StatCard } from '@/components/ui/card'
 import { useSession } from '@/features/auth/useAuth'
+import { ReportCharts } from '@/features/reports/ReportCharts'
 import { currentMonth } from '@/lib/utils'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { toHours, workHoursToSheets } from './work-hours-export'
-import { useBranches, useCheckShift, useMyTimesheet, useWorkHoursReport } from './useWorkHours'
+import { hoursByClass, sessionsForTeacher } from './work-hours-detail'
+import { useBranches, useCheckShift, useCheckTeacherShift, useMyTimesheet, useTeacherTimesheet, useWorkHoursReport } from './useWorkHours'
 
 const hoursLabel = (minutes: number): string => `${toHours(minutes)} giờ`
 const timeLabel = (iso: string): string =>
-  new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+  new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' })
 
 /** Họ tên hiển thị (last_name + first_name); fallback về SĐT khi chưa có hồ sơ tên. */
 const personName = (p: { firstName: string | null; lastName: string | null; phoneNumber: string }): string => {
@@ -170,10 +173,32 @@ function MyTimesheetView(): React.ReactElement {
 }
 
 function ReportTables({ report }: { report: WorkHoursReport }): React.ReactElement {
+  // slice-25: xem chi tiet theo tung giao vien (loc theo thang dang chon o cap trang).
+  const [detailPhone, setDetailPhone] = useState('')
+  const detailTeacher = report.teachers.find((t) => t.phoneNumber === detailPhone)
+  const detailSessions = detailPhone ? sessionsForTeacher(report.sessions, detailPhone) : []
+  const classHours = hoursByClass(report.sessions)
+
   return (
     <>
       <Card aria-label="Giáo viên">
         <CardTitle>Giờ dạy giáo viên</CardTitle>
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-slate-600">Xem chi tiết</span>
+          <select
+            aria-label="Xem chi tiết giáo viên"
+            className="c-input"
+            value={detailPhone}
+            onChange={(e) => setDetailPhone(e.target.value)}
+          >
+            <option value="">-- Chọn giáo viên --</option>
+            {report.teachers.map((t) => (
+              <option key={t.teacherId} value={t.phoneNumber}>
+                {personName(t)}
+              </option>
+            ))}
+          </select>
+        </label>
         {report.teachers.length === 0 ? (
           <p className="text-sm text-slate-500">Không có buổi học trong tháng.</p>
         ) : (
@@ -269,7 +294,131 @@ function ReportTables({ report }: { report: WorkHoursReport }): React.ReactEleme
           </tbody>
         </table>
       </Card>
+
+      {detailTeacher && (
+        <Card aria-label="Chi tiết giáo viên">
+          <CardTitle>Chi tiết giáo viên — {personName(detailTeacher)}</CardTitle>
+          <p className="text-sm text-slate-600">
+            {detailTeacher.held} buổi thực dạy · {hoursLabel(detailTeacher.taughtMinutes)} · nghỉ{' '}
+            {detailTeacher.missed} buổi · dạy bù {detailTeacher.makeup} · dạy thay {detailTeacher.substitute}
+          </p>
+          {detailSessions.length === 0 ? (
+            <p className="text-sm text-slate-500">Giáo viên chưa có buổi học nào trong tháng.</p>
+          ) : (
+            <table className="c-table">
+              <thead>
+                <tr>
+                  <th>Ngày</th>
+                  <th>Lớp</th>
+                  <th>Thời lượng</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailSessions.map((s) => (
+                  <tr key={s.sessionId}>
+                    <td>
+                      {s.sessionDate} {s.startsAt}
+                    </td>
+                    <td>{s.className}</td>
+                    <td>{s.durationMinutes} phút</td>
+                    <td>
+                      <span className="inline-flex items-center gap-1">
+                        {WORK_SESSION_STATUS_LABELS[s.status]}
+                        {s.isMakeup && <Badge tone="accent">Bù</Badge>}
+                        {s.isSubstitute && <Badge tone="warning">Thay</Badge>}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
+
+      <Card aria-label="Theo lớp">
+        <CardTitle>Giờ dạy theo lớp</CardTitle>
+        {classHours.length === 0 ? (
+          <p className="text-sm text-slate-500">Không có buổi học trong tháng.</p>
+        ) : (
+          <table className="c-table">
+            <thead>
+              <tr>
+                <th>Lớp</th>
+                <th>Buổi thực dạy</th>
+                <th>Buổi nghỉ</th>
+                <th>Giờ dạy</th>
+              </tr>
+            </thead>
+            <tbody>
+              {classHours.map((c) => (
+                <tr key={c.classId}>
+                  <td>{c.className}</td>
+                  <td>{c.heldSessions}</td>
+                  <td>{c.missedSessions}</td>
+                  <td className="font-medium">{hoursLabel(c.taughtMinutes)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </>
+  )
+}
+
+function TeacherTimekeeping({ branchId, month, report }: { branchId: string; month: string; report: WorkHoursReport }): React.ReactElement {
+  const [teacherId, setTeacherId] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const sheet = useTeacherTimesheet(teacherId, branchId, month)
+  const check = useCheckTeacherShift()
+  const teachers = report.staff.filter((worker) => worker.role === 'teacher')
+  const open = sheet.data?.openShift
+
+  function toggle(): void {
+    if (!sheet.data) return
+    const action = open ? 'check-out' : 'check-in'
+    setMessage(null)
+    check.mutate({ teacherId, branchId, action }, {
+      onSuccess: () => setMessage(action === 'check-in' ? 'Đã check-in cho giáo viên.' : 'Đã check-out cho giáo viên.'),
+      onError: (error) => setMessage((error as Error).message),
+    })
+  }
+
+  return (
+    <Card aria-label="Chấm công giáo viên">
+      <CardTitle>Chấm công giáo viên</CardTitle>
+      {!branchId ? <p>Chọn một cơ sở để chấm công.</p> : (
+        <>
+          <p className="text-sm text-slate-600">Ca làm theo giáo viên trên tất cả cơ sở, riêng giờ dạy tính theo buổi. Nút chấm công ghi thời điểm hiện tại của máy chủ (giờ Việt Nam), không phụ thuộc tháng đang xem.</p>
+          <label htmlFor="timesheet-teacher">Giáo viên</label>
+          <select id="timesheet-teacher" className="c-input" value={teacherId} disabled={check.isPending} onChange={(e) => { setTeacherId(e.target.value); setMessage(null) }}>
+            <option value="">Chọn giáo viên</option>
+            {teachers.map((t) => <option key={t.userId} value={t.userId}>{t.phoneNumber}</option>)}
+          </select>
+          {teacherId && sheet.isLoading && <p>Đang tải lịch sử…</p>}
+          {teacherId && sheet.isError && <p role="alert">{(sheet.error as Error).message}</p>}
+          {sheet.data && (
+            <>
+              <p>{open ? `Đang trong ca từ ${timeLabel(open.checkInAt)}` : 'Chưa trong ca'}</p>
+              <Button onClick={toggle} disabled={check.isPending || sheet.isFetching || sheet.isError}>{open ? 'Check-out cho giáo viên' : 'Check-in cho giáo viên'}</Button>
+              {message && <p role="status">{message}</p>}
+              <h3 className="font-semibold">Lịch sử thao tác trong tháng</h3>
+              <p className="text-sm text-slate-600">Lịch sử gồm thao tác tại cơ sở đã chọn và thao tác không rõ cơ sở; ca cũ có thể không xác định được người thao tác.</p>
+              {sheet.data.events.length === 0 ? <p>Chưa có thao tác trong tháng.</p> : (
+                <table className="c-table">
+                  <thead><tr><th>Thời điểm</th><th>Thao tác</th><th>Người ghi</th></tr></thead>
+                  <tbody>{sheet.data.events.map((event) => (
+                    <tr key={`${event.shiftId}-${event.action}`}><td>{timeLabel(event.occurredAt)}</td><td>{event.action === 'check_in' ? 'Check-in' : 'Check-out'}</td><td>{event.recordedByPhone ?? event.recordedBy ?? 'Không xác định'}</td></tr>
+                  ))}</tbody>
+                </table>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </Card>
   )
 }
 
@@ -281,6 +430,7 @@ function AdminReportView(): React.ReactElement {
   const data = report.data
   const totalTaught = data?.teachers.reduce((sum, t) => sum + t.taughtMinutes, 0) ?? 0
   const totalWorked = data?.staff.reduce((sum, s) => sum + s.workedMinutes, 0) ?? 0
+  const classHours = hoursByClass(data?.sessions ?? [])
 
   function exportExcel(): void {
     if (!data) return
@@ -318,6 +468,13 @@ function AdminReportView(): React.ReactElement {
             <StatCard label="Nhân sự chấm công" value={String(data.staff.length)} icon={Users} tone="accent" />
             <StatCard label="Tổng giờ công" value={hoursLabel(totalWorked)} icon={Clock} tone="warning" />
           </div>
+          <ReportCharts title="Biểu đồ phút công của nhân sự được gán cơ sở (tất cả cơ sở)" unit="phút" items={[
+            { label: 'Giáo viên', value: data.staff.filter((s) => s.role === 'teacher').reduce((n, s) => n + s.workedMinutes, 0) },
+            { label: 'Nhân viên', value: data.staff.filter((s) => s.role === 'staff').reduce((n, s) => n + s.workedMinutes, 0) },
+          ]} />
+          <ReportCharts title="Biểu đồ trạng thái buổi dạy" unit="buổi" items={WORK_SESSION_STATUSES.map((status) => ({ label: WORK_SESSION_STATUS_LABELS[status], value: data.sessions.filter((s) => s.status === status).length }))} />
+          <ReportCharts title="Biểu đồ giờ dạy theo lớp" unit="phút" items={classHours.map((c) => ({ label: c.className, value: c.taughtMinutes }))} />
+          <TeacherTimekeeping key={query.branchId ?? ''} branchId={query.branchId ?? ''} month={query.month} report={data} />
           <ReportTables report={data} />
         </>
       )}

@@ -17,6 +17,7 @@ import {
   useEnrollments,
   useLevels,
 } from './useCatalog'
+import { LevelRoadmap } from './LevelRoadmap'
 
 /**
  * Trang quan ly chuong trinh hoc (slice-1 Task 3) — chi Admin (route guard theo role).
@@ -109,6 +110,8 @@ export function CatalogPage(): React.ReactElement {
           {formError}
         </p>
       )}
+
+      <LevelRoadmap levels={levels.data} courses={courses.data} classes={classes.data} />
 
       <section className="c-card">
         <h2 className="c-section-title">
@@ -210,6 +213,7 @@ export function CatalogPage(): React.ReactElement {
             <thead>
               <tr>
                 <th>Tên lớp</th>
+                <th>Khoá học</th>
                 <th>Cơ sở</th>
                 <th className="text-right">Hành động</th>
               </tr>
@@ -218,6 +222,7 @@ export function CatalogPage(): React.ReactElement {
               {classes.data.map((k) => (
                 <tr key={k.id}>
                   <td>{k.name}</td>
+                  <td>{courses.data?.find((c) => c.id === k.courseId)?.name ?? '—'}</td>
                   <td>
                     {branches.data?.find((b) => b.id === k.branchId)?.name ?? '—'}
                   </td>
@@ -225,7 +230,9 @@ export function CatalogPage(): React.ReactElement {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteClass.mutate(k.id)}
+                      onClick={() =>
+                        deleteClass.mutate(k.id, { onError: (err) => setFormError((err as Error).message) })
+                      }
                       disabled={deleteClass.isPending}
                     >
                       <Trash2 className="mr-1 h-4 w-4" /> Xoá

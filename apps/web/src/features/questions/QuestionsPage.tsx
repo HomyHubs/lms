@@ -15,6 +15,7 @@ import { checkImportFile, parseQuestionsXlsx } from '@/lib/question-import'
 import { buildXlsx, downloadFile, XLSX_MIME } from '@/lib/xlsx-export'
 import { QuestionImages } from '@/features/media/QuestionImages'
 import { useSession } from '@/features/auth/useAuth'
+import { useQuestionEditPermissions } from '@/features/settings/useSettings'
 import type { Question } from '@lms/shared'
 import { LevelPanel } from './LevelPanel'
 import { readPanelState, writePanelState, type PanelState } from './panel-state'
@@ -108,6 +109,12 @@ export function QuestionsPage(): React.ReactElement {
       return next
     })
   }
+
+  // slice-19 (ADR 0015): quyền SỬA câu hỏi theo role (server là nguồn sự thật + enforce thật).
+  // Ẩn/khoá nút ở UI chỉ là lớp trải nghiệm; superadmin luôn được sửa.
+  const perms = useQuestionEditPermissions()
+  const canEdit =
+    user?.role === 'superadmin' || (user ? (perms.data?.[user.role] ?? false) : false)
 
   // slice-18: cuộn lên form khi bấm "Sửa".
   const formRef = useRef<HTMLElement | null>(null)
@@ -216,6 +223,13 @@ export function QuestionsPage(): React.ReactElement {
     <>
       <PageHeader icon={ListChecks} title="Ngân hàng câu hỏi" />
 
+      {!canEdit && (
+        <p className="c-card text-sm text-slate-500" role="status">
+          Vai trò của bạn chỉ được xem ngân hàng câu hỏi. Liên hệ quản trị để được cấp quyền sửa.
+        </p>
+      )}
+
+      {canEdit && (
       <section ref={formRef} className="c-card">
         <h2 className="c-section-title">
           <ListChecks className="h-5 w-5" /> Thêm câu hỏi
@@ -342,7 +356,9 @@ export function QuestionsPage(): React.ReactElement {
           </p>
         )}
       </section>
+      )}
 
+      {canEdit && (
       <section className="c-card">
         <h2 className="c-section-title">
           <Upload className="h-5 w-5" /> Import từ CSV / XLSX
@@ -370,6 +386,7 @@ export function QuestionsPage(): React.ReactElement {
           </p>
         )}
       </section>
+      )}
 
       {questionList &&
         LEVEL_CODES.map((code) => (
@@ -381,8 +398,8 @@ export function QuestionsPage(): React.ReactElement {
             onToggle={() => togglePanel(code)}
             onEdit={editQuestion}
             onDelete={(id) => deleteQuestion.mutate(id)}
-            editDisabled={updateQuestion.isPending}
-            deleteDisabled={deleteQuestion.isPending}
+            editDisabled={updateQuestion.isPending || !canEdit}
+            deleteDisabled={deleteQuestion.isPending || !canEdit}
           />
         ))}
     </>

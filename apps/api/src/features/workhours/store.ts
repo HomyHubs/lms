@@ -24,28 +24,49 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
     db.selectFrom('staff_shifts').select(SHIFT_COLUMNS).where('id', '=', id).executeTakeFirstOrThrow()
 
   return {
-    async checkIn(userId) {
+    async checkIn(userId, recordedBy = userId, branchId) {
       try {
-        const inserted = await db
-          .insertInto('staff_shifts')
-          .values({ user_id: userId })
-          .returning('id')
-          .executeTakeFirstOrThrow()
-        return shiftById(inserted.id)
+        const id = await db.transaction().execute(async (trx) => {
+          const shift = await trx.insertInto('staff_shifts')
+            .values({ user_id: userId })
+            .returning(['id', 'check_in_at'])
+            .executeTakeFirstOrThrow()
+          await trx.insertInto('shift_events').values({
+            shift_id: shift.id, user_id: userId, event_type: 'check_in',
+            occurred_at: sql<string>`now()`, recorded_by: recordedBy, branch_id: branchId ?? null,
+          }).execute()
+          return shift.id
+        })
+        return shiftById(id)
       } catch (err) {
         if (isUniqueViolation(err)) return undefined
         throw err
       }
     },
-    async checkOut(userId) {
-      const updated = await db
-        .updateTable('staff_shifts')
-        .set({ check_out_at: sql<string>`now()` })
+    async checkOut(userId, recordedBy = userId, branchId) {
+      const id = await db.transaction().execute(async (trx) => {
+        const shift = await trx.updateTable('staff_shifts')
+          .set({ check_out_at: sql<string>`now()` })
+          .where('user_id', '=', userId)
+          .where('check_out_at', 'is', null)
+          .returning(['id', 'check_out_at'])
+          .executeTakeFirst()
+        if (!shift || !shift.check_out_at) return undefined
+        await trx.insertInto('shift_events').values({
+          shift_id: shift.id, user_id: userId, event_type: 'check_out',
+          occurred_at: sql<string>`now()`, recorded_by: recordedBy, branch_id: branchId ?? null,
+        }).execute()
+        return shift.id
+      })
+      return id ? shiftById(id) : undefined
+    },
+    async listShiftEvents(userId, { from, to }) {
+      const localDate = sql<string>`(occurred_at at time zone ${sql.lit(WORK_TIME_ZONE)})::date`
+      return db.selectFrom('shift_events')
+        .select(['shift_id', 'event_type', 'occurred_at', 'recorded_by', 'branch_id'])
         .where('user_id', '=', userId)
-        .where('check_out_at', 'is', null)
-        .returning('id')
-        .executeTakeFirst()
-      return updated ? shiftById(updated.id) : undefined
+        .where(localDate, '>=', from).where(localDate, '<', to)
+        .orderBy('occurred_at', 'desc').orderBy('id', 'desc').execute()
     },
     async findOpenShift(userId) {
       return db
@@ -93,7 +114,7 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
             eb(
               'class_sessions.id',
               'in',
-              eb.selectFrom('attendance_records').select('session_id').where('recorded_by', '=', teacherId),
+              eb.selectFrom('session_teacher_events').select('session_id').where('teacher_id', '=', teacherId),
             ),
           ]),
         )
@@ -104,26 +125,19 @@ export function makeWorkHoursStore(db: AppDb): WorkHoursStore {
         .execute()
       if (sessions.length === 0) return []
 
-      // Flat second query: the latest recorder of each session is the teacher who taught it.
-      const recorders = await db
-        .selectFrom('attendance_records')
-        .select(['session_id', 'recorded_by', sql<Date>`max(recorded_at)`.as('last_recorded_at')])
-        .where(
-          'session_id',
-          'in',
-          sessions.map((s) => s.id),
-        )
-        .groupBy(['session_id', 'recorded_by'])
+      const events = await db
+        .selectFrom('session_teacher_events')
+        .select(['session_id', 'teacher_id'])
+        .where('session_id', 'in', sessions.map((s) => s.id))
+        .orderBy('id', 'desc')
         .execute()
-      const taughtBy = new Map<string, { teacher: string; at: number }>()
-      for (const r of recorders) {
-        const at = new Date(r.last_recorded_at).getTime()
-        const current = taughtBy.get(r.session_id)
-        if (!current || at > current.at) taughtBy.set(r.session_id, { teacher: r.recorded_by, at })
+      const taughtBy = new Map<string, string>()
+      for (const event of events) {
+        if (!taughtBy.has(event.session_id)) taughtBy.set(event.session_id, event.teacher_id)
       }
-      return sessions.map(
-        (s): WorkSessionRow => ({ ...s, taught_by: taughtBy.get(s.id)?.teacher ?? null }),
-      )
+      return sessions
+        .map((s): WorkSessionRow => ({ ...s, taught_by: taughtBy.get(s.id) ?? null }))
+        .filter((s) => !teacherId || s.planned_teacher_id === teacherId || s.taught_by === teacherId)
     },
 
     async listUsers(userIds) {

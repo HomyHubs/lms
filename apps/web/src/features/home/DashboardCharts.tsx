@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   Cell,
+  LabelList,
   Legend,
   Pie,
   PieChart,
@@ -10,11 +11,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardTitle } from '@/components/ui/card'
 import { useStudentReport } from '@/features/reports/useReports'
-import { useClassRates } from '@/features/attendance/useAttendance'
-import { useClasses } from '@/features/catalog/useCatalog'
+import { useBranches } from '@/features/centers/useCenters'
 import {
   useDashboardStats,
   type BranchClassGroup,
@@ -24,15 +24,12 @@ import {
 
 // Bảng màu demo: nền xanh dương → tím chủ đạo (xanh dương, trắng, tím), giữ các màu
 // ngữ nghĩa (xanh lá = đạt, đỏ = vắng, vàng = trễ) để biểu đồ vẫn dễ đọc đúng ý nghĩa.
-const BAR_COLOR = '#4f46e5'
 const PASS_COLORS = ['#16a34a', '#dc2626']
 /** Bảng màu xoay vòng cho pie nhiều lát (cơ sở): ưu tiên xanh dương/tím trước. */
 const SLICE_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#6366f1', '#a855f7', '#0ea5e9', '#db2777']
-/** Đi học (xanh lá) · Đi trễ (vàng) · Vắng (đỏ) · Khác/có phép (xám). */
-const ATTENDANCE_COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#94a3b8']
 
 // Pie gọn để xếp nhiều cái trên một dòng; bar cao hơn một chút cho dễ đọc nhãn.
-const PIE_HEIGHT = 240
+const PIE_HEIGHT = 260
 const BAR_HEIGHT = 260
 
 function ChartState({ message }: { message: string }): React.ReactElement {
@@ -40,19 +37,31 @@ function ChartState({ message }: { message: string }): React.ReactElement {
 }
 
 /** Nhãn lát pie dạng "Tên 42%" dựa trên phần trăm trong tổng. */
-function percentLabel(entry: { name?: string | number; percent?: number }): string {
+function percentLabel(entry: { percent?: number }): string {
   const pct = Math.round((entry.percent ?? 0) * 100)
-  return `${entry.name} ${pct}%`
+  // Chỉ hiện % trên lát để nhãn không chồng nhau; tên lát đã có ở <Legend/>.
+  return `${pct}%`
 }
 
-function StudentsBarChart({ data }: { data: ChartDatum[] }): React.ReactElement {
+function StudentsBarChart({
+  data,
+  colors = SLICE_COLORS,
+}: {
+  data: ChartDatum[]
+  colors?: string[]
+}): React.ReactElement {
   return (
     <ResponsiveContainer width="100%" height={BAR_HEIGHT}>
       <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
         <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={-10} textAnchor="end" height={50} />
         <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
         <Tooltip />
-        <Bar dataKey="value" name="Học viên" fill={BAR_COLOR} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="value" name="Học viên" radius={[4, 4, 0, 0]}>
+          {data.map((entry: ChartDatum, index: number) => (
+            <Cell key={entry.name} fill={colors[index % colors.length]} />
+          ))}
+          <LabelList dataKey="value" position="top" />
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   )
@@ -69,7 +78,16 @@ function SharePieChart({
   return (
     <ResponsiveContainer width="100%" height={PIE_HEIGHT}>
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={72} label={percentLabel}>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          outerRadius={60}
+          label={percentLabel}
+          labelLine={false}
+        >
           {data.map((entry: ChartDatum, index: number) => (
             <Cell key={entry.name} fill={colors[index % colors.length]} />
           ))}
@@ -98,50 +116,32 @@ function CompletionPieChart(): React.ReactElement {
 }
 
 /**
- * Tỉ lệ điểm danh của một lớp: Đi học / Đi trễ / Vắng / Khác (có phép).
- * API getAttendanceRates bắt buộc một bộ lọc nên cho Admin chọn lớp (mặc định lớp đầu tiên).
+ * Tỉ lệ điểm danh cho TẤT CẢ cơ sở (slice-16): mỗi cơ sở là một hàng bấm được,
+ * điều hướng sang trang chi tiết cơ sở (/attendance/branch/:branchId) để xem đủ các lớp.
+ * Bỏ ràng buộc chọn một lớp như bản cũ; branch-scope do backend quyết định (admin chỉ
+ * thấy cơ sở trong phạm vi được phân quyền).
  */
-function AttendancePieChart(): React.ReactElement {
-  const classes = useClasses()
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
-  const classList = classes.data ?? []
-  const activeClassId = selectedClassId ?? classList[0]?.id ?? null
-  const rates = useClassRates(activeClassId)
-
-  if (classes.isLoading) return <ChartState message="Đang tải…" />
-  if (classList.length === 0) return <ChartState message="Chưa có lớp học" />
-
-  const overall = rates.data?.overall
-  const data: ChartDatum[] = [
-    { name: 'Đi học', value: overall?.present ?? 0 },
-    { name: 'Đi trễ', value: overall?.late ?? 0 },
-    { name: 'Vắng', value: overall?.absent ?? 0 },
-    { name: 'Khác', value: overall?.excused ?? 0 },
-  ]
-  const total = data.reduce((sum: number, d: ChartDatum) => sum + d.value, 0)
+function AttendanceByBranch(): React.ReactElement {
+  const branches = useBranches()
+  if (branches.isLoading) return <ChartState message="Đang tải…" />
+  const list = branches.data ?? []
+  if (list.length === 0) return <ChartState message="Chưa có cơ sở" />
 
   return (
-    <>
-      <select
-        aria-label="Chọn lớp"
-        className="c-input mb-3 max-w-xs border-primary-200"
-        value={activeClassId ?? ''}
-        onChange={(e) => setSelectedClassId(e.target.value)}
-      >
-        {classList.map((cls) => (
-          <option key={cls.id} value={cls.id}>
-            {cls.name}
-          </option>
-        ))}
-      </select>
-      {rates.isLoading ? (
-        <ChartState message="Đang tải…" />
-      ) : total === 0 ? (
-        <ChartState message="Chưa có dữ liệu điểm danh" />
-      ) : (
-        <SharePieChart data={data} colors={ATTENDANCE_COLORS} />
-      )}
-    </>
+    <div className="flex flex-col gap-2">
+      {list.map((b) => (
+        <Link
+          key={b.id}
+          to={`/attendance/branch/${b.id}`}
+          className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+        >
+          <span className="font-medium text-slate-800">{b.name}</span>
+          <span aria-hidden className="text-slate-400">
+            ›
+          </span>
+        </Link>
+      ))}
+    </div>
   )
 }
 
@@ -197,6 +197,7 @@ function ClassSizeByBranchChart({ groups, bars }: {
                 {bars.map((b: ClassBarDatum) => (
                   <Cell key={b.classId} fill={SLICE_COLORS[b.branchIndex % SLICE_COLORS.length]} />
                 ))}
+                <LabelList dataKey="size" position="top" />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -214,12 +215,12 @@ function ClassSizeByBranchChart({ groups, bars }: {
 export function DashboardCharts(): React.ReactElement {
   const stats = useDashboardStats()
 
-  const renderBar = (data: ChartDatum[]): React.ReactElement => {
+  const renderBar = (data: ChartDatum[], colors: string[] = SLICE_COLORS): React.ReactElement => {
     if (stats.isLoading) return <ChartState message="Đang tải…" />
     if (data.length === 0 || data.every((d: ChartDatum) => d.value === 0)) {
       return <ChartState message="Chưa có dữ liệu" />
     }
-    return <StudentsBarChart data={data} />
+    return <StudentsBarChart data={data} colors={colors} />
   }
 
   const renderBranchPie = (): React.ReactElement => {
@@ -233,12 +234,13 @@ export function DashboardCharts(): React.ReactElement {
       {/* Hàng biểu đồ cột */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardTitle>Học viên theo khóa học</CardTitle>
-          {renderBar(stats.studentsByCourse)}
+          <CardTitle>Tổng số học viên theo khóa học</CardTitle>
+          {/* TODO(slice-16): xác nhận gom theo cấp độ (Starter/Mover/Flyer) hay theo khóa học (studentsByCourse) */}
+          {renderBar(stats.studentsByCourse, SLICE_COLORS)}
         </Card>
         <Card>
-          <CardTitle>Học viên theo cơ sở</CardTitle>
-          {renderBar(stats.studentsByBranch)}
+          <CardTitle>Tổng số học viên theo cơ sở</CardTitle>
+          {renderBar(stats.studentsByBranch, SLICE_COLORS)}
         </Card>
       </div>
 
@@ -259,7 +261,7 @@ export function DashboardCharts(): React.ReactElement {
         </Card>
         <Card>
           <CardTitle>Tỉ lệ điểm danh</CardTitle>
-          <AttendancePieChart />
+          <AttendanceByBranch />
         </Card>
       </div>
     </div>

@@ -404,6 +404,7 @@ Chi tiết và quy tắc suy luận khi mất bàn giao: `docs/ai-workflow/READM
 ## 16. Dữ liệu và migration
 
 - Migration là append-only. Không sửa migration đã merge, chỉ thêm migration mới.
+- **Mỗi file migration phải có version (timestamp) duy nhất.** dbmate khoá migration theo version chứ không theo tên file; hai file trùng version sẽ làm `dbmate up` chết với `duplicate key value violates unique constraint "schema_migrations_pkey"` và **file thứ hai không bao giờ được áp dụng**. Kiểm tra trước khi commit: `ls db/migrations/ | sed -E 's/^([0-9]+)_.*/\1/' | sort | uniq -d` phải rỗng. Nếu trùng, đổi tên file sau sang version kế tiếp (giữ nguyên nội dung, vì file thứ hai chưa từng được áp dụng ở DB nào).
 - Mỗi migration phải đảo ngược được và đã test rollback trước khi coi là xong.
 - Không sửa schema trực tiếp trên bất kỳ môi trường nào.
 - Thay đổi phá vỡ chia hai bước: thêm cái mới và tương thích ngược trước, xóa cái cũ ở release sau.
@@ -647,6 +648,9 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-13 | Lịch sử thi & báo cáo thi | Dọc | Done | 20 | 2026-11-13 |
 | slice-14 | Bài thi theo lớp | Dọc | Done | — | 2026-11-10 |
 | slice-15 | Đồng bộ hiển thị họ tên học viên | Dọc | Done | e24a0f9, 3c4aee6, c703d8b, 7bbbbec, 438c25e, f5e4675 | 2026-11-11 |
+| slice-16 | Dashboard Tổng quan (nhãn số/màu cột, nhãn pie, điểm danh theo cơ sở + trang chi tiết) | Dọc | Done | 5d390b2 | 2026-11-13 |
+| slice-17 | Điểm danh (view): lọc theo ngày thật (`listSessionsOnDate` dùng `dateIso`), nhóm theo cơ sở, chart trạng thái, bộ chọn ngày + preset, widget calendar in-house + test lọc ngày | Dọc | Done (nợ widget calendar/test đã trả 2026-11-26) | — | 2026-11-13 |
+| slice-19 | Phân quyền sửa câu hỏi theo role (settings bật/tắt trong quản lý user; ADR 0015) | Dọc | Done | d332cd2 | 2026-11-13 |
 | slice-11b | Import bộ đề từ Word/Excel | Dọc | Done | 21 | 2026-11-14 |
 | slice-12 | Hình ảnh câu hỏi / bộ đề | Dọc | Done | 22 | 2026-11-14 |
 | slice-4.2 | Hoàn thiện thi online | Dọc | Done | 23 | 2026-11-14 |
@@ -657,6 +661,24 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-11c | Mẫu Excel trắc nghiệm + hình từ link Google | Dọc | Done | 28 | 2026-11-14 |
 | postman-setup | Bộ tài nguyên Postman (collection LMS API, env LMS Local, OpenAPI spec) | — | Done | aa80a74, e9716ce | 2026-11-12 |
 | web-demo | Chế độ demo read-only cho apps/web: fetch interceptor đọc dữ liệu từ file JSON, chặn ghi (403), nút chọn file + dữ liệu mẫu, cấu hình deploy static Vercel (VITE_DEMO) | — | Done | f169659, b4fee71 | 2026-11-12 |
+| slice-20 | Bộ đề & Đề thi UI (bố cục Tạo đề, filter danh sách đề, xem trước đề, mẫu Excel import; mục 4.1, 4.2, 4.3, 4.5) | Dọc | Done | 4d54c1e | 2026-11-14 |
+| slice-21 | Liên kết Đề thi ↔ Bộ đề (đưa câu hỏi vào/ra bộ đề + xem trước; mục 4.4) | Dọc | Done | 794bc74 | 2026-11-14 |
+| slice-24 | Báo cáo thi & xếp loại (phân trang 50/trang, chọn 20/50, dashboard pass/fail theo cơ sở/trung tâm/cấp độ; mục 6, 8) | Dọc | Done | 2cf6306 | 2026-11-20 |
+| slice-26 | Người dùng: SĐT nhỏ dưới họ tên, làm lại cột tuổi học viên (mục 9.1-hiển thị, 9.2) | Dọc | Done | 32 | 2026-11-20 |
+| slice-22 | Chấm bài: link tải mẫu, nút bắt đầu chấm, sửa kết quả, đưa điểm vào lớp + preview trước khi import (mục 5.2, 5.3) | Dọc | Done | 31 | 2026-11-21 |
+| slice-6.1 | Điểm danh nhiều lớp và hiện diện (thay đổi slice-6; ADR 0014-multiclass) | Dọc | Done | 3185e7d | 2026-11-22 |
+| slice-1.1 | Bảo toàn lịch sử ghi danh (thay đổi slice-1) | Dọc | Done | 38 | 2026-11-24 |
+| slice-10.1 | Menu quản lý thi: menu cha + menu con theo vai trò, trang chọn chức năng | Dọc | Done | 34 | 2026-11-24 |
+| slice-23 | Mã học viên chuẩn hóa, tách khỏi SĐT (ADR 0014-student-code, migration + backfill) | Dọc | Done | 39 | 2026-11-25 |
+| slice-30 | Menu Học viên: tìm kiếm + hồ sơ chi tiết (điểm, giờ học, chuyên cần, thi, học lực); gia cố 2026-11-26: mã HV thật từ slice-23, panel thời gian học, tìm theo mã, +20 test | Dọc | Done | 40 | 2026-11-26 |
+| slice-27 | Trung tâm & cơ sở: sửa thông tin inline (tên trung tâm, tên + địa chỉ cơ sở) | Dọc | Done | fd67f7d | 2026-11-26 |
+| slice-28 | Chương trình học: chặn xoá lớp còn học viên (409), sơ đồ lộ trình cấp độ, cột khoá học | Dọc | Done | f052224 | 2026-11-26 |
+| slice-29 | Ghi danh & Quản lý: 2 panel (HV/GV theo lớp, quản lý theo cơ sở) | Dọc | Done | 51de9c3 | 2026-11-26 |
+| slice-25 | Ngày công & giờ dạy: chi tiết theo giáo viên + theo lớp + biểu đồ giờ dạy theo lớp | Dọc | Done | 8ce890a | 2026-11-26 |
+| slice-17 (nợ) | Widget calendar in-house + test lọc ngày cho điểm danh | Dọc | Done | a3efab5 | 2026-11-26 |
+| slice-dashboard-movements | Lịch sử vào/ra ghi danh, biểu đồ thanh+tròn cho thi/điểm danh/công/xếp loại, admin chấm công giáo viên (audit + concurrency) | Dọc | Done | (nhiều commit, phần 3–4 đóng 2026-11-26) | 2026-11-26 |
+
+**Đã hủy, không làm (không tính vào rollup Done):** `slice-9` — hủy 2026-11-26. Ô dù này đã tách xong sang `slice-9a` + `slice-9b` (cả hai Done); phần "chấm bán tự động" bỏ hẳn; audio/ghi âm cho Listening/Speaking **không xây trong LMS** mà dùng luồng "giáo viên tự chấm + đưa kết quả vào lớp" đã có (`slice-9a` + `slice-22`). Chi tiết + lý do: `docs/tasks/slices/slice-9-mo-rong.md`.
 
 **Quyết định cấu trúc repo (mục 4):** [ ] Trường hợp A — [x] Trường hợp B (repo mới khởi tạo từ bộ combo, chưa có `src/`)
 

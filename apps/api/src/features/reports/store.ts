@@ -5,6 +5,25 @@ import type { ReportsStore } from './service.js'
 /** Kysely implementation of ReportsStore on a real Postgres (no mocks). */
 export function makeReportsStore(db: AppDb): ReportsStore {
   return {
+    async listMovementBranches(branchIds) {
+      if (branchIds.length === 0) return []
+      return db.selectFrom('branches').select(['id', 'name']).where('id', 'in', branchIds).orderBy('name').execute()
+    },
+    async listMovements(branchIds, from, to) {
+      if (branchIds.length === 0) return []
+      return db.selectFrom('enrollment_events as e')
+        .innerJoin('branches as b', 'b.id', 'e.branch_id')
+        .leftJoin('classes as c', 'c.id', 'e.class_id')
+        .leftJoin('users as u', 'u.id', 'e.student_id')
+        .select([
+          sql<string>`e.id::text`.as('id'), 'b.id as branch_id', 'b.name as branch_name',
+          'c.name as class_name', 'u.phone_number', 'e.event_type', 'e.occurred_at',
+        ])
+        .where('e.branch_id', 'in', branchIds)
+        .where(sql<boolean>`e.occurred_at >= (${from}::date::timestamp at time zone 'Asia/Ho_Chi_Minh')`)
+        .where(sql<boolean>`e.occurred_at < ((${to}::date + 1)::timestamp at time zone 'Asia/Ho_Chi_Minh')`)
+        .orderBy('e.occurred_at', 'desc').orderBy('e.id', 'desc').execute()
+    },
     async listPolicies() {
       // A level created after the migration gets its row here, so the column defaults stay the
       // single source of the default policy and no level's students drop out of the report.
@@ -70,6 +89,7 @@ export function makeReportsStore(db: AppDb): ReportsStore {
           sql<string | null>`nullif(trim(concat_ws(' ', u.last_name, u.first_name)), '')`.as('student_name'),
         ])
       if (branchIds) q = q.where('c.branch_id', 'in', branchIds)
+      q = q.where('e.ended_at', 'is', null)
       if (levelId) q = q.where('l.id', '=', levelId)
       if (classId) q = q.where('c.id', '=', classId)
       return q.orderBy('c.name').orderBy('u.phone_number').execute()

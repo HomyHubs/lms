@@ -34,7 +34,7 @@ export const CreateAiRequestRequest = z.object({
   questionType: QuestionType.optional(),
   difficulty: QuestionDifficulty.optional(),
   count: z.coerce
-    .number({ invalid_type_error: 'So luong phai la so' })
+    .number({ error: 'So luong phai la so' })
     .int('So luong phai la so nguyen')
     .min(1, 'So luong toi thieu la 1')
     .max(MAX_AI_QUESTION_COUNT, `So luong toi da la ${MAX_AI_QUESTION_COUNT}`),

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -59,10 +60,14 @@ vi.mock('@/features/reports/useReports', () => ({
   }),
 }))
 
-vi.mock('@/features/catalog/useCatalog', () => ({
-  useClasses: () => ({
+// slice-16: thẻ "Tỉ lệ điểm danh" nay liệt kê các cơ sở (useBranches) thay cho bộ chọn lớp.
+vi.mock('@/features/centers/useCenters', () => ({
+  useBranches: () => ({
     isLoading: false,
-    data: [{ id: 'c1', courseId: 'co1', branchId: 'b1', name: 'Lớp Starters 1', createdAt: '2026-09-16T00:00:00.000Z' }],
+    data: [
+      { id: 'b1', centerId: 'c1', name: 'Cơ sở A', address: null, createdAt: '' },
+      { id: 'b2', centerId: 'c1', name: 'Cơ sở B', address: null, createdAt: '' },
+    ],
   }),
 }))
 
@@ -74,15 +79,24 @@ vi.mock('@/features/attendance/useAttendance', () => ({
       students: [],
     },
   }),
+  useBranchRates: () => ({ isLoading: false, data: { branchId: 'b1', overall: { present: 0, late: 0, absent: 0, excused: 0, total: 0, ratePercent: null }, classes: [] } }),
 }))
 
 import { DashboardCharts } from './DashboardCharts'
 
+function renderDashboard() {
+  return render(
+    <MemoryRouter>
+      <DashboardCharts />
+    </MemoryRouter>,
+  )
+}
+
 describe('DashboardCharts', () => {
   it('renders the chart titles', () => {
-    render(<DashboardCharts />)
-    expect(screen.getByText('Học viên theo khóa học')).toBeInTheDocument()
-    expect(screen.getByText('Học viên theo cơ sở')).toBeInTheDocument()
+    renderDashboard()
+    expect(screen.getByText('Tổng số học viên theo khóa học')).toBeInTheDocument()
+    expect(screen.getByText('Tổng số học viên theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ học viên theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ hoàn thành bài')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ điểm danh')).toBeInTheDocument()
@@ -90,5 +104,21 @@ describe('DashboardCharts', () => {
     expect(screen.getByText('Sĩ số từng lớp theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Cơ sở Quận 1 (12)')).toBeInTheDocument()
     expect(screen.getByText('Cơ sở Quận 3 (8)')).toBeInTheDocument()
+  })
+
+  it('renders the renamed "Tổng số" bar titles (slice-16)', () => {
+    renderDashboard()
+    expect(screen.getByText('Tổng số học viên theo khóa học')).toBeInTheDocument()
+    expect(screen.getByText('Tổng số học viên theo cơ sở')).toBeInTheDocument()
+  })
+
+  it('lists all branches in the attendance card and links to the branch detail page (slice-16)', () => {
+    renderDashboard()
+    expect(screen.getByText('Tỉ lệ điểm danh')).toBeInTheDocument()
+    // Mỗi cơ sở là một link điều hướng tới /attendance/branch/:branchId.
+    const linkA = screen.getByRole('link', { name: /Cơ sở A/ })
+    const linkB = screen.getByRole('link', { name: /Cơ sở B/ })
+    expect(linkA.getAttribute('href')).toContain('/attendance/branch/b1')
+    expect(linkB.getAttribute('href')).toContain('/attendance/branch/b2')
   })
 })

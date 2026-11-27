@@ -6,8 +6,8 @@ import { ExamsPage } from './ExamsPage'
 
 vi.mock('@/features/auth/useAuth', () => ({ useSession: () => ({ user: { role: 'student' } }) }))
 
-const EXAM_ID = '11111111-1111-1111-1111-111111111111'
-const QUESTION_ID = '22222222-2222-2222-2222-222222222222'
+const EXAM_ID = '11111111-1111-4111-8111-111111111111'
+const QUESTION_ID = '22222222-2222-4222-8222-222222222222'
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -22,7 +22,7 @@ function examList() {
       {
         id: EXAM_ID,
         title: 'Starter Reading',
-        levelId: '33333333-3333-3333-3333-333333333333',
+        levelId: '33333333-3333-4333-8333-333333333333',
         levelCode: 'starter',
         skill: 'reading',
         questionCount: 1,
@@ -32,7 +32,7 @@ function examList() {
         retakeCooldownMinutes: 0,
         opensAt: '2026-09-27T00:00:00.000Z',
         closesAt: '2026-09-28T00:00:00.000Z',
-        createdBy: '44444444-4444-4444-4444-444444444444',
+        createdBy: '44444444-4444-4444-8444-444444444444',
         createdAt: '2026-09-27T00:00:00.000Z',
       },
     ],
@@ -258,9 +258,15 @@ describe('ExamsPage', () => {
       }),
     )
     renderPage()
-    await screen.findByText('Starter Reading')
+    // Các lookup phụ thuộc fetch (danh sách đề, rồi UI làm bài sau khi tải attempt) có thể
+    // vượt 1000ms mặc định của findBy khi chạy test song song -> nới timeout chống flaky.
+    await screen.findByText('Starter Reading', undefined, { timeout: 5000 })
     fireEvent.click(screen.getByRole('button', { name: 'Vào thi' }))
-    const flag = await screen.findByRole('button', { name: 'Đánh dấu xem lại câu 1' })
+    const flag = await screen.findByRole(
+      'button',
+      { name: 'Đánh dấu xem lại câu 1' },
+      { timeout: 5000 },
+    )
     expect(flag).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(flag)
     expect(flag).toHaveAttribute('aria-pressed', 'true')

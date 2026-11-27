@@ -32,7 +32,7 @@
 | slice-6 | Điểm danh | ⬜ Chưa bắt đầu | Xem DANH MỤC D | `slices/slice-6-diem-danh.md` |
 | slice-7 | Xếp loại & Dashboard | ⬜ Chưa bắt đầu | Xem DANH MỤC E | `slices/slice-7-xep-loai-dashboard.md` |
 | slice-8 | Ngày công & giờ dạy | ⬜ Chưa bắt đầu | Xem DANH MỤC F | `slices/slice-8-ngay-cong-gio-day.md` |
-| slice-9 | Mở rộng Speaking/Writing + thông báo | ⏸️ Hoãn (không làm MVP) | — | `slices/slice-9-mo-rong.md` |
+| slice-9 | Mở rộng Speaking/Writing + thông báo | 🚫 Đã hủy 2026-11-26 (tách 9a/9b; bỏ chấm bán tự động; audio dùng luồng chấm tay) | — | `slices/slice-9-mo-rong.md` |
 
 ## 3. ĐANG LÀM
 
@@ -59,7 +59,7 @@ Phụ thuộc: slice-3 (Done). Hệ thống KHÔNG gọi AI provider trực ti�
 ### DANH MỤC C — Chấm điểm & Thi lại (slice-5)
 Phụ thuộc: slice-4 Done.
 - Chấm tự động trắc nghiệm/điền từ theo đáp án; pass/fail theo ngưỡng **cấu hình được** theo cấp độ/khóa; tự tạo lượt thi lại (đề mới random, giới hạn số lần, thời gian chờ); lưu lịch sử `ExamAttempt` để audit.
-- KHÔNG stub: logic pass/fail + giới hạn số lần thi lại. Câu tự luận/Speaking đánh dấu `TODO(slice-9)`.
+- KHÔNG stub: logic pass/fail + giới hạn số lần thi lại. Câu tự luận/Speaking để `pending_manual` — GV tự chấm và đưa điểm vào lớp (slice-9a + slice-22); không làm chấm bán tự động/AI (slice-9 đã hủy 2026-11-26).
 
 ### DANH MỤC D — Điểm danh (slice-6)
 Phụ thuộc: slice-1.
@@ -85,7 +85,7 @@ Phụ thuộc: slice-1 + slice-6.
 
 - **slice-7 — trọng số xếp loại:** điểm thi **90%** + chuyên cần **10%**; phải để **cấu hình đổi được** về sau.
 - **OTP (slice-2/9):** KHÔNG dùng WhatsApp (không có tài khoản). Kênh chính = **Email**. Telegram đã có code, bật nếu có bot token.
-- **slice-9:** KHÔNG làm cho MVP → **Hoãn**. (Nội dung slice-9 còn mơ hồ, cần làm rõ lại nếu sau này cần.)
+- **slice-9:** **Đã hủy 2026-11-26.** Chấm tay Speaking/Writing đã xong ở slice-9a, thông báo ở slice-9b; phần "chấm bán tự động" bỏ hẳn; audio/ghi âm không xây trong LMS — GV tự chấm và đưa kết quả vào lớp như luồng đã có. Muốn làm lại thì mở slice mới.
 
 ## 6. Khi làm xong 1 task
 
