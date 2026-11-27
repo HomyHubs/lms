@@ -7,7 +7,19 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-27
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Release `dev` → `main` (`196be90`) — Dependabot 130 cảnh báo → **0**. Không còn task nghiệp vụ mở; chỉ còn việc kiểm thử tay + nợ kỹ thuật có marker.
+- Trạng thái: Đang trả nợ kỹ thuật theo marker — vừa xong `TODO(slice-26)` (tuổi ±1, ADR 0018). Không còn task nghiệp vụ mở; còn 4 marker nợ (`slice-23` fallback SĐT, `slice-1` role text, `slice-20` ExamPreview N+1, `slice-21` kéo-thả) + việc kiểm thử tay.
+
+## Đã làm (phiên 2026-11-27, phần 2)
+
+- **Trả nợ `TODO(slice-26)` — tuổi học viên lệch ±1 (ADR 0018)**: gốc lỗi là `age = new Date().getFullYear() - birth_year` — công thức trả "tuổi sẽ đạt trong năm nay", nên ai chưa qua sinh nhật bị dư 1 tuổi (học viên sinh 30/12/2015 xem ngày 27/11/2026 hiện 11 thay vì 10). Vì Starter/Mover/Flyer phân theo độ tuổi nên sai lệch này ảnh hưởng xếp lớp.
+  - Migration `20261127000000_users_birth_date.sql` thêm `users.birth_date date` (nullable, additive). **Không backfill** từ `birth_year`: không suy ra được ngày/tháng, đặt mặc định `01-01` chỉ biến "thiếu dữ liệu" thành "dữ liệu sai".
+  - `apps/api/src/features/users/age.ts` (mới): `todayInVN`, `parseIsoDate`, `ageFromBirthDate`, `ageFromBirthYear`, `displayAge` — hàm thuần, nhận `today` dạng `YYYY-MM-DD`, mọi so sánh theo `Asia/Ho_Chi_Minh` (không theo giờ máy chủ).
+  - Contract: `AdminUser.birthDate` + `birthYear` là hai mức chính xác của cùng một dữ liệu; có `birthDate` thì `birthYear` dẫn xuất từ đó. Create/update nhận `birthDate`, vẫn nhận `birthYear` (tương thích ngược); gửi cả hai mà lệch năm → lỗi validate.
+  - `store.ts`: đọc `birth_date` qua `to_char(..., 'YYYY-MM-DD')` (theo mẫu `attendance/store.ts`) để `pg` không trả `Date` lệch ngày; đường ghi dùng `.returning('id')` + đọc lại thay vì nhét biểu thức vào `RETURNING`.
+  - FE: ô "Năm sinh" → ô "Ngày sinh" (`type=date`); cột Năm sinh hiện thêm ngày sinh nhỏ bên dưới; tuổi chỉ-biết-năm-sinh hiển thị `~11` + tooltip để không giả vờ chính xác.
+  - Test: `age.test.ts` 15 case (3 ngày quanh sinh nhật, 29/02, ngày không tồn tại, tương lai), `service.test.ts` +4 case, `users/store.integration.test.ts` (mới, 4 case trên Postgres thật — cũng phủ `assignStudentCode` lần đầu), `packages/shared/src/users.test.ts` (mới, 14 case).
+  - Cổng: lint 4/4, typecheck 5/5, test shared 31 + api 314 (+32 integration skip ở máy local) + web 120, build OK.
+  - Còn lại: dữ liệu cũ chỉ có năm sinh vẫn lệch ±1 — không sửa được bằng code (`TODO(slice-26-b)`), cần nhập bổ sung ngày sinh thật.
 
 ### Việc trước đó
 

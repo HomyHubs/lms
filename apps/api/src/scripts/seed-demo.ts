@@ -100,6 +100,8 @@ async function insertUser(
     lastName: string | null
     firstName: string | null
     birthYear?: number | null
+    // slice-26 (ADR 0018): ngay sinh day du de tuoi demo la chinh xac, khong phai uoc luong.
+    birthDate?: string | null
     gender?: 'male' | 'female' | 'other' | null
     parentPhone?: string | null
   },
@@ -114,6 +116,7 @@ async function insertUser(
       last_name: profile?.lastName ?? null,
       first_name: profile?.firstName ?? null,
       birth_year: profile?.birthYear ?? null,
+      birth_date: profile?.birthDate ?? null,
       gender: profile?.gender ?? null,
       parent_phone: profile?.parentPhone ?? null,
     })
@@ -137,6 +140,7 @@ function splitStudentName(fullName: string): { lastName: string | null; firstNam
  */
 function studentProfileExtras(index: number): {
   birthYear: number
+  birthDate: string
   gender: 'male' | 'female'
   parentPhone: string
 } {
@@ -145,7 +149,11 @@ function studentProfileExtras(index: number): {
   const birthYear = currentYear - age
   const gender: 'male' | 'female' = rng() < 0.5 ? 'male' : 'female'
   const parentPhone = phone('0988', index + 1)
-  return { birthYear, gender, parentPhone }
+  // slice-26 (ADR 0018): ngay/thang suy ra tu chi so (KHONG dung rng) de khong lam lech chuoi rng
+  // cua toan bo du lieu demo. Ngay 1..28 de thang nao cung hop le.
+  const month = String((index % 12) + 1).padStart(2, '0')
+  const day = String((index % 28) + 1).padStart(2, '0')
+  return { birthYear, birthDate: `${birthYear}-${month}-${day}`, gender, parentPhone }
 }
 
 async function seedQuestions(db: AppDb, levelIds: Record<DemoLevel, string>): Promise<Map<string, DemoQuestion>> {

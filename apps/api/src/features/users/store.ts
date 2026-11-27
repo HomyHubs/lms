@@ -1,7 +1,22 @@
+import { sql } from 'kysely'
 import type { AppDb } from '../../platform/db.js'
 import type { UsersStore } from './service.js'
 
-/** Cac cot an toan de tra ra ngoai (KHONG gom password_hash). */
+/**
+ * slice-26 (ADR 0018): `users.birth_date` la cot Postgres kieu `date`. De `pg` parse thi no tra ve
+ * `Date` luc nua dem theo timezone may chu, roi khi format lai se lech ngay. Ep sang chuoi
+ * 'YYYY-MM-DD' ngay trong cau SQL — cung cach `attendance/store.ts` dang lam voi `session_date`.
+ */
+const BIRTH_DATE = sql<string | null>`to_char(users.birth_date, 'YYYY-MM-DD')`.as('birth_date')
+
+/**
+ * Cac cot an toan de DOC ra ngoai (KHONG gom password_hash).
+ *
+ * Luu y: bieu thuc `BIRTH_DATE` chi dung cho menh de SELECT. Voi `returning()` cua INSERT/UPDATE,
+ * store ghi xong doc lai bang `readRow` thay vi nhet bieu thuc vao RETURNING — RETURNING nhan duoc
+ * ten cot tho va bieu thuc, nhung doc lai la duong an toan nhat va chi ton them mot luot truy van
+ * tren duong ghi (thao tac quan tri, tan suat thap).
+ */
 const SAFE_COLUMNS = [
   'id',
   'phone_number',
@@ -10,6 +25,7 @@ const SAFE_COLUMNS = [
   'last_name',
   'first_name',
   'birth_year',
+  BIRTH_DATE,
   'gender',
   'address',
   'parent_phone',
@@ -54,6 +70,11 @@ export async function assignCodeWithRetry<T>(
 
 /** Hien thuc UsersStore bang Kysely tren Postgres THUC (khong mock). */
 export function makeUsersStore(db: AppDb): UsersStore {
+  /** Doc lai mot dong theo id voi bo cot an toan (da ep `birth_date` sang chuoi). */
+  const readRow = async (id: string) => {
+    return db.selectFrom('users').select(SAFE_COLUMNS).where('id', '=', id).executeTakeFirst()
+  }
+
   /** Ma ke tiep theo tien to co so: max(so thu tu trong cung prefix) + 1, zero-pad. */
   const nextCode = async (branchCode: string | null): Promise<string> => {
     const prefix = branchCode && branchCode.trim() !== '' ? branchCode : DEFAULT_CODE_PREFIX
@@ -76,12 +97,14 @@ export function makeUsersStore(db: AppDb): UsersStore {
 
   /** Ghi ma hoc vien; nem loi unique violation neu ma da bi nguoi khac lay. */
   const writeCode = async (id: string, code: string) => {
-    return db
+    const written = await db
       .updateTable('users')
       .set({ updated_at: new Date().toISOString(), student_code: code })
       .where('id', '=', id)
-      .returning(SAFE_COLUMNS)
+      .returning('id')
       .executeTakeFirst()
+    // Khong co dong nao bi sua -> user khong ton tai (service tra not_found).
+    return written ? readRow(id) : undefined
   }
 
   return {
@@ -147,11 +170,12 @@ export function makeUsersStore(db: AppDb): UsersStore {
       lastName,
       firstName,
       birthYear,
+      birthDate,
       gender,
       address,
       parentPhone,
     }) {
-      return db
+      const inserted = await db
         .insertInto('users')
         .values({
           phone_number: phoneNumber,
@@ -161,16 +185,20 @@ export function makeUsersStore(db: AppDb): UsersStore {
           last_name: lastName,
           first_name: firstName,
           birth_year: birthYear,
+          // slice-26 (ADR 0018): ngay sinh day du; service da dan xuat birthYear tu do truoc khi goi.
+          birth_date: birthDate,
           gender,
           address,
           parent_phone: parentPhone,
         })
-        .returning(SAFE_COLUMNS)
+        .returning('id')
         .executeTakeFirstOrThrow()
+      // Doc lai de `birth_date` ra dang chuoi 'YYYY-MM-DD' nhu cac duong doc khac.
+      return (await readRow(inserted.id))!
     },
 
     async updateUser(id, input) {
-      return db
+      const updated = await db
         .updateTable('users')
         .set({
           updated_at: new Date().toISOString(),
@@ -180,13 +208,16 @@ export function makeUsersStore(db: AppDb): UsersStore {
           ...(input.lastName !== undefined ? { last_name: input.lastName } : {}),
           ...(input.firstName !== undefined ? { first_name: input.firstName } : {}),
           ...(input.birthYear !== undefined ? { birth_year: input.birthYear } : {}),
+          // slice-26 (ADR 0018): null = xoa ngay sinh (quay ve uoc luong theo birth_year).
+          ...(input.birthDate !== undefined ? { birth_date: input.birthDate } : {}),
           ...(input.gender !== undefined ? { gender: input.gender } : {}),
           ...(input.address !== undefined ? { address: input.address } : {}),
           ...(input.parentPhone !== undefined ? { parent_phone: input.parentPhone } : {}),
         })
         .where('id', '=', id)
-        .returning(SAFE_COLUMNS)
+        .returning('id')
         .executeTakeFirst()
+      return updated ? readRow(id) : undefined
     },
 
     async deleteUser(id) {

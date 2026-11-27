@@ -18,6 +18,10 @@ export interface UsersTable {
   last_name: ColumnType<string | null, string | null | undefined, string | null>
   first_name: ColumnType<string | null, string | null | undefined, string | null>
   birth_year: ColumnType<number | null, number | null | undefined, number | null>
+  // slice-26 (ADR 0018): ngay sinh day du de tinh tuoi chinh xac. Doc ra dang chuoi 'YYYY-MM-DD'
+  // (xem `BIRTH_DATE` o users/store.ts) — kieu `date` cua Postgres neu de pg parse se thanh `Date`
+  // luc nua dem theo timezone may chu, gay lech ngay.
+  birth_date: ColumnType<string | null, string | null | undefined, string | null>
   gender: ColumnType<string | null, string | null | undefined, string | null>
   address: ColumnType<string | null, string | null | undefined, string | null>
   parent_phone: ColumnType<string | null, string | null | undefined, string | null>

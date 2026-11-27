@@ -39,6 +39,7 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
                 lastName: null,
                 firstName: null,
                 birthYear: null,
+                birthDate: null,
                 gender: null,
                 address: null,
                 parentPhone: null,
@@ -56,6 +57,7 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
                 lastName: 'Nguyễn',
                 firstName: 'An',
                 birthYear: 2015,
+                birthDate: null,
                 gender: 'male',
                 address: null,
                 parentPhone: null,
@@ -72,6 +74,7 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
                 lastName: 'Nguyễn',
                 firstName: 'An',
                 birthYear: 2015,
+                birthDate: null,
                 gender: 'male',
                 address: null,
                 parentPhone: null,
@@ -87,10 +90,27 @@ function stubUsersFetch(): { perms: Record<string, boolean>; putCalls: number } 
                 lastName: 'Trần',
                 firstName: 'Bình',
                 birthYear: 1990,
+                birthDate: null,
                 gender: 'female',
                 address: null,
                 parentPhone: null,
                 age: null,
+                createdAt: '2026-09-16T00:00:00.000Z',
+              },
+              // slice-26 (ADR 0018): hoc vien co NGAY sinh -> tuoi CHINH XAC, khong co dau `~`.
+              {
+                id: '44444444-4444-4444-8444-444444444444',
+                phoneNumber: '0904444444',
+                email: null,
+                role: 'student',
+                lastName: 'Lê',
+                firstName: 'Chi',
+                birthYear: 2015,
+                birthDate: '2015-12-30',
+                gender: 'female',
+                address: null,
+                parentPhone: null,
+                age: 10,
                 createdAt: '2026-09-16T00:00:00.000Z',
               },
             ],
@@ -133,9 +153,13 @@ describe('UsersPage', () => {
     // SDT van hien (nay nam duoi ho ten), nhung KHONG con cot "So dien thoai".
     await waitFor(() => expect(screen.getByText('0902222222')).toBeInTheDocument())
     expect(screen.queryByRole('columnheader', { name: 'Số điện thoại' })).toBeNull()
-    // Hoc vien co tuoi -> hien; giao vien co nam sinh nhung khong hien tuoi.
-    expect(screen.getByText('11')).toBeInTheDocument()
+    // ADR 0018: chi biet nam sinh -> tuoi UOC LUONG, danh dau `~` de khong gia vo chinh xac.
+    expect(screen.getByText('~11')).toBeInTheDocument()
+    // Co ngay sinh -> tuoi chinh xac (30/12 chua toi -> 10, du 2026-2015 = 11).
+    expect(screen.getByText('10')).toBeInTheDocument()
+    // Giao vien co nam sinh nhung khong hien tuoi.
     expect(screen.queryByText('36')).toBeNull()
+    expect(screen.queryByText('~36')).toBeNull()
   })
 
   // slice-23: cot "Mã học viên" hien ma cho hoc vien (read-only).

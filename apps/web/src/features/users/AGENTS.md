@@ -6,7 +6,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 - Nhiệm vụ: Trang quản lý người dùng (chỉ Admin) — danh sách + form tạo + cấu hình quyền sửa câu hỏi; hiển thị mã học viên (slice-23) và SĐT nhỏ dưới họ tên (slice-26).
 - Slice/Task đã triển khai: slice-23 (`docs/tasks/slices/slice-23-ma-hoc-vien.md`), slice-26 (`docs/tasks/slices/slice-26-nguoi-dung-hien-thi.md`).
-- Phụ thuộc: `@lms/shared` (`AdminUser` với `studentCode`/`age`); API client `src/lib/api.ts` (`listUsers/createUser/updateUser/deleteUser`); hook `useUsers`.
+- Phụ thuộc: `@lms/shared` (`AdminUser` với `studentCode`/`age`/`birthDate`); API client `src/lib/api.ts` (`listUsers/createUser/updateUser/deleteUser`); hook `useUsers`.
 - Owner hiện tại: Hoang Hoang HA
 
 ## Contract (cửa công khai — chốt trước, không đổi giữa chừng)
@@ -37,6 +37,17 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Bước tiếp theo**
 - Nhập/sửa `student_code` thủ công + chỉnh tuổi chính xác (birth_date) là slice sau.
+
+### 2026-11-27 — Trả nợ `TODO(slice-26)`: nhập ngày sinh, tuổi chính xác (ADR 0018)
+
+**Đã xong**
+- Ô "Năm sinh" (`type=number`) → ô "Ngày sinh" (`type=date`, `aria-label="Ngày sinh"`); form gửi `birthDate` thay vì `birthYear`, backend tự dẫn xuất năm sinh.
+- Cột "Năm sinh" hiện năm là chính, ngày sinh đầy đủ hiện nhỏ bên dưới (`text-xs text-slate-400`) — cùng mẫu "SĐT nhỏ dưới họ tên" của slice-26, không thêm cột mới.
+- `formatAge(user)` (mới, trong `UsersPage.tsx`): chỉ học viên có tuổi; khi `birthDate === null` (chỉ biết năm sinh) hiển thị `~11` kèm `title` giải thích tuổi có thể lệch 1 — không trình bày số ước lượng như số chính xác.
+- Test `UsersPage.test.tsx`: fixture thêm `birthDate`; thêm 1 học viên có ngày sinh (tuổi chính xác `10`), giữ 1 học viên chỉ có năm sinh (`~11`), khẳng định giáo viên không hiện tuổi (`36`/`~36` đều null).
+
+**Bước tiếp theo**
+- Dữ liệu cũ chỉ có năm sinh vẫn hiện `~<tuổi>` cho tới khi nhập bổ sung ngày sinh thật (`TODO(slice-26-b)`).
 
 ## Bàn giao phiên (điền khi dừng giữa chừng, dùng mẫu docs/ai-workflow/templates/session-handoff.md)
 - —

@@ -48,6 +48,7 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
       lastName,
       firstName,
       birthYear,
+      birthDate,
       gender,
       address,
       parentPhone,
@@ -60,6 +61,8 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
         last_name: lastName,
         first_name: firstName,
         birth_year: birthYear,
+        // slice-26 (ADR 0018): ngay sinh day du; null khi chi biet nam sinh.
+        birth_date: birthDate,
         gender,
         address,
         parent_phone: parentPhone,
@@ -101,6 +104,7 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
       if (input.lastName !== undefined) row.last_name = input.lastName
       if (input.firstName !== undefined) row.first_name = input.firstName
       if (input.birthYear !== undefined) row.birth_year = input.birthYear
+      if (input.birthDate !== undefined) row.birth_date = input.birthDate
       if (input.gender !== undefined) row.gender = input.gender
       if (input.address !== undefined) row.address = input.address
       if (input.parentPhone !== undefined) row.parent_phone = input.parentPhone
@@ -175,6 +179,7 @@ describe('users routes — RBAC guard', () => {
         last_name: 'Nguyễn Minh',
         first_name: 'An',
         birth_year: 2015,
+        birth_date: null,
         gender: 'male',
         address: null,
         parent_phone: '0912345678',
@@ -277,6 +282,7 @@ describe('users routes — CRUD (admin only)', () => {
         last_name: null,
         first_name: null,
         birth_year: null,
+        birth_date: null,
         gender: null,
         address: null,
         parent_phone: null,
@@ -305,6 +311,7 @@ describe('users routes — CRUD (admin only)', () => {
         last_name: null,
         first_name: null,
         birth_year: null,
+        birth_date: null,
         gender: null,
         address: null,
         parent_phone: null,
