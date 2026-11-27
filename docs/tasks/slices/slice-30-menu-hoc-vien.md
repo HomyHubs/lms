@@ -37,7 +37,7 @@ Ngoài ra: số liệu các panel phải lấy thật từ store/endpoint hiện
 ## Nợ kỹ thuật
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
-| TODO(slice-30) | `apps/api/src/features/students/store.ts` | Gọi lặp nhiều store có thể gây N+1 khi dữ liệu học viên lớn; cần gộp/tối ưu truy vấn | Khi đo thấy chậm thực tế |
+| ~~TODO(slice-30)~~ | `apps/api/src/features/students/store.ts` | ~~Gọi lặp nhiều store có thể gây N+1~~ → **đã trả 2026-11-27**: gộp `loadExamAgg`/`loadAttendanceAgg`/`loadStudyAgg` thành một `loadAggregates` (1 truy vấn, 4 subselect trên cùng dòng `users`); hồ sơ giờ còn 2 round-trip (aggregates + policy) thay vì 4 | Đã trả |
 | ~~TODO(slice-30)~~ | `apps/api/src/features/students` (profile) | ~~Nguồn "thời gian học" chưa rõ công thức~~ → **đã chốt 2026-11-26**: chỉ tính buổi `present`/`late`, phút học = `sum(class_sessions.duration_minutes)` | Đã trả |
 | ~~TODO(slice-30)~~ | `apps/api/src/features/students/service.ts` (`toClassificationPanel`) | ~~Xếp loại đang dùng điểm thi trung bình làm điểm tổng tạm thời~~ → **đã trả 2026-11-27**: dùng `finalScore`/`classify` của `platform/grading.ts` với policy cấp độ (ADR 0006) | Đã trả |
 
@@ -47,6 +47,7 @@ Ngoài ra: số liệu các panel phải lấy thật từ store/endpoint hiện
 | 2026-11-12 | Tạo | Khởi tạo file slice từ yêu cầu 13.1 | Lập kế hoạch thực thi | — |
 | 2026-11-26 | Bổ sung | Gia cố sau khi slice-23 (mã học viên) merge: `studentCode` lấy thật từ `users.student_code` (trước đó hardcode `null`), thêm tìm kiếm theo mã, thêm panel "Thời gian học" (`study`: số buổi + tổng phút) và cột "Mã HV" ở danh sách | Slice-23 đã có mã học viên nên không được để `null` giả; panel thời gian học là yêu cầu 13.1 còn thiếu | ADR 0014 |
 | 2026-11-27 | Sửa | Hồ sơ học viên dùng **đúng công thức ADR 0006** thay vì công thức tạm: (1) điểm thi = trung bình điểm CAO NHẤT của từng đề, (2) tỉ lệ chuyên cần loại vắng CÓ PHÉP khỏi mẫu số, (3) `finalScore` có trọng số thi/chuyên cần theo policy cấp độ, (4) `classify` theo ngưỡng policy thay vì 90/75/50 cứng | Hồ sơ và báo cáo cho ra số khác nhau cho cùng một học viên — trái ADR 0006 | ADR 0006 |
+| 2026-11-27 | Sửa | Gộp 3 truy vấn aggregate của hồ sơ (`loadExamAgg`/`loadAttendanceAgg`/`loadStudyAgg`) thành một `loadAggregates` | Giảm round-trip mỗi hồ sơ 4 → 2; bỏ marker N+1 | — |
 
 ## Cách nghiệm thu
 - Thủ công: menu "Học viên" hiện với admin/teacher/staff và ẩn với học viên.

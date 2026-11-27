@@ -166,14 +166,13 @@ function makeFakeStudentsStore(): StudentsStore {
       }
       return identity
     },
-    async loadExamAgg(studentId) {
-      return exams[studentId] ?? { attempts: 0, passed: 0, failed: 0, avg_score_pct: null }
-    },
-    async loadAttendanceAgg(studentId) {
-      return attendance[studentId] ?? { present: 0, absent: 0, late: 0, excused: 0 }
-    },
-    async loadStudyAgg(studentId) {
-      return study[studentId] ?? { sessions_attended: 0, study_minutes: 0 }
+    async loadAggregates(studentId) {
+      // slice-30: 3 panel trong mot truy van.
+      return {
+        exam: exams[studentId] ?? { attempts: 0, passed: 0, failed: 0, avg_score_pct: null },
+        attendance: attendance[studentId] ?? { present: 0, absent: 0, late: 0, excused: 0 },
+        study: study[studentId] ?? { sessions_attended: 0, study_minutes: 0 },
+      }
     },
     async loadPolicy(levelId) {
       return levelId === TEST_POLICY.levelId ? TEST_POLICY : null

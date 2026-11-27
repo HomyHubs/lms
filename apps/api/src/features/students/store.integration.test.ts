@@ -110,13 +110,23 @@ describeWithPostgres('students store on real Postgres', () => {
     await db.destroy()
   })
 
-  it('loadExamAgg lấy điểm cao nhất của từng đề rồi mới lấy trung bình', async () => {
+  it('loadAggregates lấy điểm cao nhất của từng đề rồi mới lấy trung bình', async () => {
     const store = makeStudentsStore(db)
-    const agg = await store.loadExamAgg(STUDENT_ID)
-    expect(agg.attempts).toBe(3)
-    expect(agg.passed).toBe(2)
-    expect(agg.failed).toBe(1)
-    expect(agg.avg_score_pct).toBe(85)
+    const agg = await store.loadAggregates(STUDENT_ID)
+    expect(agg.exam.attempts).toBe(3)
+    expect(agg.exam.passed).toBe(2)
+    expect(agg.exam.failed).toBe(1)
+    expect(agg.exam.avg_score_pct).toBe(85)
+    // Chua diem danh buoi nao -> chuyen can va thoi gian hoc deu rong.
+    expect(agg.attendance).toEqual({ present: 0, absent: 0, late: 0, excused: 0 })
+    expect(agg.study).toEqual({ sessions_attended: 0, study_minutes: 0 })
+  })
+
+  it('loadAggregates trả số 0 cho học viên không tồn tại thay vì ném lỗi', async () => {
+    const store = makeStudentsStore(db)
+    const agg = await store.loadAggregates('72000000-0000-4000-8000-0000000000fe')
+    expect(agg.exam.avg_score_pct).toBeNull()
+    expect(agg.exam.attempts).toBe(0)
   })
 
   it('findStudentIdentity trả level_id của lớp học viên đang ghi danh', async () => {

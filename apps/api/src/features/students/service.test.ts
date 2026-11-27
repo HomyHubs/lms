@@ -81,21 +81,14 @@ function makeFakeStore(seed: FakeStudent[]): StudentsStore {
         level_id: s.level_id,
       } satisfies StudentIdentityRow
     },
-    async loadExamAgg(studentId) {
-      return seed.find((x) => x.id === studentId)?.exam ?? { attempts: 0, passed: 0, failed: 0, avg_score_pct: null }
-    },
-    async loadAttendanceAgg(studentId) {
-      return (
-        seed.find((x) => x.id === studentId)?.attendance ?? {
-          present: 0,
-          absent: 0,
-          late: 0,
-          excused: 0,
-        }
-      )
-    },
-    async loadStudyAgg(studentId) {
-      return seed.find((x) => x.id === studentId)?.study ?? { sessions_attended: 0, study_minutes: 0 }
+    async loadAggregates(studentId) {
+      // slice-30: 3 panel lay trong mot truy van; store gia lap tra cung mot luc.
+      const s = seed.find((x) => x.id === studentId)
+      return {
+        exam: s?.exam ?? { attempts: 0, passed: 0, failed: 0, avg_score_pct: null },
+        attendance: s?.attendance ?? { present: 0, absent: 0, late: 0, excused: 0 },
+        study: s?.study ?? { sessions_attended: 0, study_minutes: 0 },
+      }
     },
     async loadPolicy(levelId) {
       const owner = seed.find((s) => s.level_id === levelId)

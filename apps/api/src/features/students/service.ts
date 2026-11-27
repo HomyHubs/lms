@@ -64,6 +64,13 @@ export interface StudentStudyAggRow {
   study_minutes: number
 }
 
+/** Ba nhom so lieu cua mot ho so, lấy trong MOT truy vấn (slice-30). */
+export interface StudentAggregateRow {
+  exam: StudentExamAggRow
+  attendance: StudentAttendanceAggRow
+  study: StudentStudyAggRow
+}
+
 export interface StudentsStore {
   /**
    * Tim hoc vien theo ten / SDT (khong phan biet hoa thuong), gioi han theo co so.
@@ -75,11 +82,8 @@ export interface StudentsStore {
     id: string,
     branchIds: string[] | undefined,
   ) => Promise<StudentIdentityRow | undefined>
-  // TODO(slice-30): hai lenh duoi goi rieng cho tung hoc vien -> co the N+1 khi mo nhieu ho so;
-  // gop/truy van theo lo khi do thay cham thuc te.
-  loadExamAgg: (studentId: string) => Promise<StudentExamAggRow>
-  loadAttendanceAgg: (studentId: string) => Promise<StudentAttendanceAggRow>
-  loadStudyAgg: (studentId: string) => Promise<StudentStudyAggRow>
+  /** Cả 3 panel (thi / chuyên cần / thời gian học) trong một truy vấn — tránh 3 round-trip mỗi hồ sơ. */
+  loadAggregates: (studentId: string) => Promise<StudentAggregateRow>
   /** Policy xep loai cua cap do (ADR 0006); null khi cap do chua co policy. */
   loadPolicy: (levelId: string) => Promise<ClassificationPolicy | null>
 }
@@ -167,14 +171,12 @@ export async function loadStudentProfile(
   const identity = await store.findStudentIdentity(id, branchIds)
   if (!identity) return null
 
-  const [examAgg, attendanceAgg, studyAgg, policy] = await Promise.all([
-    store.loadExamAgg(id),
-    store.loadAttendanceAgg(id),
-    store.loadStudyAgg(id),
+  const [agg, policy] = await Promise.all([
+    store.loadAggregates(id),
     identity.level_id ? store.loadPolicy(identity.level_id) : Promise.resolve(null),
   ])
-  const exam = toExamPanel(examAgg)
-  const attendance = toAttendancePanel(attendanceAgg)
+  const exam = toExamPanel(agg.exam)
+  const attendance = toAttendancePanel(agg.attendance)
   const classification = toClassificationPanel(exam, attendance, policy)
 
   return {
@@ -186,7 +188,7 @@ export async function loadStudentProfile(
     levelCode: identity.level_code,
     exam,
     attendance,
-    study: toStudyPanel(studyAgg),
+    study: toStudyPanel(agg.study),
     classification,
   }
 }
