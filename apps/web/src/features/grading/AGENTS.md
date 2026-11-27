@@ -29,6 +29,15 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 **Bước tiếp theo**
 - PR slice-22 → dev.
 
+### 2026-11-27 — slice-23-c (ADR 0022): mã học viên có dấu phân cách
+
+**Đã xong**
+- Dải cảnh báo ở `PreviewTable` sửa ví dụ định dạng từ `HN0001` sang `HN-0001`. Đây là chữ người dùng đọc, nên nó phải khớp mã thật — để nguyên là dạy người ta gõ một mã không tồn tại.
+- Không đổi logic: import điểm vẫn khớp theo chuỗi nguyên vẹn; `student_code_looks_like_phone` vẫn bắt đúng (mã mới bỏ dấu `-` ra vẫn không giống SĐT).
+
+**Bước tiếp theo**
+- Cột mã trong file Excel giờ có `-`; nhập tay/dán có thể thành `HV - 0001`. Chưa chuẩn hoá đầu vào (ADR 0022 §Consequences).
+
 ### 2026-11-27 — ADR 0019: bỏ fallback SĐT, cảnh báo "cột mã là SĐT"
 
 **Đã xong**

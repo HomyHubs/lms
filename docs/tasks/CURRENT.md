@@ -7,7 +7,20 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
 - Cập nhật ngày: 2026-11-27
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Đã trả **toàn bộ** marker nợ còn lại của phiên này: `slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT (ADR 0019), `slice-23-b` (ADR 0020), `slice-1` (ADR 0021). Không còn `TODO(<slice>)` nào trong code.
+- Trạng thái: Đã trả **toàn bộ** marker nợ còn lại của phiên này: `slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT (ADR 0019), `slice-23-b` (ADR 0020), `slice-1` (ADR 0021), `slice-23-c` đổi định dạng mã (ADR 0022). Không còn `TODO(<slice>)` nào trong code.
+
+## Đã làm (phiên 2026-11-27, phần 8)
+
+- **`slice-23-c` — định dạng mã học viên có dấu phân cách `HV-0001` (ADR 0022)**: chủ dự án chốt đổi, vì dự án còn ở demo nên ràng buộc "mã đã in trên phiếu/thẻ" của ADR 0020 không còn đúng.
+  - **Vì sao đổi**: ADR 0020 sửa **bộ đếm** nhưng **chuỗi mã vẫn mơ hồ** — `HV`+10001 và `HV1`+1 đều cho `HV10001`. Unique index chặn trùng nên không có dữ liệu sai, nhưng không ai đọc mã biết được nó thuộc cơ sở nào, và mọi đoạn parse đều phải đoán ranh giới. ADR 0020 chữa triệu chứng; dấu phân cách chữa nguyên nhân.
+  - `packages/shared/src/student-code.ts` (mới) là **nơi duy nhất** giữ định dạng: `STUDENT_CODE_SEPARATOR`, `STUDENT_CODE_SEQ_WIDTH`, `DEFAULT_STUDENT_CODE_PREFIX`, `normalizeStudentCodePrefix`, `formatStudentCode`, `parseStudentCode`, `isStudentCode`. Trước đây biểu thức `` `${prefix}${String(n).padStart(4,'0')}` `` được chép tay ở **3 nơi** (store thật + 2 store giả lập).
+  - Dấu phân cách thuộc về **định dạng**, không thuộc về tiền tố: `branches.code` vẫn `HV`, khoá `student_code_seq.prefix` vẫn `HV` → **không có migration nào cho bảng đếm**.
+  - Migration `20261127000002_student_code_separator.sql`: chèn `-` bằng regex trên **chính chuỗi mã** (`^([^0-9]+)([0-9]+)$` → `\1-\2`), **không** suy lại tiền tố từ cơ sở hiện tại — học viên chuyển cơ sở phải giữ tiền tố cũ, suy lại là đổi danh tính của mã. Bỏ qua mã đã đúng dạng nên idempotent; `down` gỡ đúng dấu vừa chèn.
+  - **Sửa một lỗi mà chính định dạng mới gây ra**: `students/store.ts` tìm theo mã bằng `like '%q%'` trên chuỗi thô, nên gõ `HN0001` (thói quen cũ / dán từ file cũ) **không** tìm ra `HN-0001`. Nay so khớp bỏ dấu phân cách ở **cả hai phía**, dùng hằng số từ `@lms/shared` để định dạng không bị chép lại trong SQL. Test `students/service.test.ts` giữ nguyên ca gõ `'hn0001'` (đúng thứ nó đang bảo vệ) và thêm ca gõ có/không dấu.
+  - Test: `packages/shared/src/student-code.test.ts` 12 case (zero-pad, dài ra khi >9999, tiền tố rỗng → `HV`, tiền tố lồng nhau, tiền tố chứa `-`, từ chối dạng cũ, round-trip); `users/store.integration.test.ts` assert tuyệt đối `Q9-0001`/`Z7-0001`/`Z71-0001`/`Z7-0002`/`Z71-0002`; fixture `HN-0001` ở users/students/web.
+  - Cổng: lint 4/4, typecheck 5/5, shared **60**, api **327 pass** (+33 skip local vì máy không có Docker), web **129**, build OK.
+  - **Chưa kiểm được cục bộ**: migration và câu SQL `replace()` chỉ chạy thật trên Postgres ở CI (`dev-health-check` chạy `dbmate up → down → up`).
+  - **Cố ý để ngoài phạm vi**: import điểm chưa trim/đổi hoa-thường cột mã nên `HV - 0001` sẽ không khớp (ADR 0022 §Consequences).
 
 ## Đã làm (phiên 2026-11-27, phần 7)
 

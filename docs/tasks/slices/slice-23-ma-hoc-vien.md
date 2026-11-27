@@ -8,6 +8,10 @@
 - Phụ thuộc: slice-1 (User, Branch & phân quyền)
 - Sửa mục gốc: — (tính năng mới; đặc tả mục 5.1 + 9.1 phần mã; theo `docs/adr/0014-student-code.md`)
 
+> **Cập nhật 2026-11-27:** định dạng mã đã đổi từ `HN0001` sang **`HN-0001`** (có dấu phân cách) —
+> xem `slice-23-c-dinh-dang-ma-hoc-vien.md` và ADR 0022. Mọi chỗ dưới đây ghi `HN0001` là **lịch sử
+> của slice này**, không phải định dạng hiện hành.
+
 ## Mục tiêu bấm được / nghiệm thu được
 - Mỗi học viên có `student_code` ổn định, sinh tự động theo cơ sở (ví dụ `HN0001`), tách khỏi số điện thoại; SĐT vẫn là khóa đăng nhập, không đổi.
 - Chỉ role học viên mới có mã; tạo học viên mới sẽ tự sinh mã, còn role khác (admin/teacher/staff) không có mã.
@@ -72,6 +76,7 @@ Ngoài ra: không stub việc khớp import (phải khớp thật theo `student_
 | 2026-11-27 | Mở rộng | Tách `matchGradingRow` dùng chung cho `importGrades` + `previewImportGrades`; thêm `GradeImportResult.matchedByPhone` và `GradeImportPreviewRow.matchedBy`; preview nhận `allowedStudentCodes` | Làm lộ việc khớp bằng SĐT (hướng an toàn thay vì gỡ fallback) + sửa lỗi preview chỉ khớp theo SĐT | — |
 | 2026-11-27 | Thu hẹp | Bỏ hẳn fallback SĐT: `matchGradingRow` chỉ tra theo mã; bỏ `allowedPhones` khỏi `importGrades`/`previewImportGrades`; bỏ `matchedByPhone`/`matchedBy` khỏi contract; thêm lý do `student_code_looks_like_phone`; store bỏ 2 helper SĐT, thêm `listStudentCodesInClasses` | Chủ dự án chốt: một khoá duy nhất, SĐT giữ làm dữ liệu chứ không làm khoá khớp | 0019 |
 | 2026-11-27 | Sửa | `nextCode` bỏ cách quét `student_code like '<prefix>%'`, chuyển sang bảng đếm `student_code_seq` khoá theo tiền tố, cấp số bằng upsert nguyên tử; migration seed quy mã cũ về đúng cơ sở của học viên. Không đổi định dạng mã | Trả `TODO(slice-23-b)`; giữ mã đã in trên phiếu/thẻ và trong file Excel của trung tâm | 0020 |
+| 2026-11-27 | Sửa | Đổi định dạng mã sang `<tiền tố>-<số thứ tự>` (`HN-0001`) + migration chèn dấu phân cách vào mã đã cấp; định dạng gom về `packages/shared/src/student-code.ts`; tìm theo mã bỏ qua dấu phân cách. **Đảo ngược dòng ngay trên** | Ràng buộc "mã đã in trên giấy" không còn đúng (dự án còn ở demo); bộ đếm đã đúng nhưng chuỗi mã vẫn mơ hồ khi tiền tố lồng nhau → tách sang slice-23-c | 0022 |
 
 ## Cách nghiệm thu
 - Thủ công: chạy `migrate up` → cột `student_code` tồn tại và học viên cũ có mã dạng `HN0001`; chạy `migrate down` → cột biến mất; chạy `up` lại → không lỗi.

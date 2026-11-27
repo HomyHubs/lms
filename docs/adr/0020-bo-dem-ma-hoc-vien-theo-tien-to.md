@@ -1,6 +1,6 @@
 # ADR 0020 — Bộ đếm mã học viên thuộc về tiền tố, không suy ra từ dữ liệu (trả nợ slice-23-b)
 
-Status: Accepted
+Status: Accepted — **Decision 4 (không đổi định dạng mã đã cấp) đã bị ADR 0022 thay thế ngày 2026-11-27**. Các Decision 1–3, 5, 6 vẫn hiệu lực. Nội dung dưới đây giữ nguyên làm lịch sử.
 
 ## Context
 

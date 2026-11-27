@@ -9,7 +9,7 @@ const STUDENT_1 = '30000000-0000-4000-8000-000000000001'
 /** Ho so day du: co ma hoc vien + ca 4 panel (slice-30). */
 const FULL_PROFILE = {
   id: STUDENT_1,
-  studentCode: 'HV0001',
+  studentCode: 'HV-0001',
   fullName: 'Nguyễn Văn A',
   phoneNumber: '0912345678',
   branchName: 'Cơ sở 1',
@@ -74,7 +74,7 @@ describe('StudentDetailPage (slice-30)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Nguyễn Văn A' })).toBeInTheDocument()
     // Mo ta duoi tieu de: ma hoc vien · co so · cap do.
-    expect(screen.getByText('HV0001 · Cơ sở 1 · starter')).toBeInTheDocument()
+    expect(screen.getByText('HV-0001 · Cơ sở 1 · starter')).toBeInTheDocument()
 
     // Panel thi.
     expect(screen.getByText('Kết quả thi')).toBeInTheDocument()

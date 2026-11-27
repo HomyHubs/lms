@@ -201,7 +201,7 @@ function PreviewTable({ preview }: { preview: GradeImportPreview }): React.React
         <p role="status" className="rounded-md bg-warning-50 p-2 text-sm text-warning-900">
           {phoneLike.length} dòng có <strong>cột mã là số điện thoại</strong>. Nhập điểm chỉ khớp theo
           mã học viên, nên các dòng này sẽ bị bỏ qua — đổi cột mã trong file sang mã học viên
-          (dạng <code>HN0001</code>) rồi xem trước lại.
+          (dạng <code>HN-0001</code>) rồi xem trước lại.
         </p>
       )}
       <table className="c-table" aria-label="Xem trước bảng điểm">

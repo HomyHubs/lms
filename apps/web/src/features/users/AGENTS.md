@@ -20,7 +20,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 **Đã xong**
 - Thêm cột read-only "Mã học viên" vào bảng người dùng (`UsersPage.tsx`); hiện `u.studentCode` hoặc `—` khi trống (role khác học viên). `src/lib/api.ts` KHÔNG đổi: `listUsers` parse bằng zod `AdminUserList` nên `studentCode` (đã có ở contract) chảy qua tự động; `useUsers.ts` không đổi.
-- Test `UsersPage.test.tsx`: stub thêm 1 học viên `studentCode: 'HN0001'` + 1 admin `studentCode: null`; assert header "Mã học viên" và giá trị `HN0001` render.
+- Test `UsersPage.test.tsx`: stub thêm 1 học viên `studentCode: 'HN-0001'` + 1 admin `studentCode: null`; assert header "Mã học viên" và giá trị `HN-0001` render.
 
 **Đang làm dở**
 - Chỉ hiển thị (read-only); chưa có UI sửa/nhập tay mã học viên (để slice sau).

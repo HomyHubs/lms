@@ -84,4 +84,5 @@
 
 **Bước tiếp theo**
 - Muốn gỡ hẳn fallback thì cần chủ dự án xác nhận dữ liệu thật: `select count(*) from users where role='student' and student_code is null` phải bằng 0 trên production. Không suy ra được từ code.
-- `TODO(slice-23-b)`: bộ đếm mã học viên dùng chung giữa tiền tố lồng nhau (`HV` và `HV1`) — cần đổi format có dấu phân cách (`HV-0001`) + migrate mã đã cấp. Chờ chủ dự án duyệt vì đổi mã đã in trên giấy tờ.
+- ~~`TODO(slice-23-b)`: bộ đếm mã học viên dùng chung giữa tiền tố lồng nhau (`HV` và `HV1`) — cần đổi format có dấu phân cách (`HV-0001`) + migrate mã đã cấp. Chờ chủ dự án duyệt vì đổi mã đã in trên giấy tờ.~~ **Đã trả 2026-11-27 (ADR 0020 + ADR 0022)**: bộ đếm khoá theo tiền tố, và định dạng nay có dấu phân cách (`HN-0001`) — `HV`+10001 và `HV1`+1 không còn cho cùng một chuỗi. Import điểm **không phải sửa gì**: nó khớp theo chuỗi nguyên vẹn, chỉ cần file dùng đúng mã mới.
+- Import điểm chưa trim/đổi hoa-thường cột mã; mã giờ có `-` nên `HV - 0001` sẽ không khớp. Ghi nhận ở ADR 0022, chưa xử lý.

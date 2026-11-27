@@ -98,7 +98,7 @@ function makeFakeStudentsStore(): StudentsStore {
     {
       id: STUDENT_1,
       phone_number: '0912345678',
-      student_code: 'HV0001',
+      student_code: 'HV-0001',
       full_name: 'Nguyen Van A',
       branch_name: 'Co so 1',
       level_code: 'starter',
@@ -320,7 +320,7 @@ describe('students routes — ho so tong hop (slice-30)', () => {
     expect(res.statusCode).toBe(200)
 
     const student = res.json().student
-    expect(student.studentCode).toBe('HV0001')
+    expect(student.studentCode).toBe('HV-0001')
     expect(student.fullName).toBe('Nguyen Van A')
     expect(student.branchName).toBe('Co so 1')
     expect(student.exam).toEqual({ attempts: 4, passed: 3, failed: 1, avgScorePct: 82.5 })
@@ -360,10 +360,10 @@ describe('students routes — ho so tong hop (slice-30)', () => {
     const scope = makeFakeBranchScope({ [ADMIN_A.id]: [BRANCH_1] })
     app = await buildTestApp(ADMIN_A, makeFakeStudentsStore(), scope)
 
-    const res = await app.inject({ method: 'GET', url: '/students?q=HV0001', headers: { cookie: COOKIE } })
+    const res = await app.inject({ method: 'GET', url: '/students?q=HV-0001', headers: { cookie: COOKIE } })
     expect(res.statusCode).toBe(200)
     expect(res.json().students).toHaveLength(1)
-    expect(res.json().students[0].studentCode).toBe('HV0001')
+    expect(res.json().students[0].studentCode).toBe('HV-0001')
   })
 
   it('tra 404 khi hoc vien khong ton tai', async () => {

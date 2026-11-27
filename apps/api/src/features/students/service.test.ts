@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ClassificationPolicy } from '@lms/shared'
+import { STUDENT_CODE_SEPARATOR, type ClassificationPolicy } from '@lms/shared'
 import type {
   StudentAttendanceAggRow,
   StudentExamAggRow,
@@ -49,13 +49,23 @@ function makeFakeStore(seed: FakeStudent[]): StudentsStore {
     async searchStudents(q, branchIds) {
       if (branchIds && branchIds.length === 0) return []
       const needle = q.toLowerCase()
+      // slice-23-c (ADR 0022): ma hoc vien co dau phan cach; so khop ma bo qua dau o CA HAI phia,
+      // giong `students/store.ts`. Store gia lap lech khoi store that la cach chac chan nhat de test
+      // noi doi.
+      const codeNeedle = needle.split(STUDENT_CODE_SEPARATOR).join('')
+      const codeOf = (code: string | null): string =>
+        (code ?? '').toLowerCase().split(STUDENT_CODE_SEPARATOR).join('')
+      // Go moi dau phan cach -> chuoi rong; `includes('')` dung voi MOI ma, phai loai han truong hop
+      // nay de giong store that (`%%` khop tat ca).
+      const matchesCode = (code: string | null): boolean =>
+        codeNeedle !== '' && codeOf(code).includes(codeNeedle)
       return seed
         .filter((s) => inScope(s, branchIds))
         .filter(
           (s) =>
             (s.full_name ?? '').toLowerCase().includes(needle) ||
             s.phone_number.includes(q) ||
-            (s.student_code ?? '').toLowerCase().includes(needle),
+            matchesCode(s.student_code),
         )
         .map(
           (s): StudentSearchRow => ({
@@ -105,7 +115,7 @@ const SEED: FakeStudent[] = [
   {
     id: '20000000-0000-4000-8000-000000000001',
     phone_number: '0900000001',
-    student_code: 'HN0001',
+    student_code: 'HN-0001',
     full_name: 'Nguyễn An',
     branch_id: HN,
     branch_name: 'Cơ sở HN',
@@ -137,14 +147,31 @@ describe('searchStudents', () => {
     const results = await searchStudents(store, 'An', [HN])
     expect(results).toHaveLength(1)
     expect(results[0]?.phoneNumber).toBe('0900000001')
-    expect(results[0]?.studentCode).toBe('HN0001')
+    expect(results[0]?.studentCode).toBe('HN-0001')
     expect(results[0]?.branchName).toBe('Cơ sở HN')
   })
 
   it('finds a student by student code', async () => {
     const store = makeFakeStore(SEED)
     const results = await searchStudents(store, 'hn0001', [HN])
-    expect(results.map((r) => r.studentCode)).toEqual(['HN0001'])
+    expect(results.map((r) => r.studentCode)).toEqual(['HN-0001'])
+  })
+
+  // slice-23-c (ADR 0022): ma co dau phan cach. Go dung nhu tren the, va go lai theo tri nho
+  // (khong co dau) — ca hai deu phai tim ra, vi ma la thu nguoi ta dan tay vao o tim kiem.
+  it('finds a student by code whether or not the separator is typed', async () => {
+    const store = makeFakeStore(SEED)
+    for (const q of ['HN-0001', 'hn-0001', 'HN0001', 'hn0001']) {
+      const results = await searchStudents(store, q, [HN])
+      expect(results.map((r) => r.studentCode), `q=${q}`).toEqual(['HN-0001'])
+    }
+  })
+
+  // Bỏ dấu phân cách khỏi query '-' cho ra chuỗi rỗng; nếu không chặn thì `%%` khớp mọi học viên.
+  it('returns nothing when the query is only the separator', async () => {
+    const store = makeFakeStore(SEED)
+    const results = await searchStudents(store, '-', [HN])
+    expect(results).toEqual([])
   })
 
   it('keeps studentCode null for a legacy student without a code', async () => {
@@ -179,7 +206,7 @@ describe('loadStudentProfile', () => {
     const profile = await loadStudentProfile(store, SEED[0]!.id, [HN])
     expect(profile).not.toBeNull()
     if (!profile) return
-    expect(profile.studentCode).toBe('HN0001')
+    expect(profile.studentCode).toBe('HN-0001')
     expect(profile.exam).toEqual({ attempts: 4, passed: 3, failed: 1, avgScorePct: 80 })
     // Ti le di hoc = (present + late) / (present + late + absent) = (8+1)/10 = 90%.
     expect(profile.attendance?.ratePct).toBe(90)

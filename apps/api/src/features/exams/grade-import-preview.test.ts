@@ -96,8 +96,12 @@ describe('looksLikePhoneNumber (ADR 0019)', () => {
   })
 
   it('does not confuse student codes with phone numbers', () => {
+    // slice-23-c (ADR 0022): ma co dau phan cach — `looksLikePhoneNumber` bo dau '-' nen van phai
+    // tra false, neu khong moi file dung ma moi se bi bao "cot ma la so dien thoai".
+    expect(looksLikePhoneNumber('HN-0001')).toBe(false)
+    expect(looksLikePhoneNumber('HV-10001')).toBe(false)
+    // Ma kieu cu (truoc ADR 0022) van duoc xet dung — file cu khong bi bao sai ly do.
     expect(looksLikePhoneNumber('HN0001')).toBe(false)
-    expect(looksLikePhoneNumber('HV10001')).toBe(false)
     expect(looksLikePhoneNumber('090123456')).toBe(false) // 9 chu so: thieu mot
     expect(looksLikePhoneNumber('090123456789')).toBe(false) // 12 chu so: qua dai
     expect(looksLikePhoneNumber('19001234567')).toBe(false) // khong bat dau bang 0
@@ -108,16 +112,16 @@ describe('previewImportGrades (slice-22)', () => {
   it('marks rows as will-apply / skip without writing anything', async () => {
     const saved: string[] = []
     const store = makeStore({
-      queue: [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })],
+      queue: [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN-0001' })],
       saved,
     })
     const out = await previewImportGrades(
       store,
       EXAM_ID,
       rows(
-        { row: 2, studentCode: 'HN0001', score: 8, feedback: null },
+        { row: 2, studentCode: 'HN-0001', score: 8, feedback: null },
         { row: 3, studentCode: 'HN9999', score: 7, feedback: null },
-        { row: 4, studentCode: 'HN0001', score: 5, feedback: null },
+        { row: 4, studentCode: 'HN-0001', score: 5, feedback: null },
       ),
       NOW,
       undefined,
@@ -126,9 +130,9 @@ describe('previewImportGrades (slice-22)', () => {
     if (!out.ok) return
     expect(out.applicable).toBe(1)
     expect(out.rows).toEqual([
-      { row: 2, studentCode: 'HN0001', studentName: null, score: 8, maxScore: 10, passed: true, willApply: true, reason: null },
+      { row: 2, studentCode: 'HN-0001', studentName: null, score: 8, maxScore: 10, passed: true, willApply: true, reason: null },
       { row: 3, studentCode: 'HN9999', studentName: null, score: null, maxScore: null, passed: null, willApply: false, reason: 'student_not_found' },
-      { row: 4, studentCode: 'HN0001', studentName: null, score: null, maxScore: null, passed: null, willApply: false, reason: 'duplicate_in_file' },
+      { row: 4, studentCode: 'HN-0001', studentName: null, score: null, maxScore: null, passed: null, willApply: false, reason: 'duplicate_in_file' },
     ])
     // Preview must not write.
     expect(saved).toEqual([])
@@ -137,18 +141,18 @@ describe('previewImportGrades (slice-22)', () => {
   it('flags score over max and out-of-branch-scope', async () => {
     const saved: string[] = []
     const store = makeStore({
-      queue: [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })],
+      queue: [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN-0001' })],
       saved,
     })
     const out = await previewImportGrades(
       store,
       EXAM_ID,
       rows(
-        { row: 2, studentCode: 'HN0001', score: 20, feedback: null },
-        { row: 3, studentCode: 'HN0002', score: 6, feedback: null },
+        { row: 2, studentCode: 'HN-0001', score: 20, feedback: null },
+        { row: 3, studentCode: 'HN-0002', score: 6, feedback: null },
       ),
       NOW,
-      new Set(['HN0001']), // branch scope excludes HN0002
+      new Set(['HN-0001']), // branch scope excludes HN-0002
     )
     expect(out.ok).toBe(true)
     if (!out.ok) return
@@ -161,7 +165,7 @@ describe('previewImportGrades (slice-22)', () => {
     const out = await previewImportGrades(
       makeStore({ queue: [], skill: 'reading', saved: [] }),
       EXAM_ID,
-      rows({ row: 2, studentCode: 'HN0001', score: 8, feedback: null }),
+      rows({ row: 2, studentCode: 'HN-0001', score: 8, feedback: null }),
       NOW,
       undefined,
     )
@@ -170,8 +174,8 @@ describe('previewImportGrades (slice-22)', () => {
 
   it('preview applicable count matches what commit applies', async () => {
     const saved: string[] = []
-    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })]
-    const input = rows({ row: 2, studentCode: 'HN0001', score: 8, feedback: 'good' })
+    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN-0001' })]
+    const input = rows({ row: 2, studentCode: 'HN-0001', score: 8, feedback: 'good' })
 
     const preview = await previewImportGrades(makeStore({ queue, saved }), EXAM_ID, input, NOW, undefined)
     const commit = await importGrades(makeStore({ queue, saved }), EXAM_ID, input, 'teacher-1', NOW, undefined)
@@ -183,8 +187,8 @@ describe('previewImportGrades (slice-22)', () => {
   // `student_not_found` o buoc xem truoc, trong khi buoc ghi van nhap duoc — xem truoc noi doi.
   it('matches by student code in both preview and commit', async () => {
     const saved: string[] = []
-    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })]
-    const input = rows({ row: 2, studentCode: 'HN0001', score: 8, feedback: null })
+    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN-0001' })]
+    const input = rows({ row: 2, studentCode: 'HN-0001', score: 8, feedback: null })
 
     const preview = await previewImportGrades(makeStore({ queue, saved }), EXAM_ID, input, NOW, undefined)
     expect(preview.ok && preview.applicable).toBe(1)
@@ -201,7 +205,7 @@ describe('previewImportGrades (slice-22)', () => {
   // duoc goi dung ten benh thay vi "khong tim thay hoc vien" o ca chuc dong.
   it('no longer falls back to phone — a phone-shaped code is reported as such', async () => {
     const saved: string[] = []
-    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' })]
+    const queue = [gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN-0001' })]
     const input = rows({ row: 2, studentCode: '0900000001', score: 8, feedback: null })
 
     const preview = await previewImportGrades(makeStore({ queue, saved }), EXAM_ID, input, NOW, undefined)
@@ -243,15 +247,15 @@ describe('previewImportGrades (slice-22)', () => {
   // slice-14: de gan lop cu the -> chi cham hoc vien thuoc cac lop do, va pham vi tinh theo MA.
   it('limits the cohort to the exam classes by student code', async () => {
     const queue = [
-      gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN0001' }),
-      gradingRow({ id: 'a2', student_phone: '0900000002', student_code: 'HN0002' }),
+      gradingRow({ id: 'a1', student_phone: '0900000001', student_code: 'HN-0001' }),
+      gradingRow({ id: 'a2', student_phone: '0900000002', student_code: 'HN-0002' }),
     ]
     const input = rows(
-      { row: 2, studentCode: 'HN0001', score: 8, feedback: null },
-      { row: 3, studentCode: 'HN0002', score: 8, feedback: null },
+      { row: 2, studentCode: 'HN-0001', score: 8, feedback: null },
+      { row: 3, studentCode: 'HN-0002', score: 8, feedback: null },
     )
     const out = await previewImportGrades(
-      makeStore({ queue, classCodes: ['HN0001'], saved: [] }),
+      makeStore({ queue, classCodes: ['HN-0001'], saved: [] }),
       EXAM_ID,
       input,
       NOW,

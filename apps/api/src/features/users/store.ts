@@ -1,4 +1,5 @@
 import { sql } from 'kysely'
+import { formatStudentCode, normalizeStudentCodePrefix } from '@lms/shared'
 import type { AppDb } from '../../platform/db.js'
 import type { UsersStore } from './service.js'
 
@@ -33,10 +34,6 @@ const SAFE_COLUMNS = [
   'created_at',
 ] as const
 
-/** Tien to ma mac dinh khi hoc vien chua gan co so / co so chua co `branches.code`. */
-const DEFAULT_CODE_PREFIX = 'HV'
-/** So chu so phan so thu tu trong ma hoc vien (vd HN0001). */
-const CODE_SEQ_WIDTH = 4
 /** So lan thu lai khi trung ma do tao dong thoi cung prefix (xac suat rat thap). */
 const CODE_ASSIGN_ATTEMPTS = 5
 
@@ -76,18 +73,22 @@ export function makeUsersStore(db: AppDb): UsersStore {
   }
 
   /**
-   * Ma ke tiep theo cho tien to co so: lay MOT so tu bo dem `student_code_seq`, zero-pad.
+   * Ma ke tiep theo cho tien to co so: lay MOT so tu bo dem `student_code_seq`, roi dinh dang
+   * `<tien to>-<so>` (vd `HN-0001`).
    *
    * slice-23-b: truoc day ham nay quet `student_code like '<prefix>%'` roi lay max so thu tu. Vi tien
    * to khong co dau phan cach, hai co so co code long nhau dung chung bo dem (co so 'HV' va 'HV1':
    * ma 'HV10001' cua co so sau van khop `like 'HV%'`). Bo dem nay khoa theo TIEN TO nen moi tien to
    * co day so rieng, khong con suy tu chuoi.
    *
+   * slice-23-c (ADR 0022): dinh dang co dau phan cach nam o `@lms/shared` (`formatStudentCode`) —
+   * cung ham do test dung, nen khong con ban sao thu ba cua bieu thuc noi chuoi.
+   *
    * Upsert la mot cau lenh nguyen tu: `insert ... on conflict do update ... returning` cap so ma
    * khong can SELECT truoc, nen hai request dong thoi khong the cung doc mot gia tri.
    */
   const nextCode = async (branchCode: string | null): Promise<string> => {
-    const prefix = branchCode && branchCode.trim() !== '' ? branchCode.trim() : DEFAULT_CODE_PREFIX
+    const prefix = normalizeStudentCodePrefix(branchCode)
     const row = await db
       .insertInto('student_code_seq')
       .values({ prefix, next_value: 2 })
@@ -99,7 +100,7 @@ export function makeUsersStore(db: AppDb): UsersStore {
       )
       .returning('next_value')
       .executeTakeFirstOrThrow()
-    return `${prefix}${String(row.next_value - 1).padStart(CODE_SEQ_WIDTH, '0')}`
+    return formatStudentCode(prefix, row.next_value - 1)
   }
 
   /** Ghi ma hoc vien; nem loi unique violation neu ma da bi nguoi khac lay. */

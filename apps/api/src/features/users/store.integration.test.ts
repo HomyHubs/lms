@@ -123,11 +123,11 @@ describeWithPostgres('users store on real Postgres', () => {
     // Chưa gán cơ sở -> prefix mặc định 'HV'.
     //
     // KHÔNG assert đúng 4 chữ số: bộ đếm dùng chung `lms_test` nên số thứ tự phụ thuộc dữ liệu có
-    // sẵn (học viên khác cũng mang prefix 'HV'). Chỉ kiểm phần thực sự có nghĩa: đúng prefix và
-    // tăng đúng 1 đơn vị.
-    const sequenceOf = (code: string): number => Number(code.slice('HV'.length))
-    expect(first.user.studentCode).toMatch(/^HV\d{4,}$/)
-    expect(second.user.studentCode).toMatch(/^HV\d{4,}$/)
+    // sẵn (học viên khác cũng mang prefix 'HV'). Chỉ kiểm phần thực sự có nghĩa: đúng prefix + dấu
+    // phân cách (slice-23-c, ADR 0022) và tăng đúng 1 đơn vị.
+    const sequenceOf = (code: string): number => Number(code.slice('HV-'.length))
+    expect(first.user.studentCode).toMatch(/^HV-\d{4,}$/)
+    expect(second.user.studentCode).toMatch(/^HV-\d{4,}$/)
     expect(sequenceOf(second.user.studentCode!)).toBe(sequenceOf(first.user.studentCode!) + 1)
 
     // Gán cơ sở có code riêng rồi sinh mã cho user khác -> prefix đổi theo cơ sở.
@@ -146,7 +146,7 @@ describeWithPostgres('users store on real Postgres', () => {
 
     const reassigned = await store.assignStudentCode(third.user.id, branchCode)
     // Prefix 'Q9' chưa từng xuất hiện trong DB test -> số thứ tự chắc chắn bắt đầu từ 1.
-    expect(reassigned?.student_code).toBe('Q90001')
+    expect(reassigned?.student_code).toBe('Q9-0001')
   })
 
   /**
@@ -155,6 +155,9 @@ describeWithPostgres('users store on real Postgres', () => {
    * Trước đây `nextCode` quét `student_code like '<prefix>%'` nên cơ sở 'Z7' và 'Z71' dùng chung một
    * bộ đếm: mã 'Z710001' của cơ sở sau khớp `like 'Z7%'`, và số thứ tự của 'Z7' nhảy lên 10002.
    * Nay bộ đếm khoá theo tiền tố nên hai cơ sở có dãy số riêng.
+   *
+   * slice-23-c (ADR 0022): dấu phân cách làm chuỗi mã cũng phân biệt được — 'Z7-0001' và 'Z71-0001'
+   * không còn là hai cách đọc của cùng một chuỗi 'Z710001'.
    *
    * Dùng cặp tiền tố 'Z7'/'Z71' không xuất hiện ở bất kỳ test nào khác, và xoá sạch bộ đếm của chúng
    * trước khi chạy để assert được giá trị tuyệt đối (bảng `student_code_seq` không bị `cleanup` xoá
@@ -183,11 +186,11 @@ describeWithPostgres('users store on real Postgres', () => {
       return assigned?.student_code ?? ''
     }
 
-    expect(await studentIn('0900000737', OUTER)).toBe('Z70001')
-    expect(await studentIn('0900000738', INNER)).toBe('Z710001')
-    // Điểm mấu chốt: mã thứ hai của 'Z7' là Z70002, KHÔNG phải Z710002.
-    expect(await studentIn('0900000739', OUTER)).toBe('Z70002')
-    expect(await studentIn('0900000730', INNER)).toBe('Z710002')
+    expect(await studentIn('0900000737', OUTER)).toBe('Z7-0001')
+    expect(await studentIn('0900000738', INNER)).toBe('Z71-0001')
+    // Điểm mấu chốt: mã thứ hai của 'Z7' là Z7-0002, KHÔNG phải Z71-0002.
+    expect(await studentIn('0900000739', OUTER)).toBe('Z7-0002')
+    expect(await studentIn('0900000730', INNER)).toBe('Z71-0002')
 
     await db.deleteFrom('student_code_seq').where('prefix', 'in', ['Z7', 'Z71']).execute()
   })

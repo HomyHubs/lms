@@ -14,10 +14,29 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - `usersRoutes(app, { authStore, usersStore })`: `GET/POST /users`, `GET/PATCH/DELETE /users/:id` (chỉ Admin; role cao chỉ superadmin quản lý).
 - `UsersStore` (service.ts): `listUsers/findUserById/findUserByPhone/createUser/updateUser/deleteUser` + slice-23 `findUserByStudentCode/assignStudentCode/branchCodeForUser`.
 - `AdminUser.studentCode` (shared) chảy qua `toAdminUser` (map `row.student_code`).
+- Định dạng mã học viên: `<tiền tố>-<số thứ tự>` (vd `HN-0001`, ADR 0022), sinh bởi `formatStudentCode` trong `@lms/shared`. Contract **không** gắn regex: một dòng dữ liệu lệch không được biến thành lỗi 500 cho cả danh sách — định dạng bảo đảm ở đường ghi (một hàm sinh mã duy nhất).
 - `AdminUser.age`: dẫn xuất ở backend, KHÔNG lưu DB. Từ ADR 0018: tính từ `birthDate` (chính xác), fallback `birthYear` (ước lượng ±1). Chỉ role `student` mới có tuổi.
 - `AdminUser.birthDate` (`YYYY-MM-DD`) + `AdminUser.birthYear`: hai mức chính xác của CÙNG một dữ liệu. Có `birthDate` thì `birthYear` dẫn xuất từ nó.
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
+
+### 2026-11-27 — slice-23-c: định dạng mã có dấu phân cách `HV-0001` (ADR 0022)
+
+**Đã xong**
+- `packages/shared/src/student-code.ts` (mới) là **nơi duy nhất** giữ định dạng: `STUDENT_CODE_SEPARATOR` (`-`), `STUDENT_CODE_SEQ_WIDTH` (4), `DEFAULT_STUDENT_CODE_PREFIX` (`HV`), `normalizeStudentCodePrefix`, `formatStudentCode`, `parseStudentCode`, `isStudentCode`.
+- `store.ts`: `nextCode` dùng `normalizeStudentCodePrefix` (khoá bộ đếm) + `formatStudentCode` (chuỗi trả về); bỏ hằng số cục bộ `DEFAULT_CODE_PREFIX`/`CODE_SEQ_WIDTH`. Hai store giả lập trong test cũng gọi cùng hàm — trước đây biểu thức `` `${prefix}${String(n).padStart(4,'0')}` `` được chép tay ở 3 nơi.
+- Migration `20261127000002_student_code_separator.sql`: chèn `-` vào mã đã cấp bằng regex trên **chính chuỗi mã** (`^([^0-9]+)([0-9]+)$` → `\1-\2`), bỏ qua mã đã đúng dạng nên idempotent; `down` gỡ đúng dấu vừa chèn. **Không** suy lại tiền tố từ cơ sở hiện tại — học viên chuyển cơ sở phải giữ tiền tố cũ, suy lại là đổi danh tính của mã.
+- **Đảo ngược quyết định của ADR 0020 §Decision 4.** Lý do cũ ("mã đã in trên phiếu/thẻ, file Excel của trung tâm") là ràng buộc *triển khai*, không phải kết luận thiết kế — và dự án còn ở demo nên nó không còn đúng. ADR 0020 sửa **bộ đếm**; dấu phân cách sửa **chuỗi**: `HV`+10001 và `HV1`+1 từng cho cùng `HV10001`.
+- `students/store.ts`: tìm theo mã giờ **bỏ qua dấu phân cách ở cả hai phía** (`replace(lower(student_code), '-', '')` so với query đã bỏ `-`). Không có bước này thì gõ `HN0001` (thói quen cũ, hoặc dán từ file cũ) không tìm ra `HN-0001` — định dạng mới sẽ làm hỏng đúng đường tìm kiếm phổ biến nhất. Dùng hằng số từ `@lms/shared` nên định dạng không bị chép lại trong SQL.
+
+**Đã kiểm**
+- `packages/shared/src/student-code.test.ts` (12 case): zero-pad, dài ra khi > 9999, tiền tố rỗng → `HV`, tiền tố lồng nhau (`HV-10001` vs `HV1-0001`), tiền tố chứa `-` (`AB-CD-0001`), từ chối dạng cũ `HV0001`, round-trip.
+- `users/store.integration.test.ts`: assert tuyệt đối `Q9-0001`, `Z7-0001`, `Z71-0001`, `Z7-0002`, `Z71-0002`.
+- `students/service.test.ts`: thêm case gõ có/không dấu, hoa/thường đều tìm ra.
+- Cổng: lint 4/4, typecheck 5/5, shared **60**, api **326 pass** (+33 skip local), web **129**, build OK. Migration + SQL `replace()` chỉ được chạy thật trên Postgres ở CI (`dev-health-check` chạy `dbmate up → down → up`).
+
+**Bước tiếp theo**
+- Import điểm **chưa** trim/đổi hoa-thường cột mã; mã giờ có `-` nên `HV - 0001` sẽ không khớp. Cố ý để ngoài phạm vi slice này (xem ADR 0022 §Consequences) — cân nhắc khi có file Excel thật.
 
 ### 2026-11-14 — slice-23 Mã học viên
 
@@ -39,7 +58,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
   `insert … values (prefix, 2) on conflict (prefix) do update set next_value = next_value + 1 returning next_value`, rồi `padStart(4)`.
 - Migration `20261127000001_student_code_seq.sql`: tạo bảng + seed từ dữ liệu đã cấp. Seed quy mã về **đúng cơ sở của học viên** (cơ sở gán sớm nhất, giống `branchCodeForUser`) chứ không dùng `like`, và **được phép đếm dư** — dư chỉ làm số bắt đầu cao hơn, thiếu mới gây trùng.
 - `db.ts`: thêm `StudentCodeSeqTable` (khoá `prefix`, không phải `branch_id`).
-- **Không đổi định dạng mã đã cấp.** Phương án `HV-0001` bị loại vì mã đã in trên phiếu/thẻ và đang nằm trong file Excel của trung tâm; sau ADR 0019 file cũ dùng mã cũ sẽ thành `student_not_found`.
+- **Không đổi định dạng mã đã cấp.** Phương án `HV-0001` bị loại vì mã đã in trên phiếu/thẻ và đang nằm trong file Excel của trung tâm; sau ADR 0019 file cũ dùng mã cũ sẽ thành `student_not_found`. → **Bị đảo ngược 2026-11-27 (ADR 0022)**: dự án còn ở demo, chưa có mã nào lưu hành ngoài hệ thống. Xem mục slice-23-c ở trên.
 
 **Vì sao khoá là tiền tố, không phải branch_id**
 - Tiền tố chính là thứ quyết định chuỗi mã. Hai cơ sở tình cờ dùng chung `branches.code` **buộc phải** chung bộ đếm; tách theo `branch_id` thì chúng cấp trùng số và vòng retry thành vô ích.

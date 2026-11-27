@@ -96,7 +96,7 @@ function stubUsersFetch(): {
                 gender: 'male',
                 address: null,
                 parentPhone: null,
-                studentCode: 'HN0001',
+                studentCode: 'HN-0001',
                 age: null,
                 createdAt: '2026-09-16T00:00:00.000Z',
               },
@@ -254,7 +254,7 @@ describe('UsersPage', () => {
     stubUsersFetch()
     renderPage()
     expect(await screen.findByRole('columnheader', { name: 'Mã học viên' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('HN0001')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('HN-0001')).toBeInTheDocument())
   })
 
   // slice-19 (ADR 0015): bang cau hinh quyen sua cau hoi theo role.

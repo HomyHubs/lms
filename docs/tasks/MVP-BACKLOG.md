@@ -46,6 +46,7 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-21 | Liên kết Đề thi ↔ Bộ đề: panel đưa câu hỏi vào/ra bộ đề + xem trước (mục 4.4; giữ mô hình bộ đề = tập câu hỏi) | Dọc | Done | — | dev | 794bc74 | slice-20 | `slices/slice-21-lien-ket-de-bo-de.md` |
 | slice-22 | Chấm bài: link tải mẫu file, nút bắt đầu chấm, sửa kết quả, đưa điểm vào lớp + preview trước khi import (mục 5.2, 5.3) | Dọc | Done | — | feature/slice-22-cham-bai | 31 | slice-5, slice-9a | `slices/slice-22-cham-bai.md` |
 | slice-23 | Mã học viên / mã user chuẩn hóa, tách khỏi SĐT (mục 5.1, 9.1-mã; ADR 0014, migration) | Dọc | Done | — | feature/slice-23-ma-hoc-vien | 39 | slice-1 | `slices/slice-23-ma-hoc-vien.md` |
+| slice-23-c | Định dạng mã học viên có dấu phân cách `HV-0001` + migrate mã đã cấp (thay đổi slice-23; ADR 0022) | Dọc | Done | — | dev | — | slice-23 | `slices/slice-23-c-dinh-dang-ma-hoc-vien.md` |
 | slice-24 | Báo cáo thi & xếp loại: phân trang 50/trang, chọn 20/50, dashboard pass/fail theo cơ sở/trung tâm/cấp độ (chart, %, số) (mục 6, 8) | Dọc | Done | — | dev | — | slice-13, slice-7 | `slices/slice-24-bao-cao-thi-xep-loai.md` |
 | slice-25 | Ngày công & giờ dạy: chi tiết theo giáo viên (filter tháng), theo lớp + chart (mục 7) | Dọc | Done | — | dev | — | slice-8 | `slices/slice-25-ngay-cong-gio-day-chi-tiet.md` |
 | slice-26 | Người dùng: SĐT nhỏ dưới họ tên, làm lại cột tuổi học viên (mục 9.1-hiển thị, 9.2) | Dọc | Done | — | dev | 32 | slice-1 | `slices/slice-26-nguoi-dung-hien-thi.md` |

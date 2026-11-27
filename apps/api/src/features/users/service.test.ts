@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { formatStudentCode, normalizeStudentCodePrefix, parseStudentCode } from '@lms/shared'
 import type { UserRow, UsersStore } from './service.js'
 import { createUser, deleteUser, getUser, listUsers, updateUser } from './service.js'
 
@@ -63,18 +64,19 @@ function makeFakeStore(
     },
     async assignStudentCode(id, branchCode) {
       // slice-23: store that sinh + ghi trong mot buoc va retry khi trung so thu tu.
-      const prefix = branchCode && branchCode.trim() !== '' ? branchCode : 'HV'
+      // slice-23-c (ADR 0022): dinh dang lay tu `@lms/shared` — test khong giu ban sao cua dinh dang,
+      // va `parseStudentCode` cung duoc chay qua day.
+      const prefix = normalizeStudentCodePrefix(branchCode)
       let max = 0
       for (const u of users) {
-        if (u.role !== 'student' || !u.student_code?.startsWith(prefix)) continue
-        const suffix = u.student_code.slice(prefix.length)
-        if (!/^\d+$/.test(suffix)) continue
-        const n = Number.parseInt(suffix, 10)
-        if (n > max) max = n
+        if (u.role !== 'student') continue
+        const parsed = parseStudentCode(u.student_code ?? '')
+        if (!parsed || parsed.prefix !== prefix) continue
+        if (parsed.sequence > max) max = parsed.sequence
       }
       const row = users.find((u) => u.id === id)
       if (!row) return undefined
-      row.student_code = `${prefix}${String(max + 1).padStart(4, '0')}`
+      row.student_code = formatStudentCode(prefix, max + 1)
       return row
     },
     async branchCodeForUser(userId) {
@@ -157,7 +159,8 @@ describe('createUser', () => {
     expect(outcome.user.gender).toBe('male')
     expect(outcome.user.parentPhone).toBe('0912345678')
     // slice-23: hoc vien moi duoc sinh ma tu dong (fallback 'HV' khi chua gan co so).
-    expect(outcome.user.studentCode).toBe('HV0001')
+    // slice-23-c (ADR 0022): dinh dang co dau phan cach.
+    expect(outcome.user.studentCode).toBe('HV-0001')
     // ADR 0018: chi co nam sinh -> tuoi UOC LUONG = nam hien tai - birthYear.
     expect(outcome.user.age).toBe(2026 - 2015)
     expect(outcome.user.birthDate).toBeNull()
@@ -254,8 +257,8 @@ describe('createUser', () => {
     })
     expect(outcome.ok).toBe(true)
     if (!outcome.ok) return
-    // Tien to theo branch.code cua co so da gan ('HN'), so thu tu zero-pad 4 chu so.
-    expect(outcome.user.studentCode).toBe('HN0001')
+    // Tien to theo branch.code cua co so da gan ('HN') + dau phan cach, so thu tu zero-pad 4 chu so.
+    expect(outcome.user.studentCode).toBe('HN-0001')
   })
 
   it('leaves studentCode null for a non-student role', async () => {

@@ -1,5 +1,5 @@
 import { sql } from 'kysely'
-import type { ClassificationPolicy } from '@lms/shared'
+import { STUDENT_CODE_SEPARATOR, type ClassificationPolicy } from '@lms/shared'
 import type { AppDb } from '../../platform/db.js'
 import type {
   StudentAggregateRow,
@@ -22,6 +22,14 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
       // undefined = superadmin (khong loc co so); [] = khong co co so nao -> rong.
       if (branchIds && branchIds.length === 0) return []
       const like = `%${q.toLowerCase()}%`
+      // slice-23-c (ADR 0022): ma hoc vien co dau phan cach (`HN-0001`), nhung nguoi dung go lai ma
+      // theo tri nho hoac dan tu file cu se khong co dau. So khop theo MA thi bo qua dau phan cach o
+      // CA HAI phia; cac truong khac (ten, SDT) van so nguyen ven. Dung hang so tu `@lms/shared` de
+      // dinh dang khong bi chep lai lan thu hai trong SQL.
+      const codeNeedle = q.toLowerCase().split(STUDENT_CODE_SEPARATOR).join('')
+      // Go moi dau phan cach ('-') thi sau khi bo dau con chuoi rong, va `%%` khop TAT CA hoc vien.
+      // Roi ve mau goc trong truong hop do: no khong khop ma nao, dung y nguoi dung.
+      const codeLike = codeNeedle === '' ? like : `%${codeNeedle}%`
       let query = db
         .selectFrom('users as u')
         .leftJoin('enrollments as e', 'e.student_id', 'u.id')
@@ -35,7 +43,11 @@ export function makeStudentsStore(db: AppDb): StudentsStore {
             eb(sql<string>`lower(coalesce(u.last_name, ''))`, 'like', like),
             eb(sql<string>`lower(coalesce(u.first_name, ''))`, 'like', like),
             eb(sql<string>`lower(coalesce(concat_ws(' ', u.last_name, u.first_name), ''))`, 'like', like),
-            eb(sql<string>`lower(coalesce(u.student_code, ''))`, 'like', like),
+            eb(
+              sql<string>`replace(lower(coalesce(u.student_code, '')), ${STUDENT_CODE_SEPARATOR}, '')`,
+              'like',
+              codeLike,
+            ),
             eb('u.phone_number', 'like', `%${q}%`),
           ]),
         )

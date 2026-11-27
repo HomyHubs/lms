@@ -1,6 +1,7 @@
 import cookie from '@fastify/cookie'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
+import { formatStudentCode, normalizeStudentCodePrefix, parseStudentCode } from '@lms/shared'
 import type { AuthStore, UserRecord } from '../auth/index.js'
 import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
@@ -79,18 +80,18 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
     },
     async assignStudentCode(id, branchCode) {
       // slice-23: store that sinh + ghi trong mot buoc va retry khi trung so thu tu.
-      const prefix = branchCode && branchCode.trim() !== '' ? branchCode : 'HV'
+      // slice-23-c (ADR 0022): dinh dang lay tu `@lms/shared`, khong giu ban sao trong test.
+      const prefix = normalizeStudentCodePrefix(branchCode)
       let max = 0
       for (const u of users) {
-        if (u.role !== 'student' || !u.student_code?.startsWith(prefix)) continue
-        const suffix = u.student_code.slice(prefix.length)
-        if (!/^\d+$/.test(suffix)) continue
-        const n = Number.parseInt(suffix, 10)
-        if (n > max) max = n
+        if (u.role !== 'student') continue
+        const parsed = parseStudentCode(u.student_code ?? '')
+        if (!parsed || parsed.prefix !== prefix) continue
+        if (parsed.sequence > max) max = parsed.sequence
       }
       const row = users.find((u) => u.id === id)
       if (!row) return undefined
-      row.student_code = `${prefix}${String(max + 1).padStart(4, '0')}`
+      row.student_code = formatStudentCode(prefix, max + 1)
       return row
     },
     async branchCodeForUser() {
@@ -185,7 +186,7 @@ describe('users routes — RBAC guard', () => {
         gender: 'male',
         address: null,
         parent_phone: '0912345678',
-        student_code: 'HV0001',
+        student_code: 'HV-0001',
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])
@@ -203,7 +204,7 @@ describe('users routes — RBAC guard', () => {
     expect(users[0].firstName).toBe('An')
     expect(users[0].age).toBe(new Date().getFullYear() - 2015)
     // slice-23: ma hoc vien rong duoc tra ra (SAFE_COLUMNS gom student_code).
-    expect(users[0].studentCode).toBe('HV0001')
+    expect(users[0].studentCode).toBe('HV-0001')
   })
 
   it('POST /users creates a student with profile fields and derives age', async () => {
