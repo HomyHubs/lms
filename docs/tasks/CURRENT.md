@@ -5,9 +5,25 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
 ## Đang làm
 
 - ID Slice/Task: không còn slice nào mở trong backlog (slice-9 đã **hủy** 2026-11-26 — xem bên dưới).
-- Cập nhật ngày: 2026-11-27
+- Cập nhật ngày: 2026-11-28
 - Nhánh: `dev` (đã merge vào `main`)
-- Trạng thái: Đã trả **toàn bộ** marker nợ còn lại của phiên này: `slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT (ADR 0019), `slice-23-b` (ADR 0020), `slice-1` (ADR 0021), `slice-23-c` đổi định dạng mã (ADR 0022). Không còn `TODO(<slice>)` nào trong code.
+- Trạng thái: Đã trả **toàn bộ** marker nợ còn lại của phiên này: `slice-26`, `slice-26-b`→quy ước, `slice-20`, `slice-21`, `slice-23` phần retry, `slice-23` hướng an toàn, `slice-23` gỡ hẳn fallback SĐT (ADR 0019), `slice-23-b` (ADR 0020), `slice-1` (ADR 0021), `slice-23-c` đổi định dạng mã (ADR 0022), `slice-31` mã cơ sở duy nhất (ADR 0023), `slice-32` menu theo năng lực (ADR 0024). Không còn `TODO(<slice>)` nào trong code.
+
+## Đã làm (phiên 2026-11-28, phần 9)
+
+- **`slice-31` — mã cơ sở là duy nhất (ADR 0023)**: migration `20261128000001_branches_code_unique.sql` tạo partial unique index trên `upper(btrim(code))`, kèm `do $$ … raise exception` liệt kê mã đang trùng **trước khi** tạo index.
+  - **Vì sao**: từ ADR 0022, mã học viên = `<branches.code>-<số thứ tự>`; hai cơ sở trùng `code` dùng chung bộ đếm và sinh cùng một dãy mã. Mã vẫn unique (`users_student_code_unique` chặn trùng) nên **không có dữ liệu sai** — chỉ mất khả năng "đọc mã biết cơ sở", tức đúng thứ ADR 0022 vừa sửa. Lỗi im lặng hoàn toàn.
+  - Khoá duy nhất dùng **biểu thức** chứ không phải cột thô: `normalizeStudentCodePrefix` trim trước khi dùng làm khoá bộ đếm nên `'HV'` và `'HV '` chắc chắn đụng nhau; `'hv'`/`'HV'` cho hai dãy mã nhìn gần như giống nhau. Chặn cả ba ở tầng DB.
+  - Migration **dừng có chủ ý** khi dữ liệu đang trùng. Tự đổi tên cơ sở sẽ làm mã học viên đã cấp trỏ sai cơ sở — tệ hơn việc bắt người vận hành quyết định.
+  - **Không mở đường sửa `branches.code`**: nó không có trong contract `Branch` lẫn request tạo/sửa; API không đọc/ghi cột này. Cho sửa là tính năng riêng (phải chốt mã đã cấp giữ tiền tố cũ hay đổi theo) — ADR 0023 §Decision 4.
+  - Test: `apps/api/src/features/centers/store.integration.test.ts` 3 case trên Postgres thật (trùng hệt, trùng sau trim/upper, nhiều cơ sở không mã).
+- **`slice-32` — menu và cổng route của FE tính từ ma trận quyền (ADR 0024)**: `NavItem.permissions` thay `roles`; `RequireAuth` nhận `permission` và gọi `canAny`; `App.tsx` truyền `item.permissions` cho 17 route menu + quyền cho 2 route ngoài menu.
+  - **Vì sao không chỉ "dùng lại quyền"**: tập role của menu **không bằng** tập role của quyền API ở ba chỗ — Điểm danh là **hợp** của `attendance.read` (admin, teacher) và `attendance.self` (student); Chấm bài **hẹp hơn** `grading.grade` (staff chấm bài nhưng không đi qua màn này); Quản lý thi là hub mở cho cả `exam.manage` lẫn `exam.take`. Ép bằng nhau là đổi hành vi sản phẩm.
+  - Thêm 2 quyền diễn đạt menu: `grading.menu` {admin, teacher}, `enrollment.manage` {admin}. Quyền `.menu` **chỉ để điều hướng, không dùng làm guard API** — ghi ngay cạnh khai báo.
+  - Giữ nguyên việc superadmin thấy menu của admin (không thấy "Bài thi của tôi"), nên hành vi không đổi. "Thấy menu gì" và "được vào không" là hai câu hỏi khác nhau.
+  - Test: `components/layout/nav.test.ts` 13 case khoá tập path theo **từng role**; `App.test.tsx` xanh **không sửa kỳ vọng nào**; `permissions.test.ts` thêm case `canAny` + 2 quyền mới.
+  - **Flake ghi nhận**: `ReportsPage.test.tsx` (đọc lại XLSX) fail 1 lần khi chạy song song cả web suite, pass khi chạy riêng và pass lần chạy lại — nghi timeout dưới tải, không liên quan slice này.
+- Cổng: lint 4/4, typecheck 5/5, shared **64**, api **327 pass** (+38 skip cục bộ vì không có Docker), web **142**, build OK. Migration + integration test mới chỉ chạy thật ở CI.
 
 ## Đã làm (phiên 2026-11-27, phần 8)
 

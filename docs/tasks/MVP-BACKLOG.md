@@ -58,6 +58,8 @@ Bảng chỉ mục cấp cao cho toàn bộ Slice / Task / layer-pass. Đây là
 | slice-6.1 | Điểm danh nhiều lớp và hiện diện (thay đổi slice-6) | Dọc | Done | — | feature/slice-6.1-diem-danh-hien-dien | 3185e7d | slice-6, slice-8 | `slices/slice-6.1-diem-danh-hien-dien.md` |
 | slice-10.1 | Menu quản lý thi: menu cha + menu con theo vai trò, trang chọn chức năng (thay đổi slice-10) | Dọc | Done | — | feature/exam-management-menu | 34 | slice-10, slice-11a, slice-13 | `slices/slice-10.1-menu-quan-ly-thi.md` |
 | slice-dashboard-movements | Dashboard: lịch sử vào/ra ghi danh, biểu đồ, admin chấm công giáo viên (mục 1–4 sau slice-1.1) | Dọc | Done | — | dev | — | slice-1.1 | `slices/slice-dashboard-movements.md` |
+| slice-31 | Mã cơ sở là duy nhất: unique index trên `branches.code` (thay đổi slice-23; ADR 0023) | Dọc | Done | — | dev | — | slice-23, slice-23-c | `slices/slice-31-ma-co-so-duy-nhat.md` |
+| slice-32 | Menu và cổng route của FE tính từ ma trận quyền (thay đổi slice-1; ADR 0024) | Dọc | Done | — | dev | — | slice-1, slice-10 | `slices/slice-32-menu-theo-nang-luc.md` |
 
 ## Trạng thái hợp lệ
 

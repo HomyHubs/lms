@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { UserRole } from './auth.js'
-import { can, isAllowed, PERMISSIONS, ROLE_PERMISSIONS, type Permission } from './permissions.js'
+import { can, canAny, isAllowed, PERMISSIONS, ROLE_PERMISSIONS, type Permission } from './permissions.js'
 
 /**
  * slice-1 (ADR 0021): ma tran role -> quyen la nguon su thuc duy nhat cho ca API va FE.
@@ -46,6 +46,37 @@ describe('PERMISSIONS', () => {
     expect(can('student', 'exam.history.self')).toBe(true)
     expect(can('student', 'exam.history.read')).toBe(false)
     expect(can('student', 'exam.manage')).toBe(false)
+  })
+
+  // slice-32 (ADR 0024): hai quyen chi de hien menu. Chung phai HEP hon quyen API tuong ung —
+  // staff cham bai duoc nhung khong di qua man Cham bai.
+  it('keeps grading.menu narrower than grading.grade, and enrollment admin-only', () => {
+    expect(can('staff', 'grading.grade')).toBe(true)
+    expect(can('staff', 'grading.menu')).toBe(false)
+    expect(can('teacher', 'grading.menu')).toBe(true)
+    expect(can('admin', 'enrollment.manage')).toBe(true)
+    expect(can('teacher', 'enrollment.manage')).toBe(false)
+    expect(can('staff', 'enrollment.manage')).toBe(false)
+  })
+})
+
+describe('canAny', () => {
+  it('treats an empty permission list as "login only"', () => {
+    expect(canAny('student', [])).toBe(true)
+    expect(canAny('staff', [])).toBe(true)
+  })
+
+  it('allows when the role has at least one of the permissions', () => {
+    // Man Diem danh: hop cua "xem bang tong hop" (admin/teacher) va "xem cua minh" (student).
+    expect(canAny('admin', ['attendance.read', 'attendance.self'])).toBe(true)
+    expect(canAny('teacher', ['attendance.read', 'attendance.self'])).toBe(true)
+    expect(canAny('student', ['attendance.read', 'attendance.self'])).toBe(true)
+    expect(canAny('staff', ['attendance.read', 'attendance.self'])).toBe(false)
+  })
+
+  it('lets superadmin through any list, and denies a role with none of them', () => {
+    expect(canAny('superadmin', ['exam.take'])).toBe(true)
+    expect(canAny('teacher', ['user.manage', 'report.read'])).toBe(false)
   })
 })
 

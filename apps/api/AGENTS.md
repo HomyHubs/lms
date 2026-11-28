@@ -23,6 +23,14 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-28 — slice-31: mã cơ sở duy nhất (ADR 0023)
+
+- Migration `20261128000001_branches_code_unique.sql` + `apps/api/src/features/centers/store.integration.test.ts` (3 case trên Postgres thật: trùng hệt, trùng sau trim/upper, nhiều cơ sở không mã).
+- **Vì sao**: từ ADR 0022, mã học viên = `<branches.code>-<số thứ tự>`; hai cơ sở trùng `code` dùng chung bộ đếm và sinh cùng một dãy mã — mã vẫn unique nên **không có dữ liệu sai**, chỉ mất khả năng phân biệt cơ sở. Lỗi im lặng: không test nào đỏ, không màn hình nào sai.
+- **Không sửa API**: `branches.code` không có trong contract `Branch`, không có trong `CreateBranchRequest`/`UpdateBranchRequest` — API không đọc/ghi cột này. Index bảo vệ seed và SQL tay, đúng những đường đang tạo ra giá trị.
+- **Không mở đường sửa `code`**: cho sửa mã cơ sở là tính năng riêng (phải chốt: mã học viên đã cấp giữ tiền tố cũ hay đổi theo). Trộn vào đây sẽ tạo lỗ hổng — xem ADR 0023 §Decision 4.
+- Cổng: lint 4/4, typecheck 5/5, shared 64, api **327 pass** (+38 skip cục bộ vì không có Docker), web 142, build OK. Integration test mới chỉ chạy thật ở CI.
+
 ### 2026-11-27 — slice-1: quyền là ma trận role → năng lực (ADR 0021)
 
 - **Trả `TODO(slice-1)`** trong `platform/db.ts`. Phạm vi là hướng tối thiểu: không đổi schema, **không đổi hành vi phân quyền**.

@@ -17,6 +17,13 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-28 — slice-31: `branches.code` là duy nhất (ADR 0023)
+
+- `20261128000001_branches_code_unique.sql`: partial unique index trên `upper(btrim(code))` (`where code is not null and btrim(code) <> ''`). Khoá dùng biểu thức chứ không phải cột thô vì `normalizeStudentCodePrefix` **trim** trước khi dùng làm khoá bộ đếm — `'HV'` và `'HV '` chắc chắn đụng nhau; còn `'hv'`/`'HV'` cho hai dãy mã nhìn gần như giống nhau.
+- Migration **kiểm tra trùng trước** bằng `do $$ … raise exception` có danh sách mã trùng, thay vì để Postgres trả `23505` trần. Dừng là hành vi có chủ ý: tự đổi tên cơ sở sẽ làm mã học viên đã cấp trỏ sai cơ sở.
+- `migrate:down` = `drop index if exists`. Không mất dữ liệu, không sửa migration cũ.
+- Chưa chạy được cục bộ (máy không có Docker): up/down/up + hành vi chặn trùng được kiểm ở CI qua `dbmate up → down → up` và `apps/api/src/features/centers/store.integration.test.ts`.
+
 ### 2026-11-06 — slice-6.1 đang làm
 
 - Thêm migration `20261115000000_attendance_teacher.sql` cho nhật ký giáo viên thực dạy; áp dụng riêng trên DB test. Chưa xác minh backfill với dữ liệu cũ hoặc down/up. Chạy cả thư mục migration gặp lỗi `submit_reason` đã tồn tại trên DB test; cần xử lý thử nghiệm độc lập trước khi bàn giao.

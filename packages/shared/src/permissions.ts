@@ -24,6 +24,8 @@ export const PERMISSIONS = [
   'center.manage',
   'setting.manage',
   'user.manage',
+  // Ghi danh (gan hoc vien/giao vien vao lop, quan ly theo co so) — slice-29.
+  'enrollment.manage',
   // Bao cao: `read` cho admin xem tren man hinh, `export` chi superadmin (chong ro ri danh sach hoc vien).
   'report.read',
   'report.export',
@@ -43,6 +45,9 @@ export const PERMISSIONS = [
   // Cham bai: `grade` cham tung cau (ke ca chon tay), `import` nhap bang diem tu file.
   'grading.grade',
   'grading.import',
+  // `menu` chi de HIEN MUC DIEU HUONG, khong bao gio dung lam guard API (ADR 0024).
+  // Staff co `grading.grade` nhung khong di qua man Cham bai, nen tap role cua menu hep hon.
+  'grading.menu',
   // Diem danh: `record` la giao vien diem danh lop minh, `read` la xem bang tong hop,
   // `team` la thao tac tren nhieu lop, `office` la nghiep vu van phong (admin+staff).
   'attendance.manage',
@@ -73,6 +78,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'center.manage',
     'setting.manage',
     'user.manage',
+    'enrollment.manage',
     'report.read',
     'notification.read',
     'notification.manage',
@@ -84,6 +90,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'exam.history.read',
     'grading.grade',
     'grading.import',
+    'grading.menu',
     'attendance.manage',
     'attendance.read',
     'attendance.team',
@@ -101,6 +108,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'exam.assignClass',
     'exam.history.read',
     'grading.grade',
+    'grading.menu',
     'attendance.record',
     'attendance.read',
     'attendance.team',
@@ -126,6 +134,18 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
 /** Nguoi dung co quyen nay khong. */
 export function can(role: UserRole, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role].includes(permission)
+}
+
+/**
+ * Co IT NHAT MOT trong cac quyen (any-of). Mang rong = chi yeu cau da dang nhap.
+ *
+ * Dung cho menu va cong route cua FE (ADR 0024): mot muc menu co the la HOP cua nhieu nang luc —
+ * vd man Diem danh mo cho ca nguoi xem bang tong hop (`attendance.read`) lan hoc vien xem cua minh
+ * (`attendance.self`). Any-of dien dat dung y do do, thay vi mot mang role thu hai.
+ */
+export function canAny(role: UserRole, permissions: readonly Permission[]): boolean {
+  if (permissions.length === 0) return true
+  return permissions.some((permission) => can(role, permission))
 }
 
 /**
