@@ -3,6 +3,7 @@ import { ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import {
   CreateUserRequest,
   DEFAULT_QUESTION_EDIT_PERMISSIONS,
+  type AdminUser,
   type Gender,
   type QuestionEditPermissions,
   type UserRole,
@@ -30,6 +31,15 @@ const QUESTION_EDIT_ROLES: { role: keyof QuestionEditPermissions; label: string 
 const GENDER_LABEL: Record<Gender, string> = { male: 'Nam', female: 'Nữ', other: 'Khác' }
 
 /**
+ * Tuổi hiển thị (slice-26, ADR 0018). Chỉ học viên mới có tuổi. Khi học viên chỉ có năm sinh
+ * (dữ liệu cũ) thì tuổi là ƯỚC LƯỢNG lệch ±1, nên đánh dấu `~` thay vì trình bày như số chính xác.
+ */
+function formatAge(user: AdminUser): string {
+  if (user.role !== 'student' || user.age === null) return '—'
+  return user.birthDate === null ? `~${user.age}` : String(user.age)
+}
+
+/**
  * Trang quan ly nguoi dung (slice-1 Task 1) — chi Admin (route guard theo role).
  * Giao dien toi gian (bang danh sach + form) theo "Stub cho phep" cua slice-1.
  */
@@ -54,7 +64,11 @@ export function UsersPage(): React.ReactElement {
   const [role, setRole] = useState<UserRole>('student')
   const [lastName, setLastName] = useState('')
   const [firstName, setFirstName] = useState('')
+  // slice-26 (ADR 0018): năm sinh là trường CHÍNH — dữ liệu cũ của trung tâm chỉ có năm sinh.
+  // Ngày sinh đầy đủ là tuỳ chọn: nhập được thì tuổi chính xác, không nhập thì tuổi là ước lượng
+  // và bảng hiển thị `~<tuổi>` để nói rõ điều đó.
   const [birthYear, setBirthYear] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [gender, setGender] = useState('')
   const [address, setAddress] = useState('')
   const [parentPhone, setParentPhone] = useState('')
@@ -68,10 +82,14 @@ export function UsersPage(): React.ReactElement {
       password,
       role,
       email: email.trim() === '' ? undefined : email,
-      // Truong rong -> undefined (contract coi la khong nhap); birthYear -> Number.
+      // Truong rong -> undefined (contract coi la khong nhap).
       lastName: lastName.trim() === '' ? undefined : lastName,
       firstName: firstName.trim() === '' ? undefined : firstName,
+      // slice-26 (ADR 0018): nhập NĂM sinh là đủ (dữ liệu cũ chỉ có năm). Nhập thêm ngày sinh đầy
+      // đủ thì gửi `birthDate` — backend dẫn xuất `birthYear` từ đó và tuổi thành chính xác.
+      // Nhập cả hai mà lệch năm thì contract báo lỗi "Nam sinh khong khop voi ngay sinh".
       birthYear: birthYear.trim() === '' ? undefined : Number(birthYear),
+      birthDate: birthDate.trim() === '' ? undefined : birthDate,
       gender: gender === '' ? undefined : gender,
       address: address.trim() === '' ? undefined : address,
       parentPhone: parentPhone.trim() === '' ? undefined : parentPhone,
@@ -89,6 +107,7 @@ export function UsersPage(): React.ReactElement {
         setLastName('')
         setFirstName('')
         setBirthYear('')
+        setBirthDate('')
         setGender('')
         setAddress('')
         setParentPhone('')
@@ -159,6 +178,14 @@ export function UsersPage(): React.ReactElement {
           value={birthYear}
           onChange={(e) => setBirthYear(e.target.value)}
           placeholder="Năm sinh"
+          className="c-input"
+        />
+        <input
+          aria-label="Ngày sinh đầy đủ (tuỳ chọn)"
+          type="date"
+          value={birthDate}
+          onChange={(e) => setBirthDate(e.target.value)}
+          title="Tuỳ chọn — nhập để tính tuổi chính xác"
           className="c-input"
         />
         <select
@@ -234,9 +261,23 @@ export function UsersPage(): React.ReactElement {
                       <span className="text-xs text-slate-400">{u.phoneNumber}</span>
                     </div>
                   </td>
-                  <td>{u.birthYear ?? '—'}</td>
-                  {/* slice-26: tuoi chi co y nghia voi hoc vien; role khac de trong. */}
-                  <td>{u.role === 'student' ? (u.age ?? '—') : '—'}</td>
+                  {/* slice-26 (ADR 0018): năm sinh là chính; ngày sinh đầy đủ hiện nhỏ bên dưới. */}
+                  <td>
+                    <div className="flex flex-col">
+                      <span>{u.birthYear ?? '—'}</span>
+                      {u.birthDate && (
+                        <span className="text-xs text-slate-400">{u.birthDate}</span>
+                      )}
+                    </div>
+                  </td>
+                  {/* slice-26: tuoi chi co y nghia voi hoc vien; role khac de trong.
+                      ADR 0018: `~` = chỉ biết năm sinh nên tuổi là ước lượng (lệch ±1). */}
+                  <td title={u.role === 'student' && u.birthDate === null && u.age !== null
+                    ? 'Chỉ biết năm sinh nên tuổi có thể lệch 1 tuổi'
+                    : undefined}
+                  >
+                    {formatAge(u)}
+                  </td>
                   <td>{u.gender ? GENDER_LABEL[u.gender] : '—'}</td>
                   <td>{u.parentPhone ?? '—'}</td>
                   <td>{u.email ?? '—'}</td>

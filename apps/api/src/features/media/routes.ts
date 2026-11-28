@@ -37,7 +37,7 @@ interface MediaRoutesDeps {
 /** slice-12 (ADR 0013): image upload/serve + per-question image links. */
 export async function mediaRoutes(app: FastifyInstance, deps: MediaRoutesDeps): Promise<void> {
   const { rbac, mediaStore: store, mediaStorage: storage } = deps
-  const requireManager = rbac.requireRole('admin', 'teacher')
+  const requireManager = rbac.requirePermission('exam.manage')
   const requireUser = rbac.requireRole()
 
   await app.register(async (scope) => {

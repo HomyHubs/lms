@@ -44,13 +44,19 @@ Xác thực, phân quyền (chỉ admin/teacher sửa; `published` bất biến)
 
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
-| `TODO(slice-21)` | ExamSetLinkPanel | Kéo-thả sắp xếp thay nút lên/xuống | Khi cần UX tốt hơn |
+| ~~`TODO(slice-21)`~~ | `ExamSetsPage.tsx` (`SetEditor`) — marker cũ ghi sai vị trí ở `ExamSetPreview` | ~~Kéo-thả sắp xếp thay nút lên/xuống~~ → **đã trả 2026-11-27**: `li` câu hỏi `draggable` khi bộ đề còn nháp, `onDragStart/onDragOver/onDrop` gọi lại `move(from,to)` sẵn có | Đã trả (giữ nút Lên/Xuống — xem ghi chú) |
+
+> **Vì sao vẫn giữ nút Lên/Xuống:** yêu cầu ghi "kéo-thả thay nút lên/xuống", nhưng kéo-thả bằng
+> chuột là **không truy cập được** với người dùng bàn phím/trình đọc màn hình. Kéo-thả đã là đường
+> chính; hai nút icon nhỏ giữ lại làm đường thao tác bàn phím. Muốn bỏ hẳn thì cần thêm hợp đồng
+> bàn phím cho tay nắm kéo (Space để nhấc, mũi tên để di chuyển) — việc của một slice riêng.
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-13 | Tạo | Tạo file chi tiết slice-21, nhận việc (làm sớm trên nhánh slice-20) | Bắt đầu slice-21 | — |
+| 2026-11-27 | Trả nợ | Kéo-thả sắp xếp câu trong `SetEditor` (native HTML5 DnD, chỉ khi nháp); dời marker từ `ExamSetPreview` (màn chỉ đọc, marker đặt sai chỗ) về đúng nơi | Trả `TODO(slice-21)` | — |
 
 ## Cách nghiệm thu
 

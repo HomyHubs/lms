@@ -33,11 +33,13 @@ Phan quyen theo role va theo Branch phai la thuc — khong duoc de mo (moi user 
 
 | Marker | Vi tri | Noi dung | Du kien tra |
 | --- | --- | --- | --- |
+| ~~TODO(slice-1)~~ | `apps/api/src/platform/db.ts` (`UsersTable.role`) | ~~Thay `role` text bang lien ket Branch/role day du~~ → **da tra 2026-11-27 (ADR 0021)**: `role` duoc go kieu `UserRole` o ca Kysely lan `UserRecord` (bo cast trong `toPublicUser`); quyen chuyen sang ma tran `ROLE_PERMISSIONS` + `can()` trong `@lms/shared`; luat superadmin gom ve `isAllowed` va `branchScopeOf` | Da tra |
 
 ## Nhat ky thay doi pham vi cua rieng Slice/Task nay
 
 | Ngay | Loai | Noi dung | Ly do | ADR |
 | --- | --- | --- | --- | --- |
+| 2026-11-27 | Mo rong | Quyen chuyen tu danh sach role tai tung route sang ma tran `ROLE_PERMISSIONS` trong `@lms/shared` + `rbac.requirePermission`; `role` duoc go kieu `UserRole`; luat superadmin gom ve `isAllowed`/`branchScopeOf`; `users/routes.ts` bo guard tu viet | Tra `TODO(slice-1)`; giam 30 cho khai bao quyen va 6 ban sao luat superadmin xuong mot nguon | 0021 |
 | 2026-11-10 | Sua | Them role 'superadmin' (cao nhat, vuot moi branch-scope, la role duy nhat quan ly tai khoan admin/superadmin va duy nhat duoc export danh sach hoc vien); admin thuong KHONG con export duoc | Yeu cau product: tach quyen quan tri cap cao + chong ro ri danh sach hoc vien | — |
 
 ## Cach nghiem thu

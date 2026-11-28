@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 // recharts needs a sized container; in jsdom width is 0 so charts don't paint.
 // Replace ResponsiveContainer with a plain sized div so children render.
@@ -15,11 +15,23 @@ vi.mock('recharts', async () => {
   }
 })
 
-vi.mock('./useDashboardStats', () => ({
-  useDashboardStats: () => ({
-    studentsByCourse: [
-      { name: 'Starters', value: 12 },
-      { name: 'Movers', value: 8 },
+// slice-16: giữ stats trong state để từng test đổi được dữ liệu cấp độ
+// (cần cho case "chưa có học viên nào" — mọi cột bằng 0).
+const { statsState, baseStats } = vi.hoisted(() => {
+  const base = {
+    // slice-16: cột gom theo cấp độ, chi tiết khóa học nằm trong tooltip.
+    studentsByLevel: [
+      {
+        levelCode: 'starter',
+        name: 'Starter',
+        value: 12,
+        courses: [
+          { name: 'Starters 1', value: 7 },
+          { name: 'Starters 2', value: 5 },
+        ],
+      },
+      { levelCode: 'mover', name: 'Mover', value: 8, courses: [{ name: 'Movers 1', value: 8 }] },
+      { levelCode: 'flyer', name: 'Flyer', value: 0, courses: [] },
     ],
     studentsByBranch: [
       { name: 'Cơ sở Quận 1', value: 12 },
@@ -50,8 +62,11 @@ vi.mock('./useDashboardStats', () => ({
     totalStudents: 20,
     isLoading: false,
     isEmpty: false,
-  }),
-}))
+  }
+  return { statsState: { current: base }, baseStats: base }
+})
+
+vi.mock('./useDashboardStats', () => ({ useDashboardStats: () => statsState.current }))
 
 vi.mock('@/features/reports/useReports', () => ({
   useStudentReport: () => ({
@@ -93,9 +108,13 @@ function renderDashboard() {
 }
 
 describe('DashboardCharts', () => {
+  beforeEach(() => {
+    statsState.current = baseStats
+  })
+
   it('renders the chart titles', () => {
     renderDashboard()
-    expect(screen.getByText('Tổng số học viên theo khóa học')).toBeInTheDocument()
+    expect(screen.getByText('Tổng số học viên theo cấp độ')).toBeInTheDocument()
     expect(screen.getByText('Tổng số học viên theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ học viên theo cơ sở')).toBeInTheDocument()
     expect(screen.getByText('Tỉ lệ hoàn thành bài')).toBeInTheDocument()
@@ -108,8 +127,20 @@ describe('DashboardCharts', () => {
 
   it('renders the renamed "Tổng số" bar titles (slice-16)', () => {
     renderDashboard()
-    expect(screen.getByText('Tổng số học viên theo khóa học')).toBeInTheDocument()
+    // slice-16: cột gom theo cấp độ (Starter/Mover/Flyer), không còn "theo khóa học".
+    expect(screen.getByText('Tổng số học viên theo cấp độ')).toBeInTheDocument()
     expect(screen.getByText('Tổng số học viên theo cơ sở')).toBeInTheDocument()
+    expect(screen.queryByText('Tổng số học viên theo khóa học')).not.toBeInTheDocument()
+  })
+
+  it('hiện "Chưa có dữ liệu" khi cả 3 cấp độ đều 0 học viên (slice-16)', () => {
+    statsState.current = {
+      ...baseStats,
+      studentsByLevel: baseStats.studentsByLevel.map((d) => ({ ...d, value: 0, courses: [] })),
+    }
+    renderDashboard()
+    expect(screen.getByText('Tổng số học viên theo cấp độ')).toBeInTheDocument()
+    expect(screen.getByText('Chưa có dữ liệu')).toBeInTheDocument()
   })
 
   it('lists all branches in the attendance card and links to the branch detail page (slice-16)', () => {

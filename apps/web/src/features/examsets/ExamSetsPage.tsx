@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowDown, ArrowUp, Eye, FileStack, ImagePlus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, FileStack, GripVertical, ImagePlus, Trash2 } from 'lucide-react'
 import {
   AddExamSetQuestionRequest,
   CreateExamSetRequest,
@@ -103,6 +103,9 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
   const detail = useExamSet(id)
   const [imagesFor, setImagesFor] = useState<string | null>(null)
   const [previewing, setPreviewing] = useState(false)
+  // slice-21: chỉ số câu đang được kéo. Phải khai báo TRƯỚC các early-return bên dưới
+  // (rules-of-hooks), dù chỉ dùng khi đã có dữ liệu.
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
   const reorder = useExamSetCommand((ids: string[]) => replaceExamSetItems(id, ids))
   const publish = useExamSetCommand(() => publishExamSet(id))
   const archive = useExamSetCommand(() => archiveExamSet(id))
@@ -114,6 +117,7 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
   const draft = set.status === 'draft'
   const ids = set.items.map((q) => q.id)
   const move = (from: number, to: number) => {
+    if (from === to) return
     const next = [...ids]
     const [moved] = next.splice(from, 1)
     next.splice(to, 0, moved!)
@@ -143,8 +147,38 @@ function SetEditor({ id, onClose }: { id: string; onClose: (nextId?: string) => 
       {failure && <p role="alert" className="text-sm text-danger-600">{errorText(failure)}</p>}
       <ol aria-label="Câu hỏi trong bộ đề" className="space-y-2">
         {set.items.map((q, index) => (
-          <li key={q.id} className="rounded-md border border-slate-100 p-3 text-sm">
+          <li
+            key={q.id}
+            // slice-21: kéo-thả để sắp xếp (chỉ khi bộ đề còn là bản nháp). Nút Lên/Xuống bên dưới
+            // được GIỮ LẠI làm đường thao tác bằng bàn phím — kéo-thả một mình là không truy cập được.
+            draggable={draft && !reorder.isPending}
+            onDragStart={(e) => {
+              setDragIndex(index)
+              e.dataTransfer?.setData('text/plain', String(index))
+              if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+            }}
+            onDragOver={(e) => {
+              // preventDefault ở đây là điều kiện để phần tử nhận được sự kiện `drop`.
+              if (!draft || dragIndex === null || dragIndex === index) return
+              e.preventDefault()
+              if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+            }}
+            onDrop={(e) => {
+              if (!draft) return
+              e.preventDefault()
+              const raw = dragIndex ?? Number(e.dataTransfer?.getData('text/plain'))
+              setDragIndex(null)
+              if (Number.isInteger(raw)) move(raw, index)
+            }}
+            onDragEnd={() => setDragIndex(null)}
+            className={`rounded-md border border-slate-100 p-3 text-sm ${
+              dragIndex === index ? 'opacity-50' : ''
+            } ${draft ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          >
             <div className="flex items-start gap-2">
+              {draft && (
+                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+              )}
               <p className="flex-1 font-medium">Câu {index + 1}. {q.questionText}</p>
               <Button size="sm" variant={imagesFor === q.id ? 'default' : 'ghost'} aria-expanded={imagesFor === q.id}
                 aria-label={`Hình ảnh câu ${index + 1}`} onClick={() => setImagesFor(imagesFor === q.id ? null : q.id)}>

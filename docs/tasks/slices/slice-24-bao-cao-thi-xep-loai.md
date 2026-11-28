@@ -41,13 +41,14 @@ Branch-scope (admin/GV chỉ thấy dữ liệu trong phạm vi cơ sở đượ
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
 | PERF(slice-24) | `apps/api/src/features/examhistory/store.ts` (`REPORT_ROW_LIMIT`=5000) | Báo cáo thi đang giới hạn 5000 dòng; chuyển hẳn phần chi tiết sang cursor để không mất dòng khi vượt 5000 | Khi dữ liệu vượt ngưỡng |
-| PERF(slice-24) | `apps/api/src/features/reports/store.ts` (`REPORT_ROW_LIMIT`=5000) | Ranking cũng giới hạn 5000; cân nhắc phân trang server (Task 7) | Khi dữ liệu vượt ngưỡng |
+| ~~PERF(slice-24)~~ | `apps/api/src/features/reports/store.ts` | ~~Ranking cũng giới hạn 5000~~ → **đính chính 2026-11-27**: `reports/store.ts` **không hề** có `.limit()`, ranking trả toàn bộ phạm vi; nay đã phân trang server (Task 7) nên không còn rủi ro phình payload | Đã trả |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Thêm | Tạo slice | Yêu cầu phân trang panel (6.1), dashboard pass/failed theo cơ sở/trung tâm/cấp độ (6.1b), phân trang xếp hạng 20/50 (8.1) | — |
+| 2026-11-27 | Sửa | Làm Task 7: phân trang bảng xếp hạng chuyển hẳn về **server** (`GET /reports/students?page&pageSize&q`), trả thêm `rankingPage`; `q` lọc SAU khi xếp hạng nên `rank` vẫn toàn cục và các panel tổng hợp không đổi. FE bỏ cắt trang client, ô tìm debounce 300ms rồi gửi lên server | Ranking trả toàn bộ phạm vi (không có `.limit()`), payload phình khi nhiều học viên; tìm kiếm client sẽ sai khi chỉ còn một trang | — |
 
 ## Cách nghiệm thu
 

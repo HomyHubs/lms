@@ -12,7 +12,9 @@ const SHIFT_COLUMNS = [
   WORK_DATE.as('work_date'),
 ] as const
 
-const WORKER_ROLES = ['staff', 'teacher']
+// slice-1 (ADR 0021): `as const` de giu kieu `UserRole` — truoc day mang `string[]` lot qua duoc vi
+// `users.role` bi khai bao la `string`.
+const WORKER_ROLES = ['staff', 'teacher'] as const
 
 function isUniqueViolation(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505'

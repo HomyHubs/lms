@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import type { Branch, Class, Course, Enrollment } from '@lms/shared'
-import { listBranches, listClasses, listCourses, listEnrollments } from '@/lib/api'
+import type { Branch, Class, Course, Enrollment, Level } from '@lms/shared'
+import { listBranches, listClasses, listCourses, listEnrollments, listLevels } from '@/lib/api'
+import { buildStudentsByLevel, type LevelChartDatum } from './dashboard-stats'
 
 /** One labelled slice/bar of a chart. */
 export interface ChartDatum {
@@ -39,8 +40,8 @@ export interface ClassBarDatum {
 }
 
 export interface DashboardStats {
-  /** Số học viên (enrollment) theo từng khóa học. */
-  studentsByCourse: ChartDatum[]
+  /** Số học viên (enrollment) theo từng CẤP ĐỘ (Starter/Mover/Flyer) + chi tiết khóa học. */
+  studentsByLevel: LevelChartDatum[]
   /** Số học viên (enrollment) theo từng cơ sở (branch). */
   studentsByBranch: ChartDatum[]
   /** Sĩ số TỪNG LỚP, nhóm theo cơ sở (mỗi lớp là một mục riêng, không cộng gộp). */
@@ -55,7 +56,7 @@ export interface DashboardStats {
 
 /**
  * Tổng hợp số liệu cho dashboard từ các endpoint hiện có (slice-1):
- *   - học viên theo khóa học: enrollment -> class.courseId -> course
+ *   - học viên theo cấp độ: enrollment -> class.courseId -> course.levelId -> level
  *   - học viên theo cơ sở: enrollment -> class.branchId -> branch
  * Enrollment được lấy theo từng lớp (listEnrollments nhận classId), nên dùng useQueries
  * để chạy song song một query cho mỗi lớp.
@@ -64,6 +65,8 @@ export function useDashboardStats(): DashboardStats {
   const courses = useQuery<Course[]>({ queryKey: ['courses'], queryFn: listCourses })
   const classes = useQuery<Class[]>({ queryKey: ['classes'], queryFn: listClasses })
   const branches = useQuery<Branch[]>({ queryKey: ['branches'], queryFn: listBranches })
+  // Dùng chung cache key ['levels'] với useLevels() ở feature catalog.
+  const levels = useQuery<Level[]>({ queryKey: ['levels'], queryFn: listLevels })
 
   const classList: Class[] = classes.data ?? []
 
@@ -74,7 +77,7 @@ export function useDashboardStats(): DashboardStats {
     })),
   })
 
-  const baseLoading = courses.isLoading || classes.isLoading || branches.isLoading
+  const baseLoading = courses.isLoading || classes.isLoading || branches.isLoading || levels.isLoading
   const enrollmentsLoading = enrollmentQueries.some((q) => q.isLoading)
   const isLoading = baseLoading || enrollmentsLoading
 
@@ -85,14 +88,17 @@ export function useDashboardStats(): DashboardStats {
     enrollmentCountByClass.set(cls.id, rows.length)
   })
 
-  // Khóa học: cộng dồn số học viên của mọi lớp thuộc course đó.
+  // Khóa học: chỉ dùng làm nguyên liệu cho phép gom theo cấp độ bên dưới.
   const courseList: Course[] = courses.data ?? []
-  const studentsByCourse: ChartDatum[] = courseList.map((course: Course) => {
-    const value = classList
-      .filter((cls: Class) => cls.courseId === course.id)
-      .reduce((sum: number, cls: Class) => sum + (enrollmentCountByClass.get(cls.id) ?? 0), 0)
-    return { name: course.name, value }
-  })
+
+  // Cấp độ: cộng dồn số học viên của mọi lớp thuộc mọi khóa của cấp đó (slice-16).
+  // Luôn trả đủ 3 cấp Starter/Mover/Flyer theo đúng thứ tự, kể cả khi chưa có học viên.
+  const studentsByLevel: LevelChartDatum[] = buildStudentsByLevel(
+    levels.data ?? [],
+    courseList,
+    classList,
+    enrollmentCountByClass,
+  )
 
   // Cơ sở: cộng dồn số học viên của mọi lớp thuộc branch đó.
   const branchList: Branch[] = branches.data ?? []
@@ -137,7 +143,7 @@ export function useDashboardStats(): DashboardStats {
   const isEmpty = !isLoading && totalStudents === 0
 
   return {
-    studentsByCourse,
+    studentsByLevel,
     studentsByBranch,
     classesByBranch,
     classBars,

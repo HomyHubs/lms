@@ -75,7 +75,7 @@ interface ExamSetsRoutesDeps {
  */
 export async function examSetsRoutes(app: FastifyInstance, deps: ExamSetsRoutesDeps): Promise<void> {
   const { rbac, examSetsStore: store } = deps
-  const requireManager = rbac.requireRole('admin', 'teacher')
+  const requireManager = rbac.requirePermission('exam.manage')
 
   // slice-11b: the import file is sent as the raw request body (no multipart dependency).
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer', bodyLimit: EXAM_IMPORT_MAX_BYTES },

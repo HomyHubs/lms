@@ -39,8 +39,8 @@ export async function workHoursRoutes(
 ): Promise<void> {
   const { rbac, workHoursStore: store, branchScope } = deps
   const now = deps.now ?? (() => new Date())
-  const requireWorker = rbac.requireRole('staff', 'teacher')
-  const requireAdmin = rbac.requireRole('admin')
+  const requireWorker = rbac.requirePermission('workhours.read')
+  const requireAdmin = rbac.requirePermission('workhours.manage')
 
   app.post('/timesheet/check-in', { preHandler: requireWorker }, async (request, reply) => {
     const shift = await store.checkIn(getSessionUser(request).id)

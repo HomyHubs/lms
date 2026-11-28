@@ -3,12 +3,17 @@ import type {
   ClassificationPolicy,
   LevelReport,
   MonthReport,
-  StudentClassification,
+  RankingPage,
   StudentRankingRow,
   StudentReport,
   UpdateClassificationPolicyRequest,
 } from '@lms/shared'
 import { summarize } from '../attendance/index.js'
+import { classify, finalScore, passed, round1 } from '../../platform/grading.js'
+
+// Công thức xếp loại nằm ở `platform/grading.ts` để `students` và `reports` dùng chung
+// (ADR 0006). Re-export để các import cũ qua `features/reports` vẫn chạy.
+export { classify, finalScore, passed }
 
 /** Student classification + admin dashboard (slice-7). Formula: docs/adr/0006-student-grading-dashboard.md. */
 
@@ -108,8 +113,6 @@ export function toPolicyDto(row: PolicyRow): ClassificationPolicy {
   }
 }
 
-const round1 = (n: number): number => Math.round(n * 10) / 10
-
 function average(values: readonly (number | null)[]): number | null {
   const known = values.filter((v): v is number => v !== null)
   return known.length === 0 ? null : round1(known.reduce((a, b) => a + b, 0) / known.length)
@@ -117,39 +120,6 @@ function average(values: readonly (number | null)[]): number | null {
 
 function percentOf(part: number, whole: number): number | null {
   return whole === 0 ? null : round1((part / whole) * 100)
-}
-
-/**
- * Weighted final score. No exam result -> not classifiable (null). No countable attendance ->
- * the exam score alone, so a missing roll call never punishes the student.
- */
-export function finalScore(
-  examScore: number | null,
-  attendanceRate: number | null,
-  policy: Pick<ClassificationPolicy, 'examWeight' | 'attendanceWeight'>,
-): number | null {
-  if (examScore === null) return null
-  if (attendanceRate === null) return round1(examScore)
-  return round1((examScore * policy.examWeight + attendanceRate * policy.attendanceWeight) / 100)
-}
-
-export function classify(
-  score: number | null,
-  policy: Pick<ClassificationPolicy, 'excellentMin' | 'goodMin' | 'averageMin'>,
-): StudentClassification | null {
-  if (score === null) return null
-  if (score >= policy.excellentMin) return 'excellent'
-  if (score >= policy.goodMin) return 'good'
-  if (score >= policy.averageMin) return 'average'
-  return 'weak'
-}
-
-/** Đậu (true) khi điểm tổng đạt ngưỡng passMin; Rớt (false) nếu dưới; null khi chưa có điểm. */
-export function passed(
-  score: number | null,
-  policy: Pick<ClassificationPolicy, 'passMin'>,
-): boolean | null {
-  return score === null ? null : score >= policy.passMin
 }
 
 interface ExamOutcome {
@@ -218,7 +188,35 @@ function passFail(rows: readonly StudentRankingRow[]): { passed: number; failed:
   return { passed, failed: taken - passed }
 }
 
-export function buildStudentReport(input: ReportInput): StudentReport {
+/** slice-24: yêu cầu phân trang bảng xếp hạng (thứ hạng vẫn tính trên toàn bộ phạm vi). */
+export interface RankingPageRequest {
+  page: number
+  pageSize: number
+  /** Tìm theo tên hoặc SĐT — áp SAU khi xếp hạng, TRƯỚC khi cắt trang. */
+  q?: string
+}
+
+/** Một dòng có khớp ô tìm kiếm không (tên đã ghép họ + tên, hoặc SĐT). */
+function matchesRankingQuery(row: StudentRankingRow, needle: string): boolean {
+  return (
+    (row.studentName ?? '').toLowerCase().includes(needle) ||
+    row.phoneNumber.toLowerCase().includes(needle)
+  )
+}
+
+function toRankingPage(total: number, request?: RankingPageRequest): RankingPage {
+  // Không yêu cầu phân trang (export) -> coi như một trang chứa toàn bộ.
+  if (!request) return { page: 1, pageSize: total === 0 ? 1 : total, total, totalPages: 1 }
+  const totalPages = Math.max(1, Math.ceil(total / request.pageSize))
+  return {
+    page: Math.min(request.page, totalPages),
+    pageSize: request.pageSize,
+    total,
+    totalPages,
+  }
+}
+
+export function buildStudentReport(input: ReportInput, request?: RankingPageRequest): StudentReport {
   const policyByLevel = new Map(input.policies.map((p) => [p.level_id, toPolicyDto(p)]))
   const attemptsByStudentLevel = groupBy(input.attempts, (a) => pairKey(a.student_id, a.level_id))
   const statusesByEnrollment = groupBy(input.attendance, (r) => pairKey(r.class_id, r.student_id))
@@ -294,6 +292,18 @@ export function buildStudentReport(input: ReportInput): StudentReport {
   for (const r of ranking) classifications[r.classification ?? 'unranked'] += 1
 
   const totalsPassFail = passFail(ranking)
+  // slice-24: lọc tìm kiếm + cắt trang SAU khi đã tính thứ hạng và các số tổng hợp,
+  // nên `rank` vẫn đúng toàn cục và các panel không đổi khi người dùng gõ tìm.
+  const needle = request?.q?.trim().toLowerCase()
+  const filteredRanking =
+    needle && needle !== ''
+      ? ranking.filter((r: StudentRankingRow) => matchesRankingQuery(r, needle))
+      : ranking
+  const rankingPage = toRankingPage(filteredRanking.length, request)
+  const pagedRanking = request
+    ? filteredRanking.slice((rankingPage.page - 1) * rankingPage.pageSize, rankingPage.page * rankingPage.pageSize)
+    : filteredRanking
+
   return {
     totals: {
       students: new Set(ranking.map((r) => r.studentId)).size,
@@ -309,7 +319,8 @@ export function buildStudentReport(input: ReportInput): StudentReport {
     byClass,
     byLevel,
     byMonth,
-    ranking,
+    ranking: pagedRanking,
+    rankingPage,
   }
 }
 
@@ -318,6 +329,7 @@ export async function loadStudentReport(
   store: ReportsStore,
   filter: EnrollmentFilter,
   range: DateRange,
+  request?: RankingPageRequest,
 ): Promise<StudentReport> {
   const enrollments = await store.listEnrollments(filter)
   const studentIds = [...new Set(enrollments.map((e) => e.student_id))]
@@ -328,5 +340,5 @@ export async function loadStudentReport(
     store.listGradedAttempts(studentIds, levelIds, range),
     store.listAttendanceStatuses(classIds, range),
   ])
-  return buildStudentReport({ policies, enrollments, attempts, attendance })
+  return buildStudentReport({ policies, enrollments, attempts, attendance }, request)
 }

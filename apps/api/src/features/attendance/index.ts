@@ -5,6 +5,7 @@ export {
   assignTeacher,
   buildRoster,
   markAttendance,
+  ratePercentFromCounts,
   summarize,
   toHistoryDto,
   toSessionDto,

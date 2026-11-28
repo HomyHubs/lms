@@ -31,7 +31,7 @@
 ## Stub cho phép
 
 - Trang chi tiết cơ sở (Task 6) có thể tái dùng `useClassRates` lặp theo từng lớp của cơ sở ở bản đầu; gom thành một endpoint theo cơ sở (Task 7) khi thấy chậm.
-- Màu cột theo cấp độ (Starter/Mover/Flyer) chỉ áp dụng khi có dữ liệu gom theo cấp độ; tạm thời tô mỗi cột một màu theo thứ tự trong `SLICE_COLORS`.
+- ~~Màu cột theo cấp độ chỉ áp dụng khi có dữ liệu gom theo cấp độ~~ — **đã áp dụng thật 2026-11-27**: `LEVEL_COLORS` cố định cho starter/mover/flyer, không còn là stub.
 
 ## Không được stub
 
@@ -42,24 +42,39 @@ Branch-scope (admin chỉ thấy cơ sở được phân quyền — slice-1) ph
 
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
-| TODO(slice-16) | `DashboardCharts.tsx` — `StudentsBarChart` (khóa học) | Yêu cầu 1.2 nhắc "3 level Starter/Mover/Flyer" nhưng chart đang gom theo khóa học (`studentsByCourse`); cần xác nhận gom theo cấp độ hay theo khóa học | Khi chốt nguồn dữ liệu |
 | PERF(slice-16) | Trang chi tiết cơ sở (Task 6) | Nếu lặp `getAttendanceRates` theo từng lớp gây nhiều request, gom thành một endpoint theo cơ sở (Task 7) | Khi có số liệu thật |
+
+> `TODO(slice-16)` (gom theo cấp độ hay theo khóa học) đã **trả xong 2026-11-27** — xem nhật ký thay đổi phạm vi.
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Thêm | Tạo slice | Yêu cầu chỉnh sửa Dashboard Tổng quan (mục 1.1–1.5) | — |
+| 2026-11-27 | Sửa | Cột "Tổng số học viên" gom **theo cấp độ** (Starter/Mover/Flyer) thay vì theo khóa học; chi tiết từng khóa học chuyển vào tooltip. Tiêu đề thành "Tổng số học viên theo cấp độ". | Yêu cầu 1.2 nhắc rõ "3 level Starter/Mover/Flyer" trong khi tiêu đề cũ nói "theo khóa học" — hai câu mâu thuẫn. Chủ dự án chốt 2026-11-27: ưu tiên cấp độ, vẫn giữ thông tin khóa học trong tooltip. | — |
 
 ## Cách nghiệm thu
 
-1. Admin mở `/` → biểu đồ "Tổng số học viên theo khóa học" và "Tổng số học viên theo cơ sở" hiện số trên đỉnh mỗi cột, mỗi cột một màu; tiêu đề đã đổi đúng.
+1. Admin mở `/` → biểu đồ "Tổng số học viên theo cấp độ" (3 cột Starter/Mover/Flyer, mỗi cấp một màu cố định; rê chuột thấy chi tiết từng khóa học) và "Tổng số học viên theo cơ sở" hiện số trên đỉnh mỗi cột; tiêu đề đã đổi đúng.
 2. Ba biểu đồ tròn hiển thị nhãn gọn, không chồng chữ khi cùng nằm trên một dòng (màn hình rộng) và khi xuống 1 cột (màn hình hẹp).
 3. Thẻ "Tỉ lệ điểm danh" hiện cho mọi cơ sở (không còn `<select>` chọn lớp); bấm một cơ sở → mở trang chi tiết cơ sở với đủ biểu đồ điểm danh các lớp thuộc cơ sở đó.
 4. Admin ở cơ sở khác chỉ thấy cơ sở trong phạm vi được phân quyền (branch-scope).
 5. Test tự động: mở rộng `apps/web/src/features/home/DashboardCharts.test.tsx` (nhãn số, màu cột, điều hướng); API `apps/api/src/features/attendance/routes.test.ts` + `store.integration.test.ts` cho tỉ lệ theo cơ sở. Gates PASS.
 
 ## Bàn giao phiên gần nhất
+
+### 2026-11-27 — agent (nhánh `dev`, trả nợ `TODO(slice-16)`)
+
+**Đã làm:**
+- Chốt nguồn dữ liệu: gom **theo cấp độ**, chi tiết khóa học trong tooltip (chủ dự án quyết định).
+- `apps/web/src/features/home/dashboard-stats.ts` (mới): hàm thuần `buildStudentsByLevel(levels, courses, classes, countByClass)` — cộng dồn `Enrollment → Class → Course → Level`, sắp cố định Starter→Mover→Flyer (không theo alphabet, không theo thứ tự API), giữ cấp độ 0 học viên để biểu đồ luôn đủ 3 cột, bỏ cấp độ lạ ngoài `LEVEL_CODES`.
+- `useDashboardStats.ts`: thêm query `['levels']` (dùng chung cache với `useLevels()`), trả `studentsByLevel: LevelChartDatum[]`. **Bỏ `studentsByCourse`** vì không còn nơi nào dùng (tránh code chết).
+- `DashboardCharts.tsx`: `StudentsByLevelChart` + `LevelBarTooltip` (tổng cấp + từng khóa, ẩn khóa 0 học viên); `LEVEL_COLORS` cố định theo cấp; tiêu đề "Tổng số học viên theo cấp độ"; gỡ marker `TODO(slice-16)`.
+- Test: `dashboard-stats.test.ts` (6 case — cộng dồn, thứ tự cấp, cấp 0 học viên, chi tiết khóa, cấp lạ, mảng rỗng) + `DashboardCharts.test.tsx` cập nhật mock sang `studentsByLevel` và thêm case "Chưa có dữ liệu" khi cả 3 cấp bằng 0.
+
+**Gates:** web typecheck ✅, eslint `--max-warnings=0` ✅, test web 116 PASS (28 file).
+
+**Lưu ý cho người review:** nhãn số trên đỉnh cột và màu cột **không assert được trong jsdom** (recharts cần container có kích thước thật) — cần kiểm tra bằng mắt trên trình duyệt.
 
 ### 2026-11-13 — agent (nhánh `feature/slice-16-dashboard-tong-quan`, trạng thái Review)
 

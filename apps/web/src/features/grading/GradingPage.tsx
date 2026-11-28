@@ -149,11 +149,13 @@ function AttemptPanel({ attemptId, onGraded }: { attemptId: string; onGraded: (a
 
 /** Bang tom tat ket qua import: so dong da ap, bo qua (kem ly do), loi dinh dang. */
 const SKIP_REASON_LABELS: Record<string, string> = {
-  student_not_found: 'Không tìm thấy học viên (mã/SĐT)',
+  student_not_found: 'Không tìm thấy học viên theo mã',
   already_graded: 'Bài đã được chấm trước đó',
   out_of_scope: 'Ngoài phạm vi cơ sở của bạn',
   score_exceeds_max: 'Điểm vượt quá điểm tối đa',
   duplicate_in_file: 'Trùng mã học viên trong file',
+  // ADR 0019: chỉ khớp theo mã, nên cột mã chứa SĐT phải được gọi đúng tên bệnh.
+  student_code_looks_like_phone: 'Cột mã đang là số điện thoại — cần đổi sang mã học viên',
 }
 
 function ImportResultSummary({ result }: { result: GradeImportResult }): React.ReactElement {
@@ -190,8 +192,18 @@ function ImportResultSummary({ result }: { result: GradeImportResult }): React.R
 
 /** slice-22: bang XEM TRUOC tung dong truoc khi dua diem vao lop (chua ghi gi). */
 function PreviewTable({ preview }: { preview: GradeImportPreview }): React.ReactElement {
+  // ADR 0019: file cũ dùng SĐT ở cột mã giờ không nhập được nữa — nói rõ TRƯỚC khi bấm xác nhận,
+  // thay vì để người dùng đọc vài chục dòng "không tìm thấy học viên".
+  const phoneLike = preview.rows.filter((r) => r.reason === 'student_code_looks_like_phone')
   return (
     <div className="space-y-2">
+      {phoneLike.length > 0 && (
+        <p role="status" className="rounded-md bg-warning-50 p-2 text-sm text-warning-900">
+          {phoneLike.length} dòng có <strong>cột mã là số điện thoại</strong>. Nhập điểm chỉ khớp theo
+          mã học viên, nên các dòng này sẽ bị bỏ qua — đổi cột mã trong file sang mã học viên
+          (dạng <code>HN-0001</code>) rồi xem trước lại.
+        </p>
+      )}
       <table className="c-table" aria-label="Xem trước bảng điểm">
         <thead>
           <tr>

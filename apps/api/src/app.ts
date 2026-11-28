@@ -101,7 +101,7 @@ export async function buildApp({ config, db }: BuildAppDeps): Promise<FastifyIns
     otpDispatcher,
   })
   // slice-1 Task 1: quan ly nguoi dung + RBAC theo role (chi Admin CRUD user).
-  await usersRoutes(app, { authStore, usersStore: makeUsersStore(db) })
+  await usersRoutes(app, { rbac, usersStore: makeUsersStore(db) })
   // slice-1 Task 2: quan ly Center + Branch (chi Admin).
   await centersRoutes(app, { rbac, centersStore: makeCentersStore(db) })
   // slice-1 Task 4: gan Branch cho User; cung dong vai tro "pham vi Branch" (branch-scoped)

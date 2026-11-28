@@ -1,6 +1,7 @@
 import type { ColumnType, Generated } from 'kysely'
 import { Kysely, PostgresDialect } from 'kysely'
 import pg from 'pg'
+import type { UserRole } from '@lms/shared'
 
 /** Cot do Postgres sinh gia tri (default) va app khong ghi tay khi insert. */
 type Timestamp = ColumnType<Date, string | undefined, string | undefined>
@@ -12,12 +13,18 @@ export interface UsersTable {
   // Task 3 (slice-0): email de nhan OTP dat lai mat khau (nullable, unique khi co).
   email: ColumnType<string | null, string | null | undefined, string | null>
   password_hash: string
-  // TODO(slice-1): thay `role` text bang lien ket Branch/role day du.
-  role: ColumnType<string, string | undefined, string>
+  // slice-1 (ADR 0021): kieu `UserRole` thay vi `string`. DB da rang buoc bang `users_role_check`
+  // (migration 20261117000000_superadmin_role.sql), nen `string` o day chi lam mat thong tin va buoc
+  // `toPublicUser` phai cast — cast do da che mat viec them role o DB ma quen contract.
+  role: ColumnType<UserRole, UserRole | undefined, UserRole>
   // Slice ho so hoc vien: cac truong nullable (khong pha user cu / role khac).
   last_name: ColumnType<string | null, string | null | undefined, string | null>
   first_name: ColumnType<string | null, string | null | undefined, string | null>
   birth_year: ColumnType<number | null, number | null | undefined, number | null>
+  // slice-26 (ADR 0018): ngay sinh day du de tinh tuoi chinh xac. Doc ra dang chuoi 'YYYY-MM-DD'
+  // (xem `BIRTH_DATE` o users/store.ts) — kieu `date` cua Postgres neu de pg parse se thanh `Date`
+  // luc nua dem theo timezone may chu, gay lech ngay.
+  birth_date: ColumnType<string | null, string | null | undefined, string | null>
   gender: ColumnType<string | null, string | null | undefined, string | null>
   address: ColumnType<string | null, string | null | undefined, string | null>
   parent_phone: ColumnType<string | null, string | null | undefined, string | null>
@@ -120,6 +127,20 @@ export interface UserBranchesTable {
   user_id: string
   branch_id: string
   created_at: Timestamp
+}
+
+/**
+ * Bang `student_code_seq` — slice-23-b: bo dem so thu tu ma hoc vien theo TIEN TO.
+ *
+ * Khoa la tien to (vd 'HN'), khong phai branch_id, vi tien to chinh la thu quyet dinh chuoi ma:
+ * hai co so tinh co dung chung `branches.code` thi bat buoc phai dung chung bo dem, neu khong chung
+ * se cap trung so va retry thanh vo ich.
+ */
+export interface StudentCodeSeqTable {
+  prefix: string
+  /** So thu tu SE cap tiep theo (khoi tao 2 o lan cap dau -> cap ra 1). */
+  next_value: ColumnType<number, number | undefined, number>
+  updated_at: Timestamp
 }
 
 /** Bang `questions` — slice-3: ngan hang cau hoi theo Level/Skill/Type/Difficulty. */
@@ -414,6 +435,7 @@ export interface Database {
   enrollments: EnrollmentsTable
   enrollment_events: EnrollmentEventsTable
   user_branches: UserBranchesTable
+  student_code_seq: StudentCodeSeqTable
   questions: QuestionsTable
   exams: ExamsTable
   exam_sets: ExamSetsTable

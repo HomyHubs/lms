@@ -23,6 +23,41 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-28 — slice-31: mã cơ sở duy nhất (ADR 0023)
+
+- Migration `20261128000001_branches_code_unique.sql` + `apps/api/src/features/centers/store.integration.test.ts` (3 case trên Postgres thật: trùng hệt, trùng sau trim/upper, nhiều cơ sở không mã).
+- **Vì sao**: từ ADR 0022, mã học viên = `<branches.code>-<số thứ tự>`; hai cơ sở trùng `code` dùng chung bộ đếm và sinh cùng một dãy mã — mã vẫn unique nên **không có dữ liệu sai**, chỉ mất khả năng phân biệt cơ sở. Lỗi im lặng: không test nào đỏ, không màn hình nào sai.
+- **Không sửa API**: `branches.code` không có trong contract `Branch`, không có trong `CreateBranchRequest`/`UpdateBranchRequest` — API không đọc/ghi cột này. Index bảo vệ seed và SQL tay, đúng những đường đang tạo ra giá trị.
+- **Không mở đường sửa `code`**: cho sửa mã cơ sở là tính năng riêng (phải chốt: mã học viên đã cấp giữ tiền tố cũ hay đổi theo). Trộn vào đây sẽ tạo lỗ hổng — xem ADR 0023 §Decision 4.
+- Cổng: lint 4/4, typecheck 5/5, shared 64, api **365 pass / 0 skip trên CI** (327 unit + 38 integration), web 142, build OK. Migration đã chạy thật `up → down → up` (cả 35 file) trên cluster Postgres 17.11 tạm của máy, gồm cả nhánh chặn trùng.
+
+### 2026-11-27 — slice-1: quyền là ma trận role → năng lực (ADR 0021)
+
+- **Trả `TODO(slice-1)`** trong `platform/db.ts`. Phạm vi là hướng tối thiểu: không đổi schema, **không đổi hành vi phân quyền**.
+- `UsersTable.role` và `UserRecord.role` nay là `UserRole`; bỏ `user.role as PublicUser['role']` trong `toPublicUser`. Lệch DB ↔ contract thành lỗi compile. Gõ kiểu lộ ngay 6 chỗ dựa vào `role: string` (4 helper test, `WORKER_ROLES`, `seed-demo`) — đúng những chỗ cast cũ đã che.
+- `packages/shared/src/permissions.ts` (mới): `PERMISSIONS` (26 mã `<miền>.<hành động>`), `ROLE_PERMISSIONS` (ma trận duy nhất), `can()`, `isAllowed()`. `superadmin` lấy nguyên mảng `PERMISSIONS` nên thêm quyền mới không thể quên cấp cho superadmin.
+- `rbac.requirePermission(...)` thay `requireRole(...)` ở mọi route có phân quyền (nhiều quyền = AND). `requireRole` chỉ còn cho 2 route **chỉ cần đăng nhập**.
+- `access/scope.ts` (mới): `branchScopeOf(user, scope)` trả `undefined` cho superadmin. Thay biểu thức lặp lại ở `exams` (2 chỗ), `students` (2), `reports` (1).
+- `users/routes.ts`: bỏ `makeRequireAdmin` tự viết (bản sao thứ bảy của logic resolve phiên + so role), dùng `rbac.requirePermission('user.manage')`; deps nhận `rbac` thay `authStore`; `sessionRole` dùng `getSessionUser` thay cast.
+- Test: `shared/permissions.test.ts` 11 case (không mã trùng / không mã chết / không mã gõ sai / superadmin đủ / admin không export được…), `access/rbac.test.ts` 5 case.
+
+**Bài học**
+- Cast `as` để "cho qua" typecheck chính là chỗ giấu lỗi: bỏ nó ra là lộ ngay 6 chỗ dùng `string` thay vì union.
+- Khi một luật phải viết lại ở nhiều handler, hãy đưa luật đó thành hàm (`isAllowed`, `branchScopeOf`) trước khi thêm handler mới.
+
+**Bước tiếp theo**
+- `apps/web/src/components/layout/nav.ts` vẫn khai báo `roles` riêng cho menu — quyết định hiển thị, không phải kiểm soát truy cập. Gộp vào ma trận quyền cần bộ mã `nav.*` + đổi rộng FE; để slice riêng.
+- Chưa có bảng `permissions`/`role_permissions`: chỉ đáng làm khi cần cấp quyền lẻ từng người.
+
+### 2026-11-27 — slice-23: bỏ hẳn fallback SĐT (ADR 0019)
+
+- **Đính chính mục 2026-11-14 bên dưới**: câu "`// TODO(slice-23)` gỡ khi 100% học viên có mã" **không còn đúng** — marker đó đã bị bỏ.
+- Chủ dự án chốt trong ngày: **gỡ hẳn đường khớp bằng SĐT**, giữ số điện thoại như dữ liệu bình thường (cột `users.phone_number`, `GradingRow.student_phone`, hồ sơ, hàng đợi chấm không đổi). Xem ADR 0019.
+- `exams/service.ts`: `matchGradingRow(code, byCode)` chỉ tra theo mã, trả `GradingMatch` (`matched` | `looks_like_phone` | `not_found`). `importGrades` bỏ `allowedPhones`, `previewImportGrades` bỏ `allowedPhones`; phạm vi theo `allowedStudentCodes`, cohort theo lớp dùng `listStudentCodesInClasses` (mới).
+- Bù lại việc mất fallback: `looksLikePhoneNumber()` + lý do `student_code_looks_like_phone`, chỉ xét sau khi tra mã thất bại.
+- Bỏ `matchedByPhone`/`matchedBy` khỏi contract và 2 helper SĐT khỏi store — không để lại code chết.
+- **Bài học**: `GradeImportSkipReason` ở `service.ts` từng được **chép tay** danh sách của `@lms/shared`, nên thêm giá trị mới vào shared mà API vẫn báo lỗi type. Nay dẫn xuất bằng `(typeof GRADE_IMPORT_SKIP_REASONS)[number]`. Union/enum chia sẻ giữa package thì luôn dẫn xuất, đừng chép.
+
 ### 2026-11-06 — slice-6.1 đang làm
 
 - Bắt đầu tách giáo viên thực dạy khỏi người ghi điểm danh bằng `session_teacher_events` (ADR 0014); chưa mở quyền Staff/Admin, chưa hoàn thành luồng.

@@ -1,5 +1,6 @@
 import type { AdminUser, CreateUserRequest, Gender, UpdateUserRequest, UserRole } from '@lms/shared'
 import { hashPassword } from '../auth/index.js'
+import { displayAge, todayInVN } from './age.js'
 
 /**
  * Logic quan ly nguoi dung (slice-1 Task 1) — thuan, khong phu thuoc Fastify de test de.
@@ -17,6 +18,8 @@ export interface UserRow {
   last_name: string | null
   first_name: string | null
   birth_year: number | null
+  // slice-26 (ADR 0018): ngay sinh day du 'YYYY-MM-DD' (doc ra dang chuoi, xem users/store.ts).
+  birth_date: string | null
   gender: string | null
   address: string | null
   parent_phone: string | null
@@ -34,6 +37,8 @@ export interface CreateUserFields {
   lastName: string | null
   firstName: string | null
   birthYear: number | null
+  // slice-26 (ADR 0018): ngay sinh day du; khi co thi `birthYear` duoc dan xuat tu do o tang store.
+  birthDate: string | null
   gender: Gender | null
   address: string | null
   parentPhone: string | null
@@ -47,6 +52,8 @@ export interface UpdateUserFields {
   lastName?: string | null
   firstName?: string | null
   birthYear?: number | null
+  // slice-26 (ADR 0018): null = xoa ngay sinh chinh xac (khong tu dong xoa `birthYear`).
+  birthDate?: string | null
   gender?: Gender | null
   address?: string | null
   parentPhone?: string | null
@@ -62,16 +69,27 @@ export interface UsersStore {
   deleteUser: (id: string) => Promise<boolean>
   // slice-23: tim hoc vien theo ma (khop import diem).
   findUserByStudentCode: (code: string) => Promise<UserRow | undefined>
-  // slice-23: sinh ma hoc vien ke tiep theo tien to co so (null -> fallback 'HV').
-  nextStudentCode: (branchCode: string | null) => Promise<string>
-  // slice-23: ghi ma hoc vien sau khi tao (chi goi cho role hoc vien).
-  setStudentCode: (id: string, code: string) => Promise<UserRow | undefined>
+  // slice-23: sinh + ghi ma trong mot buoc, tự retry khi trung so thu tu do tao dong thoi.
+  assignStudentCode: (id: string, branchCode: string | null) => Promise<UserRow | undefined>
   // slice-23: tien to co so (branches.code) cua co so gan som nhat cho user; null khi chua gan / chua co ma.
   branchCodeForUser: (userId: string) => Promise<string | null>
 }
 
-function toAdminUser(row: UserRow): AdminUser {
-  const birthYear = row.birth_year
+/**
+ * Nam sinh de hien thi: khi co ngay sinh day du thi nam sinh duoc DAN XUAT tu ngay sinh (nguon su
+ * thuat), nguoc lai lay cot `birth_year`. Nho vay hai truong khong bao gio mau thuan voi nhau tren
+ * duong ra, ke ca khi du lieu cu bi lech.
+ */
+function birthYearOf(row: UserRow): number | null {
+  if (row.birth_date !== null) {
+    const year = Number(row.birth_date.slice(0, 4))
+    if (Number.isInteger(year)) return year
+  }
+  return row.birth_year
+}
+
+function toAdminUser(row: UserRow, today: string): AdminUser {
+  const birthYear = birthYearOf(row)
   return {
     id: row.id,
     phoneNumber: row.phone_number,
@@ -81,6 +99,8 @@ function toAdminUser(row: UserRow): AdminUser {
     lastName: row.last_name,
     firstName: row.first_name,
     birthYear,
+    // slice-26 (ADR 0018): ngay sinh day du; null voi user cu chi biet nam sinh.
+    birthDate: row.birth_date,
     // `gender` rang buoc boi CHECK constraint; ep ve union cua contract (hoac null).
     gender: row.gender as Gender | null,
     address: row.address,
@@ -88,22 +108,29 @@ function toAdminUser(row: UserRow): AdminUser {
     // slice-23: ma hoc vien (chi doc); null voi role khac hoc vien / hoc vien chua co ma.
     studentCode: row.student_code,
     // slice-26: tuoi CHI tinh cho role hoc vien; role khac (admin/teacher/staff) khong co y nghia
-    // nghiep vu nen de null. null khi thieu birthYear.
-    // TODO(slice-26): tuoi tinh tu birth_year nen sai lech toi +-1 so voi tuoi that;
-    // muon chinh xac can them cot birth_date (migration + slice sau).
-    age: row.role === 'student' && birthYear != null ? new Date().getFullYear() - birthYear : null,
+    // nghiep vu nen de null.
+    // ADR 0018: co `birth_date` -> tuoi chinh xac (da tru chua-toi-sinh-nhat nam nay); chi co
+    // `birth_year` -> tuoi uoc luong, lech +-1 (FE hien kem dau `~`).
+    age: row.role === 'student' ? displayAge(row.birth_date, birthYear, today) : null,
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
   }
 }
 
-export async function listUsers(store: UsersStore): Promise<AdminUser[]> {
+export async function listUsers(
+  store: UsersStore,
+  today: string = todayInVN(),
+): Promise<AdminUser[]> {
   const rows = await store.listUsers()
-  return rows.map(toAdminUser)
+  return rows.map((row) => toAdminUser(row, today))
 }
 
-export async function getUser(store: UsersStore, id: string): Promise<AdminUser | null> {
+export async function getUser(
+  store: UsersStore,
+  id: string,
+  today: string = todayInVN(),
+): Promise<AdminUser | null> {
   const row = await store.findUserById(id)
-  return row ? toAdminUser(row) : null
+  return row ? toAdminUser(row, today) : null
 }
 
 export type CreateUserOutcome = { ok: true; user: AdminUser } | { ok: false; reason: 'phone_taken' }
@@ -112,11 +139,15 @@ export type CreateUserOutcome = { ok: true; user: AdminUser } | { ok: false; rea
 export async function createUser(
   store: UsersStore,
   input: CreateUserRequest,
+  today: string = todayInVN(),
 ): Promise<CreateUserOutcome> {
   const existing = await store.findUserByPhone(input.phoneNumber)
   if (existing) return { ok: false, reason: 'phone_taken' }
 
   const passwordHash = await hashPassword(input.password)
+  // slice-26 (ADR 0018): co ngay sinh day du thi nam sinh dan xuat tu do, khong tin gia tri gui kem.
+  const birthDate = input.birthDate ?? null
+  const birthYear = birthDate !== null ? Number(birthDate.slice(0, 4)) : (input.birthYear ?? null)
   const row = await store.createUser({
     phoneNumber: input.phoneNumber,
     passwordHash,
@@ -125,20 +156,21 @@ export async function createUser(
     // Thieu truong ho so -> luu null (khong pha user cu / role khac).
     lastName: input.lastName ?? null,
     firstName: input.firstName ?? null,
-    birthYear: input.birthYear ?? null,
+    birthYear,
+    birthDate,
     gender: input.gender ?? null,
     address: input.address ?? null,
     parentPhone: input.parentPhone ?? null,
   })
   // slice-23: chi hoc vien moi duoc sinh ma; role khac giu student_code = null.
-  // Sinh sau insert de co id -> tra cuu tien to co so da gan; ghi lai qua setStudentCode.
+  // Sinh sau insert de co id -> tra cuu tien to co so da gan. Một lời gọi duy nhất để store
+  // tự retry nếu hai request tạo đồng thời tính ra cùng số thứ tự.
   if (row.role === 'student' && row.student_code == null) {
     const branchCode = await store.branchCodeForUser(row.id)
-    const code = await store.nextStudentCode(branchCode)
-    const updated = await store.setStudentCode(row.id, code)
-    if (updated) return { ok: true, user: toAdminUser(updated) }
+    const updated = await store.assignStudentCode(row.id, branchCode)
+    if (updated) return { ok: true, user: toAdminUser(updated, today) }
   }
-  return { ok: true, user: toAdminUser(row) }
+  return { ok: true, user: toAdminUser(row, today) }
 }
 
 export type UpdateUserOutcome = { ok: true; user: AdminUser } | { ok: false; reason: 'not_found' }
@@ -148,6 +180,7 @@ export async function updateUser(
   store: UsersStore,
   id: string,
   input: UpdateUserRequest,
+  today: string = todayInVN(),
 ): Promise<UpdateUserOutcome> {
   const fields: UpdateUserFields = {}
   if (input.role !== undefined) fields.role = input.role
@@ -156,12 +189,18 @@ export async function updateUser(
   if (input.lastName !== undefined) fields.lastName = input.lastName
   if (input.firstName !== undefined) fields.firstName = input.firstName
   if (input.birthYear !== undefined) fields.birthYear = input.birthYear
+  // slice-26 (ADR 0018): ngay sinh la nguon su thuat -> nam sinh dan xuat theo. Dat null chi xoa
+  // ngay sinh, GIU nam sinh (quay ve tuoi uoc luong).
+  if (input.birthDate !== undefined) {
+    fields.birthDate = input.birthDate
+    if (input.birthDate !== null) fields.birthYear = Number(input.birthDate.slice(0, 4))
+  }
   if (input.gender !== undefined) fields.gender = input.gender
   if (input.address !== undefined) fields.address = input.address
   if (input.parentPhone !== undefined) fields.parentPhone = input.parentPhone
 
   const row = await store.updateUser(id, fields)
-  return row ? { ok: true, user: toAdminUser(row) } : { ok: false, reason: 'not_found' }
+  return row ? { ok: true, user: toAdminUser(row, today) } : { ok: false, reason: 'not_found' }
 }
 
 /** Xoa user theo id. Tra `false` khi khong tim thay. */

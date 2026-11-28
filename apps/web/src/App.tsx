@@ -61,14 +61,14 @@ export function App(): React.ReactElement {
           <Route
             key={item.path}
             path={item.path}
-            element={<RequireAuth role={[...item.roles]}>{PAGES[item.path]}</RequireAuth>}
+            element={<RequireAuth permission={item.permissions}>{PAGES[item.path]}</RequireAuth>}
           />
         ))}
         {/* slice-16: branch attendance detail (non-nav route, opened from the Dashboard card) */}
         <Route
           path="/attendance/branch/:branchId"
           element={
-            <RequireAuth role={['admin']}>
+            <RequireAuth permission="attendance.manage">
               <BranchAttendancePage />
             </RequireAuth>
           }
@@ -77,7 +77,7 @@ export function App(): React.ReactElement {
         <Route
           path="/students/:id"
           element={
-            <RequireAuth role={['admin', 'teacher', 'staff']}>
+            <RequireAuth permission="student.read">
               <StudentDetailPage />
             </RequireAuth>
           }

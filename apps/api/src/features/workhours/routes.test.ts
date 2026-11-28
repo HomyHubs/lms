@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { MyTimesheet, WorkHoursReport } from '@lms/shared'
 import type { AuthStore, UserRecord } from '../auth/index.js'
+import type { UserRole } from '@lms/shared'
 import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
@@ -13,7 +14,7 @@ const BRANCH_1 = '20000000-0000-4000-8000-000000000001'
 const BRANCH_2 = '20000000-0000-4000-8000-000000000002'
 const NOW = new Date('2026-11-20T03:00:00Z')
 
-function user(id: string, role: string): UserRecord {
+function user(id: string, role: UserRole): UserRecord {
   return { id, phone_number: `09${id.slice(-8)}`, password_hash: 'x', role }
 }
 const ADMIN_B1 = user('60000000-0000-4000-8000-000000000001', 'admin')

@@ -26,8 +26,8 @@ const NotificationParams = z.object({ id: z.string().uuid() })
 export async function notificationsRoutes(app: FastifyInstance, deps: NotificationsRoutesDeps): Promise<void> {
   const { rbac, notificationsStore: store, reminderRunner } = deps
   const now = deps.now ?? (() => new Date())
-  const requireUser = rbac.requireRole('admin', 'teacher', 'staff', 'student')
-  const requireAdmin = rbac.requireRole('admin')
+  const requireUser = rbac.requirePermission('notification.read')
+  const requireAdmin = rbac.requirePermission('notification.manage')
 
   app.get('/notifications', { preHandler: requireUser }, async (request) => {
     const userId = getSessionUser(request).id

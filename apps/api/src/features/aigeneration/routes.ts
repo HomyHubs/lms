@@ -46,7 +46,7 @@ export async function aiGenerationRoutes(
   deps: AiGenerationRoutesDeps,
 ): Promise<void> {
   const { rbac, aiGenerationStore: store } = deps
-  const requireManager = rbac.requireRole('admin', 'teacher')
+  const requireManager = rbac.requirePermission('exam.manage')
 
   app.post('/ai-requests', { preHandler: requireManager }, async (request, reply) => {
     const parsed = CreateAiRequestRequest.safeParse(request.body)

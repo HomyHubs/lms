@@ -62,6 +62,8 @@ export function makeExamSetsStore(db: AppDb): ExamSetsStore {
       if (filter.levelId) query = query.where('exam_sets.level_id', '=', filter.levelId)
       if (filter.skill) query = query.where('exam_sets.skill', '=', filter.skill)
       if (filter.status) query = query.where('exam_sets.status', '=', filter.status)
+      // slice-20: một truy vấn cho nhiều id (xem trước đề có nhiều bộ liên kết) thay vì N+1.
+      if (filter.ids && filter.ids.length > 0) query = query.where('exam_sets.id', 'in', filter.ids)
       return query.orderBy('exam_sets.updated_at', 'desc').execute()
     },
 

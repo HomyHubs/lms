@@ -55,9 +55,9 @@ function makeFakeStore(
     exams?: ExamRow[]
     policies?: GradingPolicyRow[]
     examSets?: SeedExamSet[]
-    // slice-14: lop theo cap do + SDT theo lop (de test gan lop / cohort import).
+    // slice-14: lop theo cap do + ma hoc vien theo lop (de test gan lop / cohort import).
     classRefs?: Record<string, { id: string; branchId: string }[]>
-    classPhones?: Record<string, string[]>
+    classCodes?: Record<string, string[]>
   } = {},
 ): ExamsStore {
   const examSets = seed.examSets ?? []
@@ -241,9 +241,6 @@ function makeFakeStore(
       else policies.push(row)
       return row
     },
-    async listStudentPhonesInBranches() {
-      return []
-    },
     async listStudentCodesInBranches() {
       // slice-23: khong gioi han theo co so trong store gia lap mac dinh (test import phu trach scope rieng).
       return []
@@ -251,10 +248,11 @@ function makeFakeStore(
     async listClassRefsForLevel(levelId) {
       return seed.classRefs?.[levelId] ?? []
     },
-    async listStudentPhonesInClasses(classIds) {
-      const phones = new Set<string>()
-      for (const id of classIds) for (const p of seed.classPhones?.[id] ?? []) phones.add(p)
-      return [...phones]
+    async listStudentCodesInClasses(classIds) {
+      // ADR 0019: pham vi theo lop tinh theo ma hoc vien (truoc day la SDT).
+      const codes = new Set<string>()
+      for (const id of classIds) for (const c of seed.classCodes?.[id] ?? []) codes.add(c)
+      return [...codes]
     },
   }
 }
@@ -816,27 +814,30 @@ describe('importGrades — khop theo ma hoc vien (chinh) va SDT (fallback) — s
       'staff-1',
       at('10:11'),
       undefined,
-      undefined,
     )
     expect(out.ok && out.summary).toEqual({ applied: 1, skipped: [] })
   })
 
-  it('fallback khop theo SDT khi gia tri khong phai ma hoc vien', async () => {
+  // ADR 0019: khong con fallback SDT. File cu dung SDT o cot ma khong nhap duoc nua, va ly do phai
+  // noi dung benh de nguoi dung biet sua cot nao.
+  it('cot ma co dang so dien thoai -> student_code_looks_like_phone', async () => {
     const store = seeded()
     await submitFor(store, 'student-1')
     const out = await importGrades(
       store,
       'exam-open',
-      [{ row: 2, studentCode: 'phone-student-1', score: 2, feedback: null }],
+      [{ row: 2, studentCode: '0901234567', score: 2, feedback: null }],
       'staff-1',
       at('10:11'),
       undefined,
-      undefined,
     )
-    expect(out.ok && out.summary).toEqual({ applied: 1, skipped: [] })
+    expect(out.ok && out.summary.applied).toBe(0)
+    expect(out.ok && out.summary.skipped).toEqual([
+      { row: 2, studentCode: '0901234567', reason: 'student_code_looks_like_phone' },
+    ])
   })
 
-  it('gia tri khong khop ca ma lan SDT -> student_not_found', async () => {
+  it('gia tri khong khop ma va khong co dang SDT -> student_not_found', async () => {
     const store = seeded()
     await submitFor(store, 'student-1')
     const out = await importGrades(
@@ -845,7 +846,6 @@ describe('importGrades — khop theo ma hoc vien (chinh) va SDT (fallback) — s
       [{ row: 2, studentCode: 'khong-ton-tai', score: 2, feedback: null }],
       'staff-1',
       at('10:11'),
-      undefined,
       undefined,
     )
     expect(out.ok && out.summary.applied).toBe(0)

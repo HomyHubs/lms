@@ -47,7 +47,8 @@ export const StudentAttendancePanel = z.object({
   absent: z.number().int(),
   late: z.number().int(),
   excused: z.number().int(),
-  // Ti le di hoc (%) = (present + late) / tong co tinh; null khi khong co buoi nao.
+  // Ti le di hoc (%) = (present + late) / (present + late + absent) — vang CO PHEP bi loai
+  // khoi mau so theo ADR 0006, dung chung cong thuc voi bao cao. Null khi khong co buoi nao dem duoc.
   ratePct: z.number().nullable(),
 })
 export type StudentAttendancePanel = z.infer<typeof StudentAttendancePanel>

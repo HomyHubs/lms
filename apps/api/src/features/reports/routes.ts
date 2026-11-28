@@ -7,7 +7,7 @@ import {
   type ClassificationPolicyList,
   type StudentReport,
 } from '@lms/shared'
-import { getSessionUser, type Rbac } from '../access/index.js'
+import { branchScopeOf, getSessionUser, type Rbac } from '../access/index.js'
 import type { BranchScope } from '../userbranches/index.js'
 import { loadStudentReport, toPolicyDto, type ReportsStore } from './service.js'
 
@@ -24,7 +24,7 @@ interface ReportsRoutesDeps {
  */
 export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDeps): Promise<void> {
   const { rbac, reportsStore: store, branchScope } = deps
-  const requireAdmin = rbac.requireRole('admin')
+  const requireAdmin = rbac.requirePermission('report.read')
 
   app.get('/reports/classification-policies', { preHandler: requireAdmin }, async () => {
     const body: ClassificationPolicyList = { policies: (await store.listPolicies()).map(toPolicyDto) }
@@ -66,19 +66,19 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
       className: r.class_name, studentPhone: r.phone_number, type: r.event_type, occurredAt: r.occurred_at.toISOString() })) }
   })
 
-  // TODO(slice-24): phan trang server cho ranking khi vuot REPORT_ROW_LIMIT (5000). Hien tai ranking
-  // tra toan bo trong pham vi (thu hang tinh tren toan cuc), FE cat trang 20/50 phia client (Task 6).
+  // slice-24: phân trang server cho bảng xếp hạng — thứ hạng tính trên toàn bộ phạm vi rồi mới
+  // cắt trang; `q` lọc sau khi xếp hạng nên các panel tổng hợp không đổi khi người dùng tìm.
   app.get('/reports/students', { preHandler: requireAdmin }, async (request, reply) => {
     const parsed = StudentReportQuery.safeParse(request.query)
     if (!parsed.success) {
       reply.code(400)
       return { error: 'Bo loc bao cao khong hop le' }
     }
-    const { branchId, levelId, classId, from, to } = parsed.data
+    const { branchId, levelId, classId, from, to, page, pageSize, q } = parsed.data
     const user = getSessionUser(request)
     // superadmin vuot branch-scope: thay tat ca co so (branchIds = undefined).
-    const scoped =
-      user.role === 'superadmin' ? undefined : await branchScope.branchIdsForUser(user.id)
+    // `branchScopeOf` tra `undefined` cho superadmin — luat do nam mot cho (ADR 0021).
+    const scoped = await branchScopeOf(user, branchScope)
     if (branchId && scoped && !scoped.includes(branchId)) {
       reply.code(404)
       return { error: 'Khong tim thay co so' }
@@ -87,6 +87,7 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
       store,
       { branchIds: branchId ? [branchId] : scoped, levelId, classId },
       { from, to },
+      { page: page ?? 1, pageSize: pageSize ?? 20, q },
     )
     return body
   })
@@ -96,7 +97,7 @@ export async function reportsRoutes(app: FastifyInstance, deps: ReportsRoutesDep
   // superadmin vuot branch-scope nen export duoc toan bo.
   app.get(
     '/reports/students/export',
-    { preHandler: rbac.requireRole('superadmin') },
+    { preHandler: rbac.requirePermission('report.export') },
     async (request, reply) => {
       const parsed = StudentReportQuery.safeParse(request.query)
       if (!parsed.success) {

@@ -370,23 +370,9 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       return selectGradingRows().where('exam_attempts.id', '=', attemptId).executeTakeFirst()
     },
 
-    async listStudentPhonesInBranches(branchIds): Promise<string[]> {
-      // SDT (ma hoc vien) cua hoc vien ghi danh lop thuoc cac co so da cho — dung cho branch-scope.
-      if (branchIds.length === 0) return []
-      const rows = await db
-        .selectFrom('enrollments')
-        .innerJoin('classes', 'classes.id', 'enrollments.class_id')
-        .innerJoin('users', 'users.id', 'enrollments.student_id')
-        .where('classes.branch_id', 'in', branchIds)
-        .select('users.phone_number as phone')
-        .distinct()
-        .execute()
-      return rows.map((r) => r.phone)
-    },
-
     async listStudentCodesInBranches(branchIds): Promise<string[]> {
       // slice-23: ma hoc vien cua hoc vien ghi danh lop thuoc cac co so da cho — dung cho branch-scope
-      // khi khop import diem theo student_code (mirror listStudentPhonesInBranches, chi lay role='student').
+      // khi khop import diem theo student_code.
       if (branchIds.length === 0) return []
       const rows = await db
         .selectFrom('enrollments')
@@ -412,17 +398,20 @@ export function makeExamsStore(db: AppDb): ExamsStore {
       return rows
     },
 
-    async listStudentPhonesInClasses(classIds): Promise<string[]> {
-      // slice-14: SDT hoc vien ghi danh CAC LOP da cho — gioi han cohort cham diem theo lop.
+    async listStudentCodesInClasses(classIds): Promise<string[]> {
+      // ADR 0019: ma hoc vien ghi danh CAC LOP da cho — gioi han cohort cham diem theo lop.
+      // Truoc day ham nay tra SDT; doi sang ma vi SDT khong con la khoa khop khi nhap diem.
       if (classIds.length === 0) return []
       const rows = await db
         .selectFrom('enrollments')
         .innerJoin('users', 'users.id', 'enrollments.student_id')
         .where('enrollments.class_id', 'in', classIds)
-        .select('users.phone_number as phone')
+        .where('users.role', '=', 'student')
+        .where('users.student_code', 'is not', null)
+        .select('users.student_code as code')
         .distinct()
         .execute()
-      return rows.map((r) => r.phone)
+      return rows.map((r) => r.code).filter((c): c is string => c !== null)
     },
 
     async findGradingPolicy(levelId): Promise<GradingPolicyRow | undefined> {

@@ -1,7 +1,7 @@
-import { useQueries } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import type { Exam } from '@lms/shared'
-import { getExamSet } from '@/lib/api'
+import { listExamSets } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 
 const LEVEL_LABEL: Record<string, string> = { starter: 'Starter', mover: 'Mover', flyer: 'Flyer' }
@@ -22,22 +22,27 @@ function Row({ label, value }: { label: string; value: React.ReactNode }): React
   )
 }
 
-/** slice-11a: danh sách bộ đề liên kết (chỉ khi mode = fixed_set). */
+/**
+ * slice-11a: danh sách bộ đề liên kết (chỉ khi mode = fixed_set).
+ *
+ * slice-20 (trả nợ): trước đây gọi `getExamSet` cho TỪNG bộ — đề có 5 bộ là 5 request, và mỗi lần
+ * mở xem trước lại gọi lại. Giờ một request `listExamSets({ ids })` trả đủ title + số câu; vẫn giữ
+ * thứ tự theo `examSetIds` (thứ tự này là thứ tự làm bài, không phải thứ tự API trả về).
+ */
 function LinkedSets({ examSetIds }: { examSetIds: string[] }): React.ReactElement {
-  // TODO(slice-20): gọi getExamSet lặp theo từng bộ — gom thành endpoint batch nếu nhiều bộ gây chậm.
-  const queries = useQueries({
-    queries: examSetIds.map((id) => ({ queryKey: ['exam-sets', 'detail', id], queryFn: () => getExamSet(id) })),
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['exam-sets', 'batch', examSetIds],
+    queryFn: () => listExamSets({ ids: examSetIds }),
   })
-  const loading = queries.some((q) => q.isLoading)
-  const failed = queries.some((q) => q.isError)
+  const byId = new Map((data ?? []).map((set) => [set.id, set]))
   return (
     <section className="grid gap-1">
       <h3 className="text-sm font-medium text-slate-700">Bộ đề liên kết</h3>
-      {loading && <p className="text-sm text-slate-500">Đang tải bộ đề…</p>}
-      {failed && <p role="alert" className="text-sm text-danger-600">Không tải được một số bộ đề.</p>}
+      {isLoading && <p className="text-sm text-slate-500">Đang tải bộ đề…</p>}
+      {isError && <p role="alert" className="text-sm text-danger-600">Không tải được một số bộ đề.</p>}
       <ul className="grid gap-1">
-        {queries.map((query, index) => {
-          const set = query.data
+        {examSetIds.map((id, index) => {
+          const set = byId.get(id)
           if (!set) return null
           return (
             <li key={set.id} className="flex justify-between gap-4 text-sm">

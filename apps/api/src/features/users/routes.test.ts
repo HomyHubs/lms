@@ -1,8 +1,10 @@
 import cookie from '@fastify/cookie'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
+import { formatStudentCode, normalizeStudentCodePrefix, parseStudentCode } from '@lms/shared'
 import type { AuthStore, UserRecord } from '../auth/index.js'
 import { SESSION_COOKIE } from '../auth/index.js'
+import { makeRbac } from '../access/index.js'
 import { usersRoutes } from './routes.js'
 import type { UserRow, UsersStore } from './service.js'
 
@@ -48,6 +50,7 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
       lastName,
       firstName,
       birthYear,
+      birthDate,
       gender,
       address,
       parentPhone,
@@ -60,6 +63,8 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
         last_name: lastName,
         first_name: firstName,
         birth_year: birthYear,
+        // slice-26 (ADR 0018): ngay sinh day du; null khi chi biet nam sinh.
+        birth_date: birthDate,
         gender,
         address,
         parent_phone: parentPhone,
@@ -73,23 +78,20 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
     async findUserByStudentCode(code) {
       return users.find((u) => u.student_code === code)
     },
-    async nextStudentCode(branchCode) {
-      // slice-23: gia lap sinh ma theo prefix (fallback 'HV') + so thu tu lon nhat + 1.
-      const prefix = branchCode && branchCode.trim() !== '' ? branchCode : 'HV'
+    async assignStudentCode(id, branchCode) {
+      // slice-23: store that sinh + ghi trong mot buoc va retry khi trung so thu tu.
+      // slice-23-c (ADR 0022): dinh dang lay tu `@lms/shared`, khong giu ban sao trong test.
+      const prefix = normalizeStudentCodePrefix(branchCode)
       let max = 0
       for (const u of users) {
-        if (u.role !== 'student' || !u.student_code?.startsWith(prefix)) continue
-        const suffix = u.student_code.slice(prefix.length)
-        if (!/^\d+$/.test(suffix)) continue
-        const n = Number.parseInt(suffix, 10)
-        if (n > max) max = n
+        if (u.role !== 'student') continue
+        const parsed = parseStudentCode(u.student_code ?? '')
+        if (!parsed || parsed.prefix !== prefix) continue
+        if (parsed.sequence > max) max = parsed.sequence
       }
-      return `${prefix}${String(max + 1).padStart(4, '0')}`
-    },
-    async setStudentCode(id, code) {
       const row = users.find((u) => u.id === id)
       if (!row) return undefined
-      row.student_code = code
+      row.student_code = formatStudentCode(prefix, max + 1)
       return row
     },
     async branchCodeForUser() {
@@ -104,6 +106,7 @@ function makeFakeUsersStore(seed: UserRow[] = []): UsersStore {
       if (input.lastName !== undefined) row.last_name = input.lastName
       if (input.firstName !== undefined) row.first_name = input.firstName
       if (input.birthYear !== undefined) row.birth_year = input.birthYear
+      if (input.birthDate !== undefined) row.birth_date = input.birthDate
       if (input.gender !== undefined) row.gender = input.gender
       if (input.address !== undefined) row.address = input.address
       if (input.parentPhone !== undefined) row.parent_phone = input.parentPhone
@@ -137,7 +140,8 @@ async function buildTestApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: false })
   await app.register(cookie)
-  await usersRoutes(app, { authStore: makeFakeAuthStore(authUser), usersStore })
+  const authStore = makeFakeAuthStore(authUser)
+  await usersRoutes(app, { rbac: makeRbac(authStore), usersStore })
   await app.ready()
   return app
 }
@@ -178,10 +182,11 @@ describe('users routes — RBAC guard', () => {
         last_name: 'Nguyễn Minh',
         first_name: 'An',
         birth_year: 2015,
+        birth_date: null,
         gender: 'male',
         address: null,
         parent_phone: '0912345678',
-        student_code: 'HV0001',
+        student_code: 'HV-0001',
         created_at: new Date('2026-09-16T00:00:00.000Z'),
       },
     ])
@@ -199,7 +204,7 @@ describe('users routes — RBAC guard', () => {
     expect(users[0].firstName).toBe('An')
     expect(users[0].age).toBe(new Date().getFullYear() - 2015)
     // slice-23: ma hoc vien rong duoc tra ra (SAFE_COLUMNS gom student_code).
-    expect(users[0].studentCode).toBe('HV0001')
+    expect(users[0].studentCode).toBe('HV-0001')
   })
 
   it('POST /users creates a student with profile fields and derives age', async () => {
@@ -280,6 +285,7 @@ describe('users routes — CRUD (admin only)', () => {
         last_name: null,
         first_name: null,
         birth_year: null,
+        birth_date: null,
         gender: null,
         address: null,
         parent_phone: null,
@@ -308,6 +314,7 @@ describe('users routes — CRUD (admin only)', () => {
         last_name: null,
         first_name: null,
         birth_year: null,
+        birth_date: null,
         gender: null,
         address: null,
         parent_phone: null,

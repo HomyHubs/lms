@@ -330,6 +330,9 @@ export const GRADE_IMPORT_SKIP_REASONS = [
   'out_of_scope',
   'score_exceeds_max',
   'duplicate_in_file',
+  // ADR 0019: khong khop ma VA gia tri o cot ma co dang so dien thoai -> noi dung benh cho nguoi dung.
+  // Chi xet khi da tra theo ma that bai, nen trung tam dung chinh SDT lam ma hoc vien van nhap duoc.
+  'student_code_looks_like_phone',
 ] as const
 export const GradeImportSkipReason = z.enum(GRADE_IMPORT_SKIP_REASONS)
 export type GradeImportSkipReason = z.infer<typeof GradeImportSkipReason>

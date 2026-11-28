@@ -19,7 +19,7 @@ function stubFetch() {
           students: [
             {
               id: STUDENT_1,
-              studentCode: 'HV0001',
+              studentCode: 'HV-0001',
               fullName: 'Nguyễn Văn A',
               phoneNumber: '0912345678',
               branchName: 'Cơ sở 1',
@@ -79,7 +79,7 @@ describe('StudentsPage (slice-30)', () => {
     await search('Nguyễn')
 
     const rowA = await screen.findByRole('row', { name: /Nguyễn Văn A/ })
-    expect(rowA).toHaveTextContent('HV0001')
+    expect(rowA).toHaveTextContent('HV-0001')
     expect(rowA).toHaveTextContent('0912345678')
     expect(rowA).toHaveTextContent('Cơ sở 1')
 

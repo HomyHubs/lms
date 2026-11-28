@@ -8,6 +8,17 @@
 
 ## Nhật ký liên tục
 
+### 2026-11-27 — Trả nợ `TODO(slice-21)`: kéo-thả sắp xếp câu
+
+**Đã xong**
+- `ExamSetsPage.tsx` (`SetEditor`): `<li>` câu hỏi có `draggable` khi bộ đề còn `draft`, xử lý `onDragStart` / `onDragOver` / `onDrop` / `onDragEnd`; thả vào vị trí nào thì gọi lại `move(from, to)` sẵn có (một lời gọi `PUT /exam-sets/:id/items`). Có `GripVertical` làm dấu hiệu kéo và `opacity-50` cho dòng đang kéo.
+- **Giữ nguyên** nút Lên/Xuống: kéo-thả bằng chuột không truy cập được với bàn phím/trình đọc màn hình. Kéo-thả là đường chính, hai nút là đường dự phòng — có test khoá lại.
+- Marker `TODO(slice-21)` cũ nằm ở `ExamSetPreview.tsx` là **sai chỗ** (màn đó chỉ đọc, không có gì để sắp xếp) → đã dời/diễn giải lại.
+- Test `ExamSetsPage.test.tsx` +2: kéo câu 2 thả lên câu 1 (dựng `dataTransfer` tối thiểu vì jsdom không có `DragEvent`), và nút Lên/Xuống vẫn còn.
+
+**Bước tiếp theo**
+- Nếu muốn bỏ hẳn nút Lên/Xuống: cần hợp đồng bàn phím cho tay nắm kéo (Space nhấc, mũi tên di chuyển, Esc huỷ).
+
 ### 2026-11-13 — slice-21 (Liên kết Đề thi ↔ Bộ đề, mục 4.4)
 
 **Đã xong**

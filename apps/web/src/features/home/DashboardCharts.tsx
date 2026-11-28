@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Link } from 'react-router-dom'
+import type { LevelCode } from '@lms/shared'
 import { Card, CardTitle } from '@/components/ui/card'
 import { useStudentReport } from '@/features/reports/useReports'
 import { useBranches } from '@/features/centers/useCenters'
@@ -21,12 +22,22 @@ import {
   type ChartDatum,
   type ClassBarDatum,
 } from './useDashboardStats'
+import type { LevelChartDatum } from './dashboard-stats'
 
 // Bảng màu demo: nền xanh dương → tím chủ đạo (xanh dương, trắng, tím), giữ các màu
 // ngữ nghĩa (xanh lá = đạt, đỏ = vắng, vàng = trễ) để biểu đồ vẫn dễ đọc đúng ý nghĩa.
 const PASS_COLORS = ['#16a34a', '#dc2626']
 /** Bảng màu xoay vòng cho pie nhiều lát (cơ sở): ưu tiên xanh dương/tím trước. */
 const SLICE_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#6366f1', '#a855f7', '#0ea5e9', '#db2777']
+/**
+ * Màu CỐ ĐỊNH theo cấp độ (slice-16): không xoay vòng để "Starter" luôn cùng một màu
+ * ở mọi biểu đồ, người xem không phải đọc lại chú thích mỗi lần.
+ */
+const LEVEL_COLORS: Record<LevelCode, string> = {
+  starter: '#2563eb',
+  mover: '#7c3aed',
+  flyer: '#0891b2',
+}
 
 // Pie gọn để xếp nhiều cái trên một dòng; bar cao hơn một chút cho dễ đọc nhãn.
 const PIE_HEIGHT = 260
@@ -59,6 +70,57 @@ function StudentsBarChart({
         <Bar dataKey="value" name="Học viên" radius={[4, 4, 0, 0]}>
           {data.map((entry: ChartDatum, index: number) => (
             <Cell key={entry.name} fill={colors[index % colors.length]} />
+          ))}
+          <LabelList dataKey="value" position="top" />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+/** Tooltip của cột cấp độ: tổng học viên của cấp + chi tiết từng khóa học bên trong. */
+function LevelBarTooltip({ active, payload }: {
+  active?: boolean
+  payload?: { payload: LevelChartDatum }[]
+}): React.ReactElement | null {
+  if (!active || !payload || payload.length === 0) return null
+  const d = payload[0]!.payload
+  // Chỉ liệt kê khóa đã có học viên — khóa 0 em không hiện để tooltip không bị loãng.
+  const courses = d.courses.filter((c: { value: number }) => c.value > 0)
+  return (
+    <div className="rounded-lg border border-primary-100 bg-white p-2 text-xs shadow-md">
+      <p className="font-medium text-primary-800">{d.name}</p>
+      <p className="text-slate-700">Tổng: {d.value} học viên</p>
+      {courses.length === 0 ? (
+        <p className="text-slate-500">Chưa có học viên</p>
+      ) : (
+        <ul className="mt-1 space-y-0.5">
+          {courses.map((c: { name: string; value: number }) => (
+            <li key={c.name} className="flex justify-between gap-3 text-slate-600">
+              <span>{c.name}</span>
+              <span className="tabular-nums">{c.value}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Biểu đồ cột THEO CẤP ĐỘ (slice-16): đúng 3 cột Starter → Mover → Flyer, mỗi cột một màu
+ * cố định, số học viên hiện trên đỉnh cột. Chi tiết khóa học nằm trong tooltip.
+ */
+function StudentsByLevelChart({ data }: { data: LevelChartDatum[] }): React.ReactElement {
+  return (
+    <ResponsiveContainer width="100%" height={BAR_HEIGHT}>
+      <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} />
+        <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+        <Tooltip content={<LevelBarTooltip />} />
+        <Bar dataKey="value" name="Học viên" radius={[4, 4, 0, 0]}>
+          {data.map((entry: LevelChartDatum) => (
+            <Cell key={entry.levelCode} fill={LEVEL_COLORS[entry.levelCode]} />
           ))}
           <LabelList dataKey="value" position="top" />
         </Bar>
@@ -223,6 +285,14 @@ export function DashboardCharts(): React.ReactElement {
     return <StudentsBarChart data={data} colors={colors} />
   }
 
+  const renderLevelBar = (): React.ReactElement => {
+    if (stats.isLoading) return <ChartState message="Đang tải…" />
+    if (stats.studentsByLevel.every((d: LevelChartDatum) => d.value === 0)) {
+      return <ChartState message="Chưa có dữ liệu" />
+    }
+    return <StudentsByLevelChart data={stats.studentsByLevel} />
+  }
+
   const renderBranchPie = (): React.ReactElement => {
     if (stats.isLoading) return <ChartState message="Đang tải…" />
     if (stats.totalStudents === 0) return <ChartState message="Chưa có dữ liệu" />
@@ -234,9 +304,8 @@ export function DashboardCharts(): React.ReactElement {
       {/* Hàng biểu đồ cột */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardTitle>Tổng số học viên theo khóa học</CardTitle>
-          {/* TODO(slice-16): xác nhận gom theo cấp độ (Starter/Mover/Flyer) hay theo khóa học (studentsByCourse) */}
-          {renderBar(stats.studentsByCourse, SLICE_COLORS)}
+          <CardTitle>Tổng số học viên theo cấp độ</CardTitle>
+          {renderLevelBar()}
         </Card>
         <Card>
           <CardTitle>Tổng số học viên theo cơ sở</CardTitle>

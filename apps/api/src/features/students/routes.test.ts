@@ -1,6 +1,7 @@
 import cookie from '@fastify/cookie'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
+import type { ClassificationPolicy } from '@lms/shared'
 import type { AuthStore, UserRecord } from '../auth/index.js'
 import { SESSION_COOKIE } from '../auth/index.js'
 import { makeRbac } from '../access/index.js'
@@ -71,6 +72,20 @@ function makeFakeBranchScope(map: Record<string, string[]>): BranchScope {
 
 interface FakeStudent extends StudentSearchRow {
   branch_id: string
+  level_id: string | null
+}
+
+/** Policy xep loai mac dinh (ADR 0006) cho moi cap do trong test. */
+const TEST_POLICY: ClassificationPolicy = {
+  levelId: '40000000-0000-4000-8000-000000000001',
+  levelCode: 'starter',
+  levelName: 'Starter',
+  examWeight: 90,
+  attendanceWeight: 10,
+  excellentMin: 85,
+  goodMin: 70,
+  averageMin: 50,
+  passMin: 50,
 }
 
 /**
@@ -83,10 +98,11 @@ function makeFakeStudentsStore(): StudentsStore {
     {
       id: STUDENT_1,
       phone_number: '0912345678',
-      student_code: 'HV0001',
+      student_code: 'HV-0001',
       full_name: 'Nguyen Van A',
       branch_name: 'Co so 1',
       level_code: 'starter',
+      level_id: TEST_POLICY.levelId,
       branch_id: BRANCH_1,
     },
     {
@@ -96,6 +112,7 @@ function makeFakeStudentsStore(): StudentsStore {
       full_name: 'Tran Thi B',
       branch_name: 'Co so 2',
       level_code: 'mover',
+      level_id: TEST_POLICY.levelId,
       branch_id: BRANCH_2,
     },
   ]
@@ -145,17 +162,20 @@ function makeFakeStudentsStore(): StudentsStore {
         full_name: row.full_name,
         branch_name: row.branch_name,
         level_code: row.level_code,
+        level_id: row.level_id,
       }
       return identity
     },
-    async loadExamAgg(studentId) {
-      return exams[studentId] ?? { attempts: 0, passed: 0, failed: 0, avg_score_pct: null }
+    async loadAggregates(studentId) {
+      // slice-30: 3 panel trong mot truy van.
+      return {
+        exam: exams[studentId] ?? { attempts: 0, passed: 0, failed: 0, avg_score_pct: null },
+        attendance: attendance[studentId] ?? { present: 0, absent: 0, late: 0, excused: 0 },
+        study: study[studentId] ?? { sessions_attended: 0, study_minutes: 0 },
+      }
     },
-    async loadAttendanceAgg(studentId) {
-      return attendance[studentId] ?? { present: 0, absent: 0, late: 0, excused: 0 }
-    },
-    async loadStudyAgg(studentId) {
-      return study[studentId] ?? { sessions_attended: 0, study_minutes: 0 }
+    async loadPolicy(levelId) {
+      return levelId === TEST_POLICY.levelId ? TEST_POLICY : null
     },
   }
 }
@@ -300,7 +320,7 @@ describe('students routes — ho so tong hop (slice-30)', () => {
     expect(res.statusCode).toBe(200)
 
     const student = res.json().student
-    expect(student.studentCode).toBe('HV0001')
+    expect(student.studentCode).toBe('HV-0001')
     expect(student.fullName).toBe('Nguyen Van A')
     expect(student.branchName).toBe('Co so 1')
     expect(student.exam).toEqual({ attempts: 4, passed: 3, failed: 1, avgScorePct: 82.5 })
@@ -309,10 +329,12 @@ describe('students routes — ho so tong hop (slice-30)', () => {
       absent: 1,
       late: 1,
       excused: 1,
-      ratePct: 83.3,
+      // (9+1) / (9+1+1) = 90.9% — vắng có phép không bị trừ (ADR 0006).
+      ratePct: 90.9,
     })
     expect(student.study).toEqual({ sessionsAttended: 10, studyMinutes: 900 })
-    expect(student.classification).toEqual({ finalScore: 82.5, label: 'good' })
+    // 90% * 82.5 + 10% * 90.9 = 83.3 -> 'good'.
+    expect(student.classification).toEqual({ finalScore: 83.3, label: 'good' })
   })
 
   it('hoc vien chua co du lieu: cac panel null, ma hoc vien null voi du lieu cu', async () => {
@@ -338,10 +360,10 @@ describe('students routes — ho so tong hop (slice-30)', () => {
     const scope = makeFakeBranchScope({ [ADMIN_A.id]: [BRANCH_1] })
     app = await buildTestApp(ADMIN_A, makeFakeStudentsStore(), scope)
 
-    const res = await app.inject({ method: 'GET', url: '/students?q=HV0001', headers: { cookie: COOKIE } })
+    const res = await app.inject({ method: 'GET', url: '/students?q=HV-0001', headers: { cookie: COOKIE } })
     expect(res.statusCode).toBe(200)
     expect(res.json().students).toHaveLength(1)
-    expect(res.json().students[0].studentCode).toBe('HV0001')
+    expect(res.json().students[0].studentCode).toBe('HV-0001')
   })
 
   it('tra 404 khi hoc vien khong ton tai', async () => {

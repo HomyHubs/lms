@@ -38,13 +38,14 @@ Xác thực, phân quyền (nút quản lý chỉ hiện với admin/teacher đ�
 
 | Marker | Vị trí | Nội dung | Dự kiến trả |
 | --- | --- | --- | --- |
-| `TODO(slice-20)` | `ExamPreview` | Lặp `getExamSet` theo từng bộ — gom endpoint batch nếu chậm | Khi số bộ liên kết lớn |
+| ~~`TODO(slice-20)`~~ | `ExamPreview` | ~~Lặp `getExamSet` theo từng bộ — gom endpoint batch nếu chậm~~ → **đã trả 2026-11-27**: `GET /exam-sets?ids=a,b,c` trả summary (title + itemCount) trong một request; FE gọi `listExamSets({ ids })` | Đã trả |
 
 ## Nhật ký thay đổi phạm vi của riêng Slice/Task này
 
 | Ngày | Loại | Nội dung | Lý do | ADR |
 | --- | --- | --- | --- | --- |
 | 2026-11-13 | Tạo | Tạo file chi tiết slice-20, nhận việc | Bắt đầu slice-20 | — |
+| 2026-11-27 | Trả nợ | `ExamSetListQuery` thêm `ids` (tách `a,b,c` → mảng uuid, tối đa 50); `ExamSetFilter.ids` + `where id in`; `LinkedSets` chuyển sang một `useQuery` | Bỏ N+1 phía client khi đề có nhiều bộ liên kết | — |
 
 ## Cách nghiệm thu
 

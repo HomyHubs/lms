@@ -21,11 +21,20 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 
 ## Nhật ký liên tục (thêm mục mới mỗi ngày, không ghi đè mục cũ)
 
+### 2026-11-28 — slice-32: menu và cổng route tính từ ma trận quyền (ADR 0024)
+
+- `components/layout/nav.ts`: `NavItem.permissions` (any-of) thay `roles`. `navItemsFor`/`examItemsFor` gọi `canAny` của `@lms/shared`; giữ nguyên việc superadmin thấy menu của admin (không thấy mục riêng của học viên) nên **hành vi không đổi**.
+- `features/auth/RequireAuth.tsx`: prop `permission` thay `role`, dùng `canAny`. `App.tsx` truyền `item.permissions` cho 17 route menu và quyền cho 2 route ngoài menu (`/attendance/branch/:branchId` → `attendance.manage`, `/students/:id` → `student.read`).
+- Thêm 2 quyền chỉ để diễn đạt menu: `grading.menu` {admin, teacher} (hẹp hơn `grading.grade` — staff chấm bài nhưng không đi qua màn Chấm bài) và `enrollment.manage` {admin}. **Quyền `.menu` không bao giờ dùng làm guard API.**
+- Vì sao không thể chỉ "dùng lại quyền": menu là **hợp** của nhiều năng lực ở vài chỗ (Điểm danh = `attendance.read` + `attendance.self`), và hẹp hơn năng lực ở chỗ khác (Chấm bài). Ép chúng bằng nhau là đổi hành vi sản phẩm, không phải refactor.
+- Test: `components/layout/nav.test.ts` (13 case) khoá tập path theo **từng role** — bằng chứng không đổi hành vi; `App.test.tsx` cũ xanh **không sửa kỳ vọng nào**. `packages/shared` thêm case `canAny` + 2 quyền mới.
+- Ghi chú flake: `ReportsPage.test.tsx` (đọc lại XLSX) fail 1 lần khi chạy song song toàn bộ web suite, pass khi chạy riêng và pass ở lần chạy lại — nghi timeout dưới tải, không liên quan slice này.
+
 ### 2026-11-14
 
 **Đã xong**
 
-- slice-23 (Mã học viên): `UsersPage` thêm cột read-only "Mã học viên" (ngay sau "Số điện thoại"), hiện `studentCode` cho học viên, `—` cho role khác. `src/lib/api.ts` KHÔNG đổi — `listUsers` parse bằng zod `AdminUserList` nên `studentCode` (đã trong contract) chảy qua tự động; `useUsers.ts` không đổi. Test `UsersPage.test.tsx` thêm học viên `HN0001` + assert header/giá trị.
+- slice-23 (Mã học viên): `UsersPage` thêm cột read-only "Mã học viên" (ngay sau "Số điện thoại"), hiện `studentCode` cho học viên, `—` cho role khác. `src/lib/api.ts` KHÔNG đổi — `listUsers` parse bằng zod `AdminUserList` nên `studentCode` (đã trong contract) chảy qua tự động; `useUsers.ts` không đổi. Test `UsersPage.test.tsx` thêm học viên `HN-0001` + assert header/giá trị.
 - slice-4.2 (hoàn thiện thi online): `ExamsPage` mở lượt gần nhất qua `GET /exams/:id/attempt` trước, chỉ `POST` khi 404 (không tự sinh lượt mới khi xem lại); gộp lưu nháp (một request đang chạy, giữ bản mới nhất); cảnh báo `beforeunload` khi đang làm; đếm "Đã trả lời x/N câu"; đồng hồ `role="timer"` đổi màu khi ≤60s; hỏi xác nhận khi nộp còn câu trống; nút "Vào thi" + "Đóng lúc …". Test `ExamsPage.test.tsx` cập nhật + test xác nhận nộp.
 - slice-4.3 (điều hướng & lưu nháp): thanh "Danh sách câu" (nút nhảy tới câu, aria-label ghi đã trả lời/xem lại); nút "Xem lại sau" mỗi câu + đếm; hộp xác nhận nộp nêu câu trống + câu đánh dấu; `exam-draft.ts` lưu bản nháp localStorage theo `examId:startedAt`, khôi phục khi revision ≥ server, xoá khi đã nộp; gửi lại khi có sự kiện `online`. 4 test mới (web 62/62).
 - slice-12.1 (ảnh ở form câu hỏi ngân hàng): `QuestionsPage` hiện khối “Hình ảnh” (`QuestionImages`, gắn đề hoặc lựa chọn) khi đang sửa câu; thêm mới thì gợi ý lưu rồi bấm “Sửa”. 1 test mới (web 63/63).

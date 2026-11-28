@@ -677,6 +677,9 @@ Không dùng mục này để theo dõi công việc đang làm dở. Nguồn s�
 | slice-25 | Ngày công & giờ dạy: chi tiết theo giáo viên + theo lớp + biểu đồ giờ dạy theo lớp | Dọc | Done | 8ce890a | 2026-11-26 |
 | slice-17 (nợ) | Widget calendar in-house + test lọc ngày cho điểm danh | Dọc | Done | a3efab5 | 2026-11-26 |
 | slice-dashboard-movements | Lịch sử vào/ra ghi danh, biểu đồ thanh+tròn cho thi/điểm danh/công/xếp loại, admin chấm công giáo viên (audit + concurrency) | Dọc | Done | (nhiều commit, phần 3–4 đóng 2026-11-26) | 2026-11-26 |
+| slice-23-c | Định dạng mã học viên có dấu phân cách `HV-0001` + migrate mã đã cấp (thay đổi slice-23; ADR 0022) | Dọc | Done | — | 2026-11-27 |
+| slice-31 | Mã cơ sở là duy nhất: unique index trên `branches.code` (thay đổi slice-23; ADR 0023) | Dọc | Done | — | 2026-11-28 |
+| slice-32 | Menu và cổng route của FE tính từ ma trận quyền (thay đổi slice-1; ADR 0024) | Dọc | Done | — | 2026-11-28 |
 
 **Đã hủy, không làm (không tính vào rollup Done):** `slice-9` — hủy 2026-11-26. Ô dù này đã tách xong sang `slice-9a` + `slice-9b` (cả hai Done); phần "chấm bán tự động" bỏ hẳn; audio/ghi âm cho Listening/Speaking **không xây trong LMS** mà dùng luồng "giáo viên tự chấm + đưa kết quả vào lớp" đã có (`slice-9a` + `slice-22`). Chi tiết + lý do: `docs/tasks/slices/slice-9-mo-rong.md`.
 
