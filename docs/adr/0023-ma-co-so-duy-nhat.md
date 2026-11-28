@@ -38,5 +38,5 @@ Hệ quả: hai cơ sở trùng mã không gây lỗi dữ liệu (mã vẫn uni
 - Trên một DB đã có dữ liệu trùng, migration **fail có chủ ý** kèm danh sách mã trùng. Người vận hành phải đổi `code` của một trong hai cơ sở bằng SQL trước khi chạy lại. Không có đường tự động.
 - **Seed demo không set `branches.code`**, nên toàn bộ học viên demo mang tiền tố `HV`. Đây là hiện trạng, không phải hệ quả của ADR này — nhưng nó có nghĩa là index chưa thay đổi gì trên dữ liệu demo.
 - Index là **biểu thức**, không phải unique constraint trên cột: `insert ... on conflict (code)` không dùng được index này. Không nơi nào cần — bảng `branches` không có luồng upsert.
-- Đảo ngược bằng `drop index if exists branches_code_unique`; không mất dữ liệu.
+- Đảo ngược bằng `drop index if exists branches_code_unique`; không mất dữ liệu. Đã chạy thật `up → down → up` cho **toàn bộ** 35 migration trên một cluster Postgres 17.11 tạm của máy, và kích hoạt riêng nhánh chặn trùng (2 cơ sở cùng mã) để chắc thông báo lỗi đọc được — nhánh đó không bao giờ chạy trên DB test vì DB test không có dữ liệu trùng.
 - Nếu sau này cho sửa `code`, phải quyết định rõ: mã học viên đã cấp **giữ tiền tố cũ** (khuyến nghị, theo ADR 0022) hay được đổi theo. ADR này không trả lời câu đó.

@@ -29,7 +29,7 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - **Vì sao**: từ ADR 0022, mã học viên = `<branches.code>-<số thứ tự>`; hai cơ sở trùng `code` dùng chung bộ đếm và sinh cùng một dãy mã — mã vẫn unique nên **không có dữ liệu sai**, chỉ mất khả năng phân biệt cơ sở. Lỗi im lặng: không test nào đỏ, không màn hình nào sai.
 - **Không sửa API**: `branches.code` không có trong contract `Branch`, không có trong `CreateBranchRequest`/`UpdateBranchRequest` — API không đọc/ghi cột này. Index bảo vệ seed và SQL tay, đúng những đường đang tạo ra giá trị.
 - **Không mở đường sửa `code`**: cho sửa mã cơ sở là tính năng riêng (phải chốt: mã học viên đã cấp giữ tiền tố cũ hay đổi theo). Trộn vào đây sẽ tạo lỗ hổng — xem ADR 0023 §Decision 4.
-- Cổng: lint 4/4, typecheck 5/5, shared 64, api **327 pass** (+38 skip cục bộ vì không có Docker), web 142, build OK. Integration test mới chỉ chạy thật ở CI.
+- Cổng: lint 4/4, typecheck 5/5, shared 64, api **365 pass / 0 skip trên CI** (327 unit + 38 integration), web 142, build OK. Migration đã chạy thật `up → down → up` (cả 35 file) trên cluster Postgres 17.11 tạm của máy, gồm cả nhánh chặn trùng.
 
 ### 2026-11-27 — slice-1: quyền là ma trận role → năng lực (ADR 0021)
 

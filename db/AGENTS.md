@@ -22,7 +22,8 @@ Nhật ký này thuộc riêng feature/nhánh này. Cập nhật liên tục, t�
 - `20261128000001_branches_code_unique.sql`: partial unique index trên `upper(btrim(code))` (`where code is not null and btrim(code) <> ''`). Khoá dùng biểu thức chứ không phải cột thô vì `normalizeStudentCodePrefix` **trim** trước khi dùng làm khoá bộ đếm — `'HV'` và `'HV '` chắc chắn đụng nhau; còn `'hv'`/`'HV'` cho hai dãy mã nhìn gần như giống nhau.
 - Migration **kiểm tra trùng trước** bằng `do $$ … raise exception` có danh sách mã trùng, thay vì để Postgres trả `23505` trần. Dừng là hành vi có chủ ý: tự đổi tên cơ sở sẽ làm mã học viên đã cấp trỏ sai cơ sở.
 - `migrate:down` = `drop index if exists`. Không mất dữ liệu, không sửa migration cũ.
-- Chưa chạy được cục bộ (máy không có Docker): up/down/up + hành vi chặn trùng được kiểm ở CI qua `dbmate up → down → up` và `apps/api/src/features/centers/store.integration.test.ts`.
+- **Đã kiểm thật, không phải suy luận**: dựng cluster Postgres 17.11 tạm trên máy (port riêng, DB vứt đi) rồi chạy **cả 35 migration `up` → `down` (ngược) → `up`** — PASS; và kích hoạt riêng nhánh chặn trùng bằng 2 cơ sở cùng mã `BQ` → migration dừng đúng, in `"BQ" (x2)` + hint, sau khi sửa mã thì `up` qua. CI chỉ chạy `dbmate up` (xem ghi chú dưới).
+- **Ghi chú về cổng CI**: `dev-health-check` chỉ chạy `dbmate up`; các harness `up → down → up` (`questions-integration.yml`, `reset-integration.yml`, `student-code-integration.yml`) chỉ kích hoạt trên `pull_request`, mà repo commit thẳng vào `dev` — nên với commit này `down` **không** được CI kiểm. Đừng viết "CI kiểm up/down/up" khi chưa đối chiếu trigger.
 
 ### 2026-11-06 — slice-6.1 đang làm
 

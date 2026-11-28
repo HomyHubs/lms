@@ -44,8 +44,9 @@ Ràng buộc dữ liệu (index) và migration — đây chính là thứ slice 
 
 ## Cách nghiệm thu
 
-- Tự động: `pnpm --filter @lms/api test` (có `TEST_DATABASE_URL`) — file `centers/store.integration.test.ts` chứng minh insert trùng bị từ chối.
-- Migration: `dev-health-check` chạy `dbmate up → down → up` trên Postgres thật, nên tính đảo ngược được kiểm tự động.
+- Tự động: `pnpm --filter @lms/api test` (có `TEST_DATABASE_URL`) — file `centers/store.integration.test.ts` chứng minh insert trùng bị từ chối. Đã chạy trên CI: api **365 passed, 0 skipped** (327 unit + 38 integration).
+- Migration: đã chạy thật trên cluster Postgres 17.11 tạm của máy — **35 migration `up` → `down` (ngược) → `up` PASS**; và kích hoạt riêng nhánh chặn trùng (2 cơ sở cùng mã) → dừng đúng kèm danh sách mã, sửa mã rồi chạy lại thì qua.
+- Lưu ý: `dev-health-check` chỉ chạy `dbmate up`; các harness `up → down → up` chỉ chạy trên `pull_request`, mà repo commit thẳng vào `dev` — nên `down` không được CI kiểm cho commit này.
 - Thủ công trên DB có dữ liệu trùng: `dbmate up` phải dừng và in ra danh sách mã trùng.
 
 ## Bàn giao phiên gần nhất

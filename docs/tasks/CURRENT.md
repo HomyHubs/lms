@@ -23,7 +23,8 @@ Phạm vi sử dụng: chỉ dùng khi đúng một người/agent làm tuần t
   - Giữ nguyên việc superadmin thấy menu của admin (không thấy "Bài thi của tôi"), nên hành vi không đổi. "Thấy menu gì" và "được vào không" là hai câu hỏi khác nhau.
   - Test: `components/layout/nav.test.ts` 13 case khoá tập path theo **từng role**; `App.test.tsx` xanh **không sửa kỳ vọng nào**; `permissions.test.ts` thêm case `canAny` + 2 quyền mới.
   - **Flake ghi nhận**: `ReportsPage.test.tsx` (đọc lại XLSX) fail 1 lần khi chạy song song cả web suite, pass khi chạy riêng và pass lần chạy lại — nghi timeout dưới tải, không liên quan slice này.
-- Cổng: lint 4/4, typecheck 5/5, shared **64**, api **327 pass** (+38 skip cục bộ vì không có Docker), web **142**, build OK. Migration + integration test mới chỉ chạy thật ở CI.
+- Cổng: lint 4/4, typecheck 5/5, shared **64**, api **365 pass / 0 skip trên CI** (327 unit + 38 integration), web **142**, build OK.
+- **Kiểm migration thật (không chỉ "CI xanh")**: dựng cluster Postgres 17.11 tạm trên máy, chạy **35 migration `up` → `down` (ngược) → `up`** — PASS; và kích hoạt riêng nhánh chặn trùng bằng 2 cơ sở cùng mã → dừng đúng kèm danh sách, sửa mã rồi chạy lại thì qua. **Phát hiện phụ**: `dev-health-check` chỉ chạy `dbmate up`, còn các harness `up → down → up` chỉ chạy trên `pull_request` — commit thẳng vào `dev` thì `down` không được CI kiểm. Đã ghi vào `db/AGENTS.md`.
 
 ## Đã làm (phiên 2026-11-27, phần 8)
 
